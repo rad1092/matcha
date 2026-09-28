@@ -100,6 +100,8 @@ pub struct SystemBus {
     boot_rom_mapped: bool,
     /// M-cycles since power-on.
     pub(crate) cycles: u64,
+    /// A halted CPU may idle in one batch until `cycles` reaches this.
+    pub(crate) halt_yield_at: u64,
     pub(crate) profile: Option<Box<Profile>>,
     pub(crate) read_watch: Option<AddrSet>,
     pub(crate) write_watch: Option<AddrSet>,
@@ -136,6 +138,7 @@ impl SystemBus {
             boot_rom_mapped: booting,
             boot_rom,
             cycles: 0,
+            halt_yield_at: 0,
             profile: None,
             read_watch: None,
             write_watch: None,
@@ -464,6 +467,13 @@ impl CpuBus for SystemBus {
 
     fn stop(&mut self) {
         self.timer.reset_div();
+    }
+
+    /// Batch halted cycles, but hand control back at frame boundaries and
+    /// when the caller's cycle budget runs out.
+    #[inline]
+    fn halt_should_yield(&self) -> bool {
+        self.cycles >= self.halt_yield_at || self.ppu.frame_ready_pending()
     }
 }
 

@@ -116,6 +116,9 @@ pub struct Ppu {
     first_line: bool,
     /// Dot at which mode 3 ends on the current line.
     mode3_end: u16,
+    /// Next dot (after `dot`) with a timing event on this line, or `line_len`.
+    /// Lets `tick` skip whole M-cycles in which nothing happens.
+    next_event: u16,
     /// Internal window line counter.
     window_line: u8,
     /// WY matched LY at some point this frame (with the window enabled).
@@ -161,6 +164,7 @@ impl Ppu {
         p.ly_compare = Some(0);
         p.lyc_flag = true;
         p.lyc_line = true;
+        p.next_event = p.compute_next_event();
         p
     }
 
@@ -194,6 +198,7 @@ impl Ppu {
             line_len: DOTS_PER_LINE,
             first_line: false,
             mode3_end: 84 + MODE3_BASE,
+            next_event: 1,
             window_line: 0,
             wy_triggered: false,
             skip_frame: false,
@@ -218,6 +223,11 @@ impl Ppu {
     /// Shade indices (0 = lightest, 3 = darkest), row-major 160x144.
     pub fn framebuffer(&self) -> &[u8; WIDTH * HEIGHT] {
         &self.framebuffer
+    }
+
+    /// A frame completed and nobody has taken it yet.
+    pub fn frame_ready_pending(&self) -> bool {
+        self.frame_ready
     }
 
     pub fn take_frame_ready(&mut self) -> bool {
@@ -336,6 +346,7 @@ impl Ppu {
         self.window_line = 0;
         self.wy_triggered = false;
         self.skip_frame = true;
+        self.next_event = self.compute_next_event();
     }
 
     fn set_blocks(&mut self, blocked: bool) {
@@ -396,6 +407,11 @@ impl Ppu {
             }
             return irq;
         }
+        if self.dot + 4 < self.next_event {
+            // Fast path: nothing happens during these four dots.
+            self.dot += 4;
+            return irq;
+        }
         for i in 0..4 {
             self.dot += 1;
             if self.dot == self.line_len {
@@ -408,8 +424,36 @@ impl Ppu {
             } else {
                 irq.late |= raised;
             }
+            self.next_event = self.compute_next_event();
         }
         irq
+    }
+
+    /// The first dot after the current one at which `dot_event` acts.
+    fn compute_next_event(&self) -> u16 {
+        const FIRST_LINE: [u16; 3] = [1, 77, 79];
+        const VISIBLE: [u16; 4] = [3, 4, 80, 84];
+        const VBLANK: [u16; 3] = [2, 4, 5];
+        const LAST_LINE: [u16; 4] = [2, 6, 8, 12];
+        let fixed: &[u16] = match self.line {
+            0..=143 if self.first_line => &FIRST_LINE,
+            0..=143 => &VISIBLE,
+            144..=152 => &VBLANK,
+            _ => &LAST_LINE,
+        };
+        let d = self.dot;
+        let mut next = self.line_len;
+        if let Some(&e) = fixed.iter().find(|&&e| e > d) {
+            next = e;
+        }
+        if self.line < 144 {
+            for e in [self.mode3_end, self.mode3_end + 1] {
+                if e > d && e < next {
+                    next = e;
+                }
+            }
+        }
+        next
     }
 
     fn next_line(&mut self) {
@@ -649,6 +693,27 @@ impl Ppu {
         }
     }
 
+    /// Decodes consecutive BG/window pixels of one tile-map row into colour
+    /// indices, fetching each tile's two bytes once per 8 pixels.
+    fn fetch_row(&self, out: &mut [u8], map: usize, start_x: usize, map_y: usize) {
+        let row_base = map + (map_y / 8 % 32) * 32;
+        let fine_y = map_y % 8;
+        let mut map_x = start_x;
+        let mut i = 0;
+        while i < out.len() {
+            let tile = self.vram[row_base + (map_x / 8) % 32];
+            let (lo, hi) = self.tile_row(self.bg_tile_addr(tile), fine_y);
+            let first_bit = map_x % 8;
+            let take = (8 - first_bit).min(out.len() - i);
+            for k in 0..take {
+                let bit = 7 - (first_bit + k);
+                out[i + k] = ((hi >> bit) & 1) << 1 | ((lo >> bit) & 1);
+            }
+            i += take;
+            map_x = (map_x + take) & 0xFF;
+        }
+    }
+
     fn render_line(&mut self, objects: &[LineObject], window: bool) {
         let y = usize::from(self.line);
         let mut bg_index = [0u8; WIDTH];
@@ -659,16 +724,12 @@ impl Ppu {
             let bg_map = if self.lcdc & 0x08 != 0 { 0x1C00 } else { 0x1800 };
             let win_map = if self.lcdc & 0x40 != 0 { 0x1C00 } else { 0x1800 };
             let bg_y = usize::from(self.line.wrapping_add(self.scy));
-            for (x, slot) in bg_index.iter_mut().enumerate() {
-                let (map, map_x, map_y) = if window && x as i32 >= wx_start {
-                    (win_map, (x as i32 - wx_start) as usize, usize::from(self.window_line))
-                } else {
-                    (bg_map, (x + usize::from(self.scx)) & 0xFF, bg_y)
-                };
-                let tile = self.vram[map + (map_y / 8) * 32 + map_x / 8];
-                let (lo, hi) = self.tile_row(self.bg_tile_addr(tile), map_y % 8);
-                let bit = 7 - (map_x % 8);
-                *slot = ((hi >> bit) & 1) << 1 | ((lo >> bit) & 1);
+            // Background up to the window's left edge, then the window.
+            let split = if window { wx_start.clamp(0, WIDTH as i32) as usize } else { WIDTH };
+            self.fetch_row(&mut bg_index[..split], bg_map, usize::from(self.scx), bg_y);
+            if split < WIDTH {
+                let first = (split as i32 - wx_start) as usize; // > 0 when WX < 7
+                self.fetch_row(&mut bg_index[split..], win_map, first, usize::from(self.window_line));
             }
             for (x, &idx) in bg_index.iter().enumerate() {
                 self.framebuffer[row_start + x] = (self.bgp >> (idx * 2)) & 3;
@@ -863,6 +924,7 @@ impl Ppu {
         r.u8s(&mut self.framebuffer)?;
         self.frame_count = r.u64()?;
         self.frame_ready = false;
+        self.next_event = self.compute_next_event();
         Ok(())
     }
 }

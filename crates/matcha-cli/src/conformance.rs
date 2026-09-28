@@ -238,7 +238,10 @@ fn run_case(case: &Case) -> Outcome {
         }
     };
     let mut gb = match GameBoy::new(rom) {
-        Ok(gb) => gb,
+        Ok(mut gb) => {
+            gb.set_audio_output(false);
+            gb
+        }
         Err(e) => {
             return Outcome { case: case.clone(), verdict: Verdict::Error(e.to_string()), frames: 0, millis: 0 };
         }

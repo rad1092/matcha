@@ -141,8 +141,14 @@ impl GameBoy {
 
     // --- running -----------------------------------------------------------------
 
-    /// Executes one instruction (or one interrupt dispatch / halted cycle).
+    /// Executes one instruction, one interrupt dispatch, or one halted M-cycle.
     pub fn step(&mut self) -> Step {
+        self.bus.halt_yield_at = 0;
+        self.step_inner()
+    }
+
+    /// One CPU step; a halted CPU may idle up to `bus.halt_yield_at`.
+    fn step_inner(&mut self) -> Step {
         if self.bus.profile.is_none() {
             return self.cpu.step(&mut self.bus);
         }
@@ -194,6 +200,7 @@ impl GameBoy {
     /// as soon as a frame completes.
     pub fn run_cycles(&mut self, budget: u64, stop_at_frame: bool) -> RunEvent {
         let start = self.bus.cycles;
+        self.bus.halt_yield_at = start.saturating_add(budget);
         let mut first = true;
         loop {
             if !first {
@@ -204,7 +211,7 @@ impl GameBoy {
                 }
             }
             first = false;
-            let step = self.step();
+            let step = self.step_inner();
             if let Some(hit) = self.bus.watch_hit.take() {
                 return RunEvent::Watchpoint { pc: step.pc, hit };
             }
@@ -264,13 +271,19 @@ impl GameBoy {
         self.bus.apu.clear_samples();
     }
 
+    /// Headless runs can switch audio output off: the APU keeps its exact
+    /// state but skips mixing and resampling (roughly 20% faster).
+    pub fn set_audio_output(&mut self, on: bool) {
+        self.bus.apu.set_output_enabled(on);
+    }
+
     pub fn set_sample_rate(&mut self, hz: u32) {
         self.bus.apu.set_sample_rate(hz);
     }
 
     /// Mutes channels for listening/visualising: bit n = channel n+1 audible.
     pub fn set_audio_channel_mask(&mut self, mask: u8) {
-        self.bus.apu.channel_mask = mask & 0x0F;
+        self.bus.apu.set_channel_mask(mask);
     }
 
     /// Per-channel (enabled, digital level 0..15) for visualisers.

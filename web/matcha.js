@@ -156,6 +156,9 @@ export class Emulator {
 
   setChannelMask(mask) { this.x.matcha_set_channel_mask(this.h, mask & 0x0F); }
 
+  /** Headless use: stop producing samples (emulation is unaffected). */
+  setAudioOutput(on) { this.x.matcha_set_audio_output(this.h, on ? 1 : 0); }
+
   saveState() {
     const len = this.x.matcha_save_state(this.h);
     return new Uint8Array(this.m.memory, this.x.matcha_state_ptr(this.h), len).slice();

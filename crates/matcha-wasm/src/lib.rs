@@ -615,3 +615,12 @@ pub unsafe extern "C" fn matcha_line_timing(e: *mut Emu) -> *const u16 {
 pub unsafe extern "C" fn matcha_remove_watchpoint(e: *mut Emu, addr: u32, write: u32) -> u32 {
     u32::from(unsafe { emu(e) }.gb.remove_watchpoint(addr as u16, write != 0))
 }
+
+/// Switches audio sample output on (1) or off (0) for headless use.
+///
+/// # Safety
+/// See module docs.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn matcha_set_audio_output(e: *mut Emu, on: u32) {
+    unsafe { emu(e) }.gb.set_audio_output(on != 0);
+}

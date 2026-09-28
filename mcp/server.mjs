@@ -216,6 +216,7 @@ const TOOLS = [
         throw new ToolError(`cannot read ${full}: ${e.code ?? e.message}`);
       }
       const gb = matcha.create(bytes);
+      gb.setAudioOutput(false); // nobody listens to an MCP server
       session.gb?.destroy();
       Object.assign(session, { gb, romPath: full, header: gb.header(), slots: new Map(), breaks: new Map(), search: null });
       gb.setPalette(PALETTES[session.palette]);

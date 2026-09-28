@@ -86,9 +86,12 @@ fn palette(name: Option<&str>) -> Result<&'static [u32; 4], String> {
     }
 }
 
+/// Loads a ROM for headless use (no audio output).
 fn load(path: &str) -> Result<GameBoy, String> {
     let rom = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
-    GameBoy::new(rom).map_err(|e| format!("{path}: {e}"))
+    let mut gb = GameBoy::new(rom).map_err(|e| format!("{path}: {e}"))?;
+    gb.set_audio_output(false);
+    Ok(gb)
 }
 
 fn cmd_info(args: &Args) -> Result<(), String> {
@@ -130,7 +133,6 @@ fn cmd_run(args: &Args) -> Result<(), String> {
         if let RunEvent::Breakpoint { pc } = gb.run_frame() {
             return Err(format!("unexpected breakpoint at {pc:#06x}"));
         }
-        gb.clear_audio();
     }
     let elapsed = started.elapsed().as_secs_f64();
     let emulated = frames as f64 / matcha_core::FRAME_RATE;

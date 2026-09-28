@@ -57,9 +57,15 @@ impl Timer {
         Self { counter: 0, tima: 0, tma: 0, tac: 0, reload: Reload::Idle }
     }
 
+    /// Counter bit feeding TIMA's edge detector (0 when the timer is off).
+    #[inline]
+    fn input_mask(&self) -> u16 {
+        if self.tac & 0x04 != 0 { TAC_BITS[usize::from(self.tac & 3)] } else { 0 }
+    }
+
     #[inline]
     fn input(&self, counter: u16) -> bool {
-        self.tac & 0x04 != 0 && counter & TAC_BITS[usize::from(self.tac & 3)] != 0
+        counter & self.input_mask() != 0
     }
 
     #[inline]
@@ -87,10 +93,11 @@ impl Timer {
         let old = self.counter;
         let new = old.wrapping_add(4);
         self.counter = new;
-        if self.input(old) && !self.input(new) {
+        // Counting up, a bit falls exactly when a carry ripples through it.
+        let fell = old & !new;
+        if fell & self.input_mask() != 0 {
             self.increment_tima();
         }
-        let fell = old & !new;
         ev.div_apu = fell & DIV_APU_BIT != 0;
         ev.serial_clock = fell & SERIAL_BIT != 0;
         ev

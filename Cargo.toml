@@ -31,3 +31,8 @@ opt-level = 3
 
 [profile.dev.package."*"]
 opt-level = 3
+
+# Symbols for profiling (cargo build --profile profiling).
+[profile.profiling]
+inherits = "release"
+debug = true

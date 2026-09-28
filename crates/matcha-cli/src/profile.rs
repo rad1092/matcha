@@ -82,6 +82,7 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode) -> Value {
         }
     };
     let header = gb.header().clone();
+    gb.set_audio_output(false);
     gb.enable_profiling();
     let frames = (seconds * matcha_core::FRAME_RATE).round() as u64;
     let mut rng = XorShift(seed | 1);
@@ -98,7 +99,6 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode) -> Value {
         if let RunEvent::Breakpoint { .. } = gb.run_frame() {
             unreachable!("no breakpoints are set");
         }
-        gb.clear_audio();
         let fb = gb.framebuffer();
         if gb.ppu_registers()[0] & 0x80 != 0 {
             lcd_on_frames += 1;

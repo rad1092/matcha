@@ -20,6 +20,12 @@ pub trait CpuBus {
     fn acknowledge_interrupt(&mut self, mask: u8);
     /// Called when the `STOP` instruction executes (resets DIV on hardware).
     fn stop(&mut self) {}
+    /// Lets a halted CPU idle through many M-cycles in one step until this
+    /// returns true (the system uses it to stop at frame boundaries).
+    /// The default never batches: one halted M-cycle per step.
+    fn halt_should_yield(&self) -> bool {
+        true
+    }
 }
 
 /// Flag bits in the `F` register.
@@ -171,12 +177,19 @@ impl Cpu {
         match self.power {
             PowerState::Running => {}
             PowerState::Halted => {
-                bus.idle();
-                if bus.pending_interrupts() == 0 {
-                    return Step { pc, kind: StepKind::Halted };
+                // Idle until an interrupt is pending (or the bus asks us to
+                // yield); each iteration is exactly one M-cycle.
+                loop {
+                    bus.idle();
+                    if bus.pending_interrupts() != 0 {
+                        // Wake-up: the interrupt (if IME) is dispatched next step.
+                        self.power = PowerState::Running;
+                        break;
+                    }
+                    if bus.halt_should_yield() {
+                        break;
+                    }
                 }
-                // Wake-up: the interrupt (if IME) is dispatched on the next step.
-                self.power = PowerState::Running;
                 return Step { pc, kind: StepKind::Halted };
             }
             PowerState::Stopped => {

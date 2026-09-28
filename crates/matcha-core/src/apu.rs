@@ -112,13 +112,16 @@ struct Pulse {
 }
 
 impl Pulse {
+    /// Returns true when the duty step (and so possibly the output) moved.
     #[inline]
-    fn tick(&mut self) {
+    fn tick(&mut self) -> bool {
         if self.timer <= 1 {
             self.timer = 2048 - self.freq;
             self.duty_step = (self.duty_step + 1) & 7;
+            true
         } else {
             self.timer -= 1;
+            false
         }
     }
 
@@ -181,22 +184,26 @@ struct Wave {
 }
 
 impl Wave {
+    /// Returns true when the channel advanced to a new sample.
     #[inline]
-    fn tick(&mut self) {
+    fn tick(&mut self) -> bool {
         self.just_read = false;
         if !self.enabled {
-            return;
+            return false;
         }
+        let mut moved = false;
         for half in 0..2 {
             if self.timer <= 1 {
                 self.timer = 2048 - self.freq;
                 self.position = (self.position + 1) & 31;
                 self.sample = self.ram[usize::from(self.position >> 1)];
                 self.just_read = half == WAVE_WINDOW_HALF;
+                moved = true;
             } else {
                 self.timer -= 1;
             }
         }
+        moved
     }
 
     #[inline]
@@ -231,21 +238,23 @@ impl Noise {
         divisor << (self.nr43 >> 4)
     }
 
+    /// Returns true when the LFSR shifted.
     #[inline]
-    fn tick(&mut self) {
-        if self.timer <= 1 {
-            self.timer = self.period();
-            if self.nr43 >> 4 >= 14 {
-                return; // shifts 14/15 starve the LFSR of clocks
-            }
-            let bit = (self.lfsr ^ (self.lfsr >> 1)) & 1;
-            self.lfsr = (self.lfsr >> 1) | (bit << 14);
-            if self.nr43 & 0x08 != 0 {
-                self.lfsr = (self.lfsr & !(1 << 6)) | (bit << 6);
-            }
-        } else {
+    fn tick(&mut self) -> bool {
+        if self.timer > 1 {
             self.timer -= 1;
+            return false;
         }
+        self.timer = self.period();
+        if self.nr43 >> 4 >= 14 {
+            return false; // shifts 14/15 starve the LFSR of clocks
+        }
+        let bit = (self.lfsr ^ (self.lfsr >> 1)) & 1;
+        self.lfsr = (self.lfsr >> 1) | (bit << 14);
+        if self.nr43 & 0x08 != 0 {
+            self.lfsr = (self.lfsr & !(1 << 6)) | (bit << 6);
+        }
+        true
     }
 
     #[inline]
@@ -276,7 +285,14 @@ pub struct Apu {
     hpf_factor: f32,
     buffer: Vec<f32>,
     /// Per-channel mute mask for debugging/visualisation (bit n = channel n+1).
-    pub(crate) channel_mask: u8,
+    channel_mask: u8,
+    /// Mixer output cached between channel changes (the hot path only adds).
+    mix_l: f32,
+    mix_r: f32,
+    mix_dirty: bool,
+    /// Host wants samples. Headless runs switch this off to skip mixing and
+    /// resampling entirely; channel state keeps advancing either way.
+    output_enabled: bool,
 }
 
 impl core::fmt::Debug for Apu {
@@ -328,7 +344,26 @@ impl Apu {
             hpf_factor: hpf_factor(48_000),
             buffer: Vec::new(),
             channel_mask: 0x0F,
+            mix_l: 0.0,
+            mix_r: 0.0,
+            mix_dirty: true,
+            output_enabled: true,
         }
+    }
+
+    /// Turns sample output on or off (see `output_enabled`).
+    pub fn set_output_enabled(&mut self, on: bool) {
+        self.output_enabled = on;
+        self.mix_dirty = true;
+        if !on {
+            self.buffer.clear();
+        }
+    }
+
+    /// Mutes channels for listening/visualising: bit n = channel n+1 audible.
+    pub fn set_channel_mask(&mut self, mask: u8) {
+        self.channel_mask = mask & 0x0F;
+        self.mix_dirty = true;
     }
 
     pub fn set_sample_rate(&mut self, rate: u32) {
@@ -362,6 +397,7 @@ impl Apu {
         if !self.powered {
             return;
         }
+        self.mix_dirty = true;
         let step = self.frame_step;
         self.frame_step = (step + 1) & 7;
         if step & 1 == 0 {
@@ -392,16 +428,22 @@ impl Apu {
     #[inline]
     pub fn tick(&mut self) {
         if self.powered {
-            self.ch1.tick();
-            self.ch2.tick();
-            self.ch3.tick();
-            self.ch4.tick();
+            // Non-short-circuiting `|`: every channel must tick.
+            let moved = self.ch1.tick() | self.ch2.tick() | self.ch3.tick() | self.ch4.tick();
+            self.mix_dirty |= moved;
         }
-        self.mix();
+        if !self.output_enabled {
+            return;
+        }
+        if self.mix_dirty {
+            self.recompute_mix();
+        }
+        self.accumulate();
     }
 
-    #[inline]
-    fn mix(&mut self) {
+    /// Recomputes the mixer output from the channels' current levels.
+    fn recompute_mix(&mut self) {
+        self.mix_dirty = false;
         let mut l = 0.0f32;
         let mut r = 0.0f32;
         let mut any_dac = false;
@@ -432,12 +474,17 @@ impl Apu {
             l *= f32::from((self.nr50 >> 4) & 7) + 1.0;
             r *= f32::from(self.nr50 & 7) + 1.0;
         }
-        // Normalise: 4 channels * volume 8 -> +-32; keep headroom.
+        // Normalise: 4 channels * volume 8 -> +-32; keep headroom. With every
+        // DAC off the mixer is disconnected and outputs silence.
         const SCALE: f32 = 1.0 / 32.0;
-        if any_dac {
-            self.acc_l += l * SCALE;
-            self.acc_r += r * SCALE;
-        }
+        (self.mix_l, self.mix_r) = if any_dac { (l * SCALE, r * SCALE) } else { (0.0, 0.0) };
+    }
+
+    /// Adds one M-cycle of output to the resampler; emits host samples.
+    #[inline]
+    fn accumulate(&mut self) {
+        self.acc_l += self.mix_l;
+        self.acc_r += self.mix_r;
         self.acc_n += 1;
         self.phase += self.sample_rate;
         if self.phase >= MCYCLE_HZ {
@@ -502,6 +549,7 @@ impl Apu {
     }
 
     pub fn write(&mut self, addr: u16, value: u8) {
+        self.mix_dirty = true;
         if let 0xFF30..=0xFF3F = addr {
             if self.ch3.enabled {
                 if self.ch3.just_read {
@@ -740,6 +788,7 @@ impl Apu {
         self.acc_n = r.u32()?;
         self.hpf_l = r.f32()?;
         self.hpf_r = r.f32()?;
+        self.mix_dirty = true;
         Ok(())
     }
 }

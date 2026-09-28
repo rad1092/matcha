@@ -47,6 +47,12 @@ pub struct StateWriter {
     buf: Vec<u8>,
 }
 
+impl fmt::Debug for StateWriter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StateWriter").field("len", &self.buf.len()).finish()
+    }
+}
+
 impl StateWriter {
     pub fn new() -> Self {
         Self { buf: Vec::with_capacity(64 * 1024) }
@@ -97,6 +103,12 @@ impl StateWriter {
 pub struct StateReader<'a> {
     data: &'a [u8],
     pos: usize,
+}
+
+impl fmt::Debug for StateReader<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StateReader").field("pos", &self.pos).field("len", &self.data.len()).finish()
+    }
 }
 
 impl<'a> StateReader<'a> {

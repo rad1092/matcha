@@ -1,0 +1,18 @@
+[package]
+name = "matcha-cli"
+description = "Headless runner, conformance scoreboard and profiler for the matcha Game Boy emulator."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "matcha"
+path = "src/main.rs"
+
+[dependencies]
+matcha-core = { path = "../matcha-core" }
+
+[lints]
+workspace = true

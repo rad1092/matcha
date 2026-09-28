@@ -1,0 +1,16 @@
+[package]
+name = "matcha-core"
+description = "Cycle-accurate Game Boy (DMG) emulator core: no_std, zero dependencies, no unsafe."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+serde_json = "1"

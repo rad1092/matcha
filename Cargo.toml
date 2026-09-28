@@ -1,0 +1,33 @@
+[workspace]
+resolver = "3"
+members = ["crates/matcha-core", "crates/matcha-cli", "crates/matcha-wasm"]
+default-members = ["crates/matcha-core", "crates/matcha-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rad1092/matcha"
+rust-version = "1.85"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+# The emulator is full of intentional truncating casts (u16 -> u8 for bus
+# values, etc.); flagging each one would bury real findings.
+cast_possible_truncation = "allow"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+debug = false
+
+# Tests run tens of millions of emulated cycles; keep them fast.
+[profile.test]
+opt-level = 3
+
+[profile.dev.package."*"]
+opt-level = 3

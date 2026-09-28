@@ -606,3 +606,12 @@ pub unsafe extern "C" fn matcha_opcode_text(e: *mut Emu, op: u32, cb: u32) -> u3
 pub unsafe extern "C" fn matcha_line_timing(e: *mut Emu) -> *const u16 {
     unsafe { emu(e) }.gb.ppu_line_timing().as_ptr()
 }
+
+/// Removes a read (`write == 0`) or write watchpoint.
+///
+/// # Safety
+/// See module docs.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn matcha_remove_watchpoint(e: *mut Emu, addr: u32, write: u32) -> u32 {
+    u32::from(unsafe { emu(e) }.gb.remove_watchpoint(addr as u16, write != 0))
+}

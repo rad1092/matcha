@@ -237,6 +237,7 @@ export class Emulator {
   removeBreakpoint(addr) { return this.x.matcha_breakpoint(this.h, addr & 0xFFFF, 0) === 1; }
   clearBreakpoints() { this.x.matcha_clear_breakpoints(this.h); }
   addWatchpoint(addr, write = true) { return this.x.matcha_watchpoint(this.h, addr & 0xFFFF, write ? 1 : 0) === 1; }
+  removeWatchpoint(addr, write = true) { return this.x.matcha_remove_watchpoint(this.h, addr & 0xFFFF, write ? 1 : 0) === 1; }
   clearWatchpoints() { this.x.matcha_clear_watchpoints(this.h); }
 
   /** Mnemonic of an opcode (operands zeroed), e.g. opcodeText(0x3E) = "ld a, $00". */

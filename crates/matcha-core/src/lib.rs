@@ -440,6 +440,15 @@ impl GameBoy {
         set.get_or_insert_with(AddrSet::new).insert(addr)
     }
 
+    pub fn remove_watchpoint(&mut self, addr: u16, write: bool) -> bool {
+        let set = if write { &mut self.bus.write_watch } else { &mut self.bus.read_watch };
+        let removed = set.as_mut().is_some_and(|w| w.remove(addr));
+        if set.as_ref().is_some_and(AddrSet::is_empty) {
+            *set = None;
+        }
+        removed
+    }
+
     pub fn clear_watchpoints(&mut self) {
         self.bus.read_watch = None;
         self.bus.write_watch = None;

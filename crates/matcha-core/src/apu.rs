@@ -14,6 +14,9 @@ const MCYCLE_HZ: u32 = 1_048_576;
 /// Largest amount of audio kept if the host never drains (≈1 s at 48 kHz).
 const MAX_BUFFERED_FRAMES: usize = 48_000;
 
+/// Which 2-T-cycle half of an M-cycle the CPU's wave RAM access lines up with.
+const WAVE_WINDOW_HALF: u8 = 1;
+
 const DUTY: [u8; 4] = [0b0000_0001, 0b1000_0001, 0b1000_0111, 0b0111_1110];
 
 /// Value OR'd into reads of FF10..FF2F (unused/write-only bits read as 1).
@@ -171,7 +174,8 @@ struct Wave {
     position: u8,
     sample: u8,
     length: Length,
-    /// The channel read wave RAM during the last M-cycle (DMG access window).
+    /// The channel fetched a wave byte in the half of the previous M-cycle
+    /// that coincides with CPU bus accesses (DMG access window).
     just_read: bool,
     ram: [u8; 16],
 }
@@ -183,12 +187,12 @@ impl Wave {
         if !self.enabled {
             return;
         }
-        for _ in 0..2 {
+        for half in 0..2 {
             if self.timer <= 1 {
                 self.timer = 2048 - self.freq;
                 self.position = (self.position + 1) & 31;
                 self.sample = self.ram[usize::from(self.position >> 1)];
-                self.just_read = true;
+                self.just_read = half == WAVE_WINDOW_HALF;
             } else {
                 self.timer -= 1;
             }

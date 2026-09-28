@@ -460,3 +460,177 @@ impl GameBoy {
         self.bus.profile.as_deref()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::vec;
+
+    /// A tiny ROM-only cartridge that scrolls the screen, pokes VRAM and
+    /// plays a tone, waiting for VBlank with HALT each frame.
+    pub(crate) fn test_rom(title: &[u8]) -> Vec<u8> {
+        let mut rom = vec![0u8; 0x8000];
+        rom[0x40] = 0xD9; // VBlank handler: reti
+        rom[0x100..0x104].copy_from_slice(&[0x00, 0xC3, 0x50, 0x01]); // nop; jp $0150
+        rom[0x134..0x134 + title.len()].copy_from_slice(title);
+        #[rustfmt::skip]
+        let program: [u8; 55] = [
+            0xF3,                   // di
+            0x31, 0xFE, 0xFF,       // ld sp,$FFFE
+            0x3E, 0x80, 0xE0, 0x26, // NR52 = $80
+            0x3E, 0x77, 0xE0, 0x24, // NR50 = $77
+            0x3E, 0xFF, 0xE0, 0x25, // NR51 = $FF
+            0x3E, 0xF0, 0xE0, 0x12, // NR12 = $F0
+            0x3E, 0x80, 0xE0, 0x11, // NR11 = $80
+            0x3E, 0x00, 0xE0, 0x13, // NR13 = $00
+            0x3E, 0x87, 0xE0, 0x14, // NR14 = $87 (trigger)
+            // loop:
+            0x21, 0x00, 0xC0,       // ld hl,$C000
+            0x34,                   // inc (hl)
+            0x7E,                   // ld a,(hl)
+            0xE0, 0x42,             // ldh (SCY),a
+            0x21, 0x10, 0x80,       // ld hl,$8010
+            0x77,                   // ld (hl),a
+            0x21, 0x00, 0x98,       // ld hl,$9800
+            0x36, 0x01,             // ld (hl),$01
+            0x3E, 0x01, 0xE0, 0xFF, // IE = VBlank
+            0xFB,                   // ei
+            0x76,                   // halt
+            0xF3,                   // di
+        ];
+        rom[0x150..0x150 + program.len()].copy_from_slice(&program);
+        let jr_at = 0x150 + program.len();
+        rom[jr_at] = 0x18; // jr loop
+        rom[jr_at + 1] = (0x170i32 - (jr_at as i32 + 2)) as i8 as u8;
+        let checksum = rom[0x134..=0x14C].iter().fold(0u8, |a, &b| a.wrapping_sub(b).wrapping_sub(1));
+        rom[0x14D] = checksum;
+        rom
+    }
+
+    fn snapshot(gb: &GameBoy) -> (Vec<u8>, Registers, Vec<u32>, u64) {
+        let audio = gb.audio_samples().iter().map(|s| s.to_bits()).collect();
+        (gb.framebuffer().to_vec(), gb.registers(), audio, gb.cycles())
+    }
+
+    fn run(gb: &mut GameBoy, frames: u32) {
+        for _ in 0..frames {
+            while gb.run_frame() != RunEvent::FrameComplete {}
+        }
+    }
+
+    #[test]
+    fn test_rom_header_is_valid() {
+        let gb = GameBoy::new(test_rom(b"MATCHATEST")).unwrap();
+        assert!(gb.header().header_checksum_ok);
+        assert_eq!(gb.header().title, "MATCHATEST");
+    }
+
+    #[test]
+    fn test_rom_actually_does_work() {
+        let mut gb = GameBoy::new(test_rom(b"MATCHATEST")).unwrap();
+        run(&mut gb, 20);
+        assert!(gb.peek(0xC000) >= 18, "frame counter in WRAM advanced");
+        assert!(!gb.audio_samples().is_empty(), "APU produced audio");
+        assert!(gb.audio_samples().iter().any(|&s| s != 0.0), "audio is not silent");
+    }
+
+    #[test]
+    fn two_machines_are_bit_identical() {
+        let mut a = GameBoy::new(test_rom(b"MATCHATEST")).unwrap();
+        let mut b = GameBoy::new(test_rom(b"MATCHATEST")).unwrap();
+        for f in 0..40 {
+            let buttons = Buttons(if f % 7 == 0 { 0x81 } else { 0 });
+            a.set_buttons(buttons);
+            b.set_buttons(buttons);
+            run(&mut a, 1);
+            run(&mut b, 1);
+        }
+        assert_eq!(snapshot(&a), snapshot(&b));
+    }
+
+    #[test]
+    fn save_state_round_trip_replays_exactly() {
+        let mut gb = GameBoy::new(test_rom(b"MATCHATEST")).unwrap();
+        run(&mut gb, 25);
+        let state = gb.save_state();
+        gb.clear_audio();
+        run(&mut gb, 30);
+        let expected = snapshot(&gb);
+
+        gb.load_state(&state).unwrap();
+        gb.clear_audio();
+        run(&mut gb, 30);
+        assert_eq!(snapshot(&gb), expected, "reloading replays identically");
+
+        let mut other = GameBoy::new(test_rom(b"MATCHATEST")).unwrap();
+        other.load_state(&state).unwrap();
+        run(&mut other, 30);
+        assert_eq!(snapshot(&other), expected, "a fresh machine resumes identically");
+    }
+
+    #[test]
+    fn bad_states_are_rejected_without_side_effects() {
+        let mut gb = GameBoy::new(test_rom(b"MATCHATEST")).unwrap();
+        run(&mut gb, 10);
+        let good = gb.save_state();
+        let before = gb.save_state();
+
+        assert_eq!(gb.load_state(b"not a state"), Err(StateError::BadMagic));
+        assert_eq!(gb.load_state(&good[..good.len() / 2]), Err(StateError::Truncated));
+        let mut trailing = good.clone();
+        trailing.push(0);
+        assert_eq!(gb.load_state(&trailing), Err(StateError::Corrupt("trailing data")));
+        let mut other_rom = GameBoy::new(test_rom(b"OTHERGAME")).unwrap();
+        assert_eq!(other_rom.load_state(&good), Err(StateError::WrongRom));
+        let mut future = good.clone();
+        future[6] = 0xFF;
+        assert!(matches!(gb.load_state(&future), Err(StateError::Version { .. })));
+
+        assert_eq!(gb.save_state(), before, "failed loads leave the machine untouched");
+    }
+
+    #[test]
+    fn breakpoints_stop_before_execution_and_resume() {
+        let mut gb = GameBoy::new(test_rom(b"MATCHATEST")).unwrap();
+        gb.add_breakpoint(0x0170);
+        assert_eq!(gb.run_frame(), RunEvent::Breakpoint { pc: 0x0170 });
+        assert_eq!(gb.registers().pc, 0x0170);
+        // Continuing steps over the breakpoint and stops there again next loop.
+        let mut hits = 0;
+        for _ in 0..10 {
+            if let RunEvent::Breakpoint { pc } = gb.run_frame() {
+                assert_eq!(pc, 0x0170);
+                hits += 1;
+            }
+        }
+        assert!(hits >= 5);
+        assert!(gb.remove_breakpoint(0x0170));
+        assert!(gb.breakpoints().is_empty());
+    }
+
+    #[test]
+    fn watchpoints_report_the_writer() {
+        let mut gb = GameBoy::new(test_rom(b"MATCHATEST")).unwrap();
+        gb.add_watchpoint(0xC000, true);
+        match gb.run_frame() {
+            RunEvent::Watchpoint { pc, hit } => {
+                assert_eq!(pc, 0x0173, "inc (hl) writes the counter");
+                assert_eq!(hit, WatchHit { addr: 0xC000, value: 1, write: true });
+            }
+            other => panic!("expected watchpoint, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn profiler_accounts_for_every_cycle() {
+        let mut gb = GameBoy::new(test_rom(b"MATCHATEST")).unwrap();
+        gb.enable_profiling();
+        let start = gb.cycles();
+        run(&mut gb, 30);
+        let p = gb.profile().unwrap();
+        assert_eq!(p.total_cycles(), gb.cycles() - start);
+        assert!(p.halted_cycles > p.busy_cycles, "the test ROM idles in HALT most of the frame");
+        assert!(p.interrupts[0] >= 29, "one VBlank interrupt per frame");
+        assert!(p.covered_bytes() > 20);
+    }
+}

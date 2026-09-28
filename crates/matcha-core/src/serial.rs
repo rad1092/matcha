@@ -20,7 +20,7 @@ pub struct Serial {
 
 impl Serial {
     pub fn new() -> Self {
-        Self { sb: 0, sc: 0x7E, bits_left: 0, output: Vec::new() }
+        Self { sb: 0, sc: 0, bits_left: 0, output: Vec::new() }
     }
 
     pub fn read(&self, addr: u16) -> u8 {

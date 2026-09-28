@@ -331,7 +331,11 @@ impl GameBoy {
     pub fn load_state(&mut self, data: &[u8]) -> Result<(), StateError> {
         let backup = self.save_state();
         match self.load_state_unchecked(data) {
-            Ok(()) => Ok(()),
+            Ok(()) => {
+                // Audio produced before the jump would click; start clean.
+                self.clear_audio();
+                Ok(())
+            }
             Err(e) => {
                 self.load_state_unchecked(&backup).expect("restoring a state we just saved cannot fail");
                 Err(e)
@@ -397,6 +401,12 @@ impl GameBoy {
     /// Current (line, dot) of the PPU.
     pub fn ppu_position(&self) -> (u8, u16) {
         self.bus.ppu.position()
+    }
+
+    /// Per-line mode 3 length / object count / window flag of the last frame
+    /// (see [`ppu::Ppu::line_timing`]).
+    pub fn ppu_line_timing(&self) -> &[u16; HEIGHT] {
+        self.bus.ppu.line_timing()
     }
 
     /// Decodes VRAM tile `index` (0..384) into 64 colour indices.

@@ -740,7 +740,6 @@ impl Apu {
         self.acc_n = r.u32()?;
         self.hpf_l = r.f32()?;
         self.hpf_r = r.f32()?;
-        self.buffer.clear();
         Ok(())
     }
 }

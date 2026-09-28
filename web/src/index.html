@@ -1,0 +1,435 @@
+<title>matcha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:wght@600;900&family=Instrument+Sans:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #E6EBDC;
+    --panel: #F4F7EE;
+    --panel-2: #EBF0E2;
+    --ink: #1B241D;
+    --muted: #586657;
+    --rule: #C6D0BA;
+    --accent: #4F6D36;
+    --accent-ink: #F3F7EB;
+    --bp: #B0392C;
+    --focus: #2F6FB0;
+    --bezel: #212A23;
+    --bezel-ink: #9DB08E;
+    --mode0: #D0DCB9;
+    --mode1: #A3B198;
+    --mode2: #8DAF63;
+    --mode3: #3E5932;
+    --heat-0: #EDF1E3;
+    --heat-1: #C9D9A6;
+    --heat-2: #8FAE63;
+    --heat-3: #4F6D36;
+    --heat-4: #1F3326;
+    --display: "Doto", "Martian Mono", ui-monospace, monospace;
+    --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #0E140F;
+      --panel: #151D16;
+      --panel-2: #1B251C;
+      --ink: #DBE5CE;
+      --muted: #8C9A87;
+      --rule: #2A352B;
+      --accent: #A2C072;
+      --accent-ink: #0F170E;
+      --bp: #E4624F;
+      --focus: #7FB0E6;
+      --bezel: #070A08;
+      --bezel-ink: #75876A;
+      --mode0: #26331F;
+      --mode1: #333E2F;
+      --mode2: #52713A;
+      --mode3: #A9C47F;
+      --heat-0: #1A231B;
+      --heat-1: #2F4328;
+      --heat-2: #52713A;
+      --heat-3: #8DAF63;
+      --heat-4: #D8E8B4;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #0E140F;
+    --panel: #151D16;
+    --panel-2: #1B251C;
+    --ink: #DBE5CE;
+    --muted: #8C9A87;
+    --rule: #2A352B;
+    --accent: #A2C072;
+    --accent-ink: #0F170E;
+    --bp: #E4624F;
+    --focus: #7FB0E6;
+    --bezel: #070A08;
+    --bezel-ink: #75876A;
+    --mode0: #26331F;
+    --mode1: #333E2F;
+    --mode2: #52713A;
+    --mode3: #A9C47F;
+    --heat-0: #1A231B;
+    --heat-1: #2F4328;
+    --heat-2: #52713A;
+    --heat-3: #8DAF63;
+    --heat-4: #D8E8B4;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 15px/1.5 var(--sans);
+    padding-inline: 16px;
+    padding-block: 18px 40px;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 18px; }
+
+  /* --- masthead ------------------------------------------------------- */
+  .mast { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+  .brand { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .wordmark { font: 900 clamp(40px, 6vw, 60px)/0.9 var(--display); letter-spacing: 0.02em; color: var(--accent); margin: 0; }
+  .spec { font: 400 11px/1.4 var(--mono); color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+  .mast-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .swatches { display: flex; gap: 6px; }
+  .swatch { width: 30px; height: 22px; border: 1px solid var(--rule); border-radius: 3px; padding: 0; cursor: pointer; background: none; display: grid; grid-template-columns: repeat(4, 1fr); overflow: hidden; }
+  .swatch span { display: block; }
+  .swatch[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--rule); background: var(--panel); border-radius: 4px; padding: 5px 8px; cursor: pointer; font-size: 12.5px; line-height: 1.3; white-space: nowrap; }
+  .btn:hover { border-color: var(--muted); }
+  .btn[aria-pressed="true"], .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn svg { width: 14px; height: 14px; flex: none; }
+  .btn .key { font: 500 10px/1 var(--mono); opacity: 0.7; }
+
+  /* --- layout --------------------------------------------------------- */
+  .bench { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+  @media (min-width: 1080px) { .bench { grid-template-columns: minmax(0, 520px) minmax(0, 1fr); } }
+  .col { display: grid; gap: 14px; min-width: 0; }
+
+  /* --- LCD stage: the one loud object on the page ------------------- */
+  .stage { background: var(--bezel); border-radius: 10px 10px 34px 10px; padding: 18px 18px 14px; display: grid; gap: 10px; position: relative; }
+  .stage.drop { outline: 2px dashed var(--accent); outline-offset: 4px; }
+  .lcd-frame { position: relative; width: 100%; max-width: 480px; margin: 0 auto; aspect-ratio: 160 / 144; background: #000; box-shadow: inset 0 0 0 2px rgba(0,0,0,0.6); }
+  #lcd { width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .lcd-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(8, 12, 9, 0.55); color: #E8F2C8; font: 500 12px/1.4 var(--mono); text-align: center; padding: 16px; letter-spacing: 0.04em; }
+  .stage-strip { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font: 400 10.5px/1.4 var(--mono); color: var(--bezel-ink); letter-spacing: 0.06em; text-transform: uppercase; }
+  .stage-strip b { color: #D6E4BD; font-weight: 500; }
+  .led { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3A4A34; margin-right: 6px; vertical-align: 1px; }
+  .led.on { background: #9BDA5A; box-shadow: 0 0 6px #9BDA5A; }
+  .led.halt { background: #E4B84F; box-shadow: 0 0 6px #E4B84F; }
+
+  .transport { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sound-chip[aria-pressed="false"] { color: var(--muted); }
+
+  /* --- touch pad (phones) --------------------------------------------- */
+  .pad { display: none; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; user-select: none; -webkit-user-select: none; touch-action: none; }
+  @media (pointer: coarse) { .pad { display: grid; } }
+  .dpad { display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(3, 46px); }
+  .dpad button, .ab button, .ss button { border: 1px solid var(--rule); background: var(--panel-2); color: var(--ink); touch-action: none; }
+  .dpad [data-btn="up"] { grid-area: 1 / 2; border-radius: 6px 6px 0 0; }
+  .dpad [data-btn="left"] { grid-area: 2 / 1; border-radius: 6px 0 0 6px; }
+  .dpad [data-btn="right"] { grid-area: 2 / 3; border-radius: 0 6px 6px 0; }
+  .dpad [data-btn="down"] { grid-area: 3 / 2; border-radius: 0 0 6px 6px; }
+  .ab { display: flex; gap: 12px; justify-self: end; transform: rotate(-18deg); }
+  .ab button { width: 58px; height: 58px; border-radius: 50%; font: 600 16px var(--sans); background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .ss { display: flex; flex-direction: column; gap: 8px; }
+  .ss button { border-radius: 14px; padding: 4px 12px; font: 500 11px var(--mono); letter-spacing: 0.06em; }
+  .pad button.held { filter: brightness(0.8); }
+
+  /* --- panels ----------------------------------------------------------- */
+  .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px 14px; display: grid; gap: 10px; min-width: 0; }
+  .panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .label { font: 500 11px/1.2 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .readout { font: 400 11px/1.2 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .note { font-size: 12.5px; color: var(--muted); margin: 0; max-width: 62ch; }
+
+  /* cartridges */
+  .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
+  .cart { border: 1px solid var(--rule); background: var(--panel-2); border-radius: 4px 4px 4px 12px; padding: 8px; display: grid; gap: 6px; text-align: left; cursor: pointer; }
+  .cart:hover { border-color: var(--muted); }
+  .cart[aria-current="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .cart canvas { width: 100%; aspect-ratio: 160 / 144; image-rendering: pixelated; background: var(--mode0); display: block; }
+  .cart-title { font: 600 12.5px/1.25 var(--sans); }
+  .cart-meta { font: 400 10px/1.3 var(--mono); color: var(--muted); }
+  .cart.open { place-content: center; text-align: center; min-height: 110px; border-style: dashed; position: relative; }
+  .cart.open input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+  /* CPU */
+  .regs { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+  .reg { background: var(--panel-2); border-radius: 3px; padding: 5px 8px; display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .reg span { font: 500 10px/1 var(--mono); color: var(--muted); letter-spacing: 0.08em; }
+  .reg b { font: 500 13px/1.2 var(--mono); font-variant-numeric: tabular-nums; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font: 500 10.5px/1 var(--mono); padding: 4px 7px; border-radius: 3px; border: 1px solid var(--rule); color: var(--muted); letter-spacing: 0.06em; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .disasm { font: 400 12px/1.65 var(--mono); margin: 0; padding: 0; list-style: none; overflow-x: auto; }
+  .disasm li { display: grid; grid-template-columns: 18px 46px 76px minmax(max-content, 1fr); gap: 6px; align-items: center; padding: 0 4px; border-radius: 2px; cursor: pointer; white-space: pre; }
+  .disasm li:hover { background: var(--panel-2); }
+  .disasm li.pc { background: var(--accent); color: var(--accent-ink); }
+  .disasm .dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--rule); justify-self: center; }
+  .disasm li.bp .dot { background: var(--bp); border-color: var(--bp); }
+  .disasm .bytes { color: var(--muted); }
+  .disasm li.pc .bytes { color: inherit; opacity: 0.75; }
+  .cpu-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .cpu-tools input { width: 84px; border: 1px solid var(--rule); background: var(--panel-2); border-radius: 3px; padding: 4px 6px; font: 400 12px var(--mono); }
+  .event { font: 500 12px/1.4 var(--mono); color: var(--bp); min-height: 1.4em; margin: 0; }
+
+  /* frame timing */
+  .timing-wrap { overflow-x: auto; }
+  #timing { width: 100%; min-width: 300px; aspect-ratio: 456 / 154; display: block; image-rendering: pixelated; border-radius: 2px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 400 11px/1.3 var(--mono); color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+  .lcdc { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* tabs */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+  .tab { border: 0; background: none; padding: 6px 10px 7px; font: 500 12px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  #tiles { width: 100%; max-width: 256px; aspect-ratio: 128 / 192; image-rendering: pixelated; display: block; background: var(--panel-2); }
+
+  .meters { display: grid; gap: 8px; }
+  .meter { display: grid; grid-template-columns: 96px 1fr 38px; gap: 10px; align-items: center; font: 400 11.5px var(--mono); }
+  .meter label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .bar { height: 12px; background: var(--panel-2); border-radius: 2px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 90ms linear; }
+  .meter.off .bar i { background: var(--mode1); }
+  #scope { width: 100%; height: 90px; display: block; background: var(--panel-2); border-radius: 3px; }
+
+  .heat { display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px; max-width: 420px; }
+  .heat i { aspect-ratio: 1; background: var(--heat-0); border-radius: 1px; }
+  .heat-cap { font: 400 11px/1.4 var(--mono); color: var(--muted); min-height: 1.4em; margin: 0; }
+  .util { display: grid; grid-template-columns: repeat(3, auto) 1fr; gap: 4px 14px; font: 400 11.5px var(--mono); align-items: center; }
+  .stack { display: flex; height: 12px; border-radius: 2px; overflow: hidden; background: var(--panel-2); grid-column: 1 / -1; }
+  .stack i { display: block; height: 100%; }
+
+  .memtools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .memtools select, .memtools input { border: 1px solid var(--rule); background: var(--panel-2); border-radius: 3px; padding: 4px 6px; font: 400 12px var(--mono); }
+  .memtools input { width: 70px; }
+  .hex { font: 400 11.5px/1.6 var(--mono); overflow-x: auto; margin: 0; white-space: pre; }
+  .hex .chg { color: var(--accent); font-weight: 500; background: var(--panel-2); }
+  .cands { font: 400 11.5px/1.6 var(--mono); margin: 0; padding: 0; list-style: none; columns: 3 150px; }
+  .cands button { border: 0; background: none; padding: 0; cursor: pointer; font: inherit; color: inherit; text-decoration: underline dotted; }
+
+  .foot { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .foot h2 { font: 500 11px/1.2 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+  .score { width: 100%; border-collapse: collapse; font: 400 12px/1.5 var(--mono); font-variant-numeric: tabular-nums; }
+  .score td, .score th { text-align: left; padding: 3px 8px 3px 0; border-bottom: 1px solid var(--rule); font-weight: 400; }
+  .score th { color: var(--muted); }
+  .score .n { text-align: right; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font: 400 12px/1.5 var(--mono); margin: 0; }
+  .keys dt { color: var(--accent); }
+  .keys dd { margin: 0; color: var(--muted); }
+  .credits { font-size: 12.5px; color: var(--muted); margin: 0; padding-left: 18px; }
+  .credits a { color: inherit; }
+  @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="brand">
+      <h1 class="wordmark">matcha</h1>
+      <p class="spec">DMG emulator · SM83 @ 4.194304 MHz · 160×144 · 4 shades · 59.73 Hz</p>
+    </div>
+    <div class="mast-tools">
+      <div class="swatches" role="group" aria-label="Screen palette" id="swatches"></div>
+      <button class="btn sound-chip" id="sound" aria-pressed="false" type="button" title="Sound (M)">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path d="M11 5.5c1 .8 1.5 1.6 1.5 2.5s-.5 1.7-1.5 2.5" stroke="currentColor" fill="none" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span id="sound-label">Sound off</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="bench">
+    <section class="col" aria-label="Screen and controls">
+      <div class="stage" id="stage">
+        <div class="lcd-frame">
+          <canvas id="lcd" width="160" height="144" aria-label="Game Boy screen"></canvas>
+          <div class="lcd-overlay" id="overlay" hidden></div>
+        </div>
+        <div class="stage-strip">
+          <span><i class="led" id="led"></i><b id="cart-name">—</b></span>
+          <span id="cart-kind">—</span>
+          <span><b id="fps">0.0</b> fps · <b id="speed-label">1×</b></span>
+        </div>
+      </div>
+
+      <div class="transport" role="toolbar" aria-label="Emulation">
+        <button class="btn primary" id="run" type="button" aria-pressed="true" title="Run / pause (Space)">
+          <svg viewBox="0 0 16 16" aria-hidden="true" id="run-icon"><path d="M4 3h3v10H4zM9 3h3v10H9z" fill="currentColor"/></svg>
+          <span id="run-label">Pause</span><span class="key">space</span>
+        </button>
+        <button class="btn" id="rewind" type="button" title="Hold to rewind (R)">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10L1 8zM15 3v10L8 8z" fill="currentColor"/></svg>Rewind<span class="key">R</span>
+        </button>
+        <button class="btn" id="ff" type="button" aria-pressed="false" title="Fast-forward 4× (F)">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 3v10l7-5zM8 3v10l7-5z" fill="currentColor"/></svg>4×<span class="key">F</span>
+        </button>
+        <button class="btn" id="frame" type="button" title="Advance one frame (N)">Frame<span class="key">N</span></button>
+        <button class="btn" id="save" type="button" title="Quick save (S)">Save<span class="key">S</span></button>
+        <button class="btn" id="load" type="button" title="Quick load (L)">Load<span class="key">L</span></button>
+        <button class="btn" id="reset" type="button" title="Power cycle">Reset</button>
+      </div>
+
+      <div class="pad" id="pad" aria-label="Touch controls">
+        <div class="dpad">
+          <button type="button" data-btn="up" aria-label="Up">▲</button>
+          <button type="button" data-btn="left" aria-label="Left">◀</button>
+          <button type="button" data-btn="right" aria-label="Right">▶</button>
+          <button type="button" data-btn="down" aria-label="Down">▼</button>
+        </div>
+        <div class="ss">
+          <button type="button" data-btn="select">SELECT</button>
+          <button type="button" data-btn="start">START</button>
+        </div>
+        <div class="ab">
+          <button type="button" data-btn="b">B</button>
+          <button type="button" data-btn="a">A</button>
+        </div>
+      </div>
+
+      <section class="panel" aria-labelledby="shelf-h">
+        <div class="panel-head">
+          <h2 class="label" id="shelf-h">Cartridges</h2>
+          <span class="readout">open-source homebrew · or drop your own .gb</span>
+        </div>
+        <div class="shelf" id="shelf"></div>
+        <p class="note">Your own ROMs stay in this browser: they are read locally and never uploaded. Battery saves persist here too.</p>
+      </section>
+    </section>
+
+    <section class="col" aria-label="Inside the machine">
+      <section class="panel" aria-labelledby="cpu-h">
+        <div class="panel-head">
+          <h2 class="label" id="cpu-h">CPU · SM83</h2>
+          <span class="readout" id="cpu-readout">—</span>
+        </div>
+        <div class="regs" id="regs"></div>
+        <div class="chips" id="cpu-chips"></div>
+        <ol class="disasm" id="disasm" aria-label="Disassembly from PC; click a line to toggle a breakpoint"></ol>
+        <p class="event" id="event" aria-live="polite"></p>
+        <div class="cpu-tools">
+          <button class="btn" id="step" type="button" title="Execute one instruction (I)">Step<span class="key">I</span></button>
+          <label class="readout" for="goto">view</label>
+          <input id="goto" placeholder="PC" spellcheck="false" autocomplete="off" aria-label="Disassemble from address (hex)">
+          <button class="btn" id="clear-bp" type="button">Clear breakpoints</button>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="timing-h">
+        <div class="panel-head">
+          <h2 class="label" id="timing-h">Frame timing · 154 lines × 456 dots</h2>
+          <span class="readout" id="timing-readout">—</span>
+        </div>
+        <div class="timing-wrap"><canvas id="timing" width="456" height="154" aria-label="Per-line PPU mode timing of the last frame"></canvas></div>
+        <div class="legend">
+          <span><i style="background:var(--mode2)"></i>OAM scan</span>
+          <span><i style="background:var(--mode3)"></i>drawing (stretches with SCX, window, sprites)</span>
+          <span><i style="background:var(--mode0)"></i>HBlank</span>
+          <span><i style="background:var(--mode1)"></i>VBlank</span>
+          <span><i style="background:var(--bp)"></i>beam</span>
+        </div>
+        <div class="lcdc" id="lcdc"></div>
+      </section>
+
+      <section class="panel" aria-label="More instruments">
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" id="tab-vram" aria-selected="true" aria-controls="pane-vram">VRAM</button>
+          <button class="tab" role="tab" id="tab-sound" aria-selected="false" aria-controls="pane-sound">Sound</button>
+          <button class="tab" role="tab" id="tab-heat" aria-selected="false" aria-controls="pane-heat">Heat</button>
+          <button class="tab" role="tab" id="tab-mem" aria-selected="false" aria-controls="pane-mem">Memory</button>
+        </div>
+        <div role="tabpanel" id="pane-vram" aria-labelledby="tab-vram" class="col">
+          <canvas id="tiles" width="128" height="192" aria-label="All 384 tiles in VRAM"></canvas>
+          <p class="note">All 384 tiles in VRAM ($8000–$97FF), shaded through BGP. Tile data being rewritten shows up here the moment it lands.</p>
+        </div>
+        <div role="tabpanel" id="pane-sound" aria-labelledby="tab-sound" class="col" hidden>
+          <div class="meters" id="meters"></div>
+          <canvas id="scope" width="600" height="90" aria-label="Output waveform"></canvas>
+          <p class="note">Untick a channel to mute it. Levels are the digital value each channel feeds its DAC (0–15).</p>
+        </div>
+        <div role="tabpanel" id="pane-heat" aria-labelledby="tab-heat" class="col" hidden>
+          <div class="util" id="util"></div>
+          <div class="heat" id="heat" aria-label="Opcode execution heatmap, 16 by 16"></div>
+          <p class="heat-cap" id="heat-cap">Hover a cell to see the instruction.</p>
+          <div class="heat" id="heat-cb" aria-label="CB-prefixed opcode heatmap"></div>
+          <p class="note">Every executed instruction since this tab opened, by opcode (top: base set, bottom: CB-prefixed). Darker is hotter, on a log scale.</p>
+        </div>
+        <div role="tabpanel" id="pane-mem" aria-labelledby="tab-mem" class="col" hidden>
+          <div class="memtools">
+            <select id="mem-region" aria-label="Memory region">
+              <option value="c000">WRAM $C000</option>
+              <option value="d000">WRAM $D000</option>
+              <option value="ff80">HRAM $FF80</option>
+              <option value="ff00">I/O $FF00</option>
+              <option value="fe00">OAM $FE00</option>
+              <option value="8000">VRAM $8000</option>
+              <option value="9800">BG map $9800</option>
+              <option value="a000">Cart RAM $A000</option>
+              <option value="0100">ROM $0100</option>
+            </select>
+            <input id="mem-addr" aria-label="Start address (hex)" placeholder="addr" spellcheck="false" autocomplete="off">
+          </div>
+          <pre class="hex" id="hex"></pre>
+          <div class="panel-head"><h3 class="label">Value finder</h3><span class="readout" id="search-count">not started</span></div>
+          <div class="memtools">
+            <button class="btn" id="search-new" type="button">New search</button>
+            <select id="search-op" aria-label="Keep addresses whose value">
+              <option value="changed">changed</option>
+              <option value="same">stayed the same</option>
+              <option value="up">went up</option>
+              <option value="down">went down</option>
+              <option value="eq">equals…</option>
+            </select>
+            <input id="search-val" aria-label="Value (decimal or $hex)" placeholder="value">
+            <button class="btn" id="search-filter" type="button">Filter</button>
+          </div>
+          <ul class="cands" id="cands"></ul>
+          <p class="note">Find where a game keeps a number: start a search, play until it changes, filter, repeat. Click an address to show it above and break when something writes to it.</p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="foot panel">
+    <div>
+      <h2>Accuracy, measured</h2>
+      <table class="score">
+        <tr><th>Suite</th><th class="n">Pass</th><th class="n">Total</th></tr>
+        <tr><td>SingleStepTests SM83 (per-instruction, cycle-exact)</td><td class="n">498,000</td><td class="n">498,000</td></tr>
+        <tr><td>Mooneye acceptance + MBC (DMG)</td><td class="n">@MOONEYE_PASS@</td><td class="n">@MOONEYE_TOTAL@</td></tr>
+        <tr><td>Blargg cpu / timing / sound / oam_bug</td><td class="n">@BLARGG_PASS@</td><td class="n">@BLARGG_TOTAL@</td></tr>
+        <tr><td>dmg-acid2</td><td class="n">@ACID_PASS@</td><td class="n">@ACID_TOTAL@</td></tr>
+        <tr><td>Mealybug Tearoom (mid-line PPU)</td><td class="n">@MEALY_PASS@</td><td class="n">@MEALY_TOTAL@</td></tr>
+      </table>
+    </div>
+    <div>
+      <h2>Keys</h2>
+      <dl class="keys">
+        <dt>Arrows</dt><dd>D-pad</dd>
+        <dt>X · Z</dt><dd>A · B</dd>
+        <dt>Enter · Backspace</dt><dd>Start · Select</dd>
+        <dt>Space · N · I</dt><dd>Pause · frame · instruction</dd>
+        <dt>R (hold) · F</dt><dd>Rewind · fast-forward</dd>
+        <dt>S · L · M</dt><dd>Quick save · load · sound</dd>
+      </dl>
+    </div>
+    <div>
+      <h2>Cartridges on the shelf</h2>
+      <ul class="credits" id="credits"></ul>
+    </div>
+  </footer>
+</div>
+
+<script type="module">
+/*@BUNDLE@*/
+</script>

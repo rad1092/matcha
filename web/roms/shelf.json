@@ -1,0 +1,38 @@
+[
+  {
+    "id": "tobu",
+    "file": "tobu.gb",
+    "title": "Tobu Tobu Girl",
+    "author": "Tangram Games",
+    "license": "MIT, art CC BY 4.0",
+    "url": "https://github.com/SimonLarsen/tobutobugirl",
+    "thumb": [[840, null]]
+  },
+  {
+    "id": "libbet",
+    "file": "libbet.gb",
+    "title": "Libbet and the Magic Floor",
+    "author": "Damian Yerrick",
+    "license": "zlib",
+    "url": "https://github.com/pinobatch/libbet",
+    "thumb": [[600, "start"], [606, ""], [900, null]]
+  },
+  {
+    "id": "shock-lobster",
+    "file": "shocklobster.gb",
+    "title": "Shock Lobster",
+    "author": "Dave VanEe",
+    "license": "zlib",
+    "url": "https://github.com/tbsp/shock-lobster",
+    "thumb": [[300, "start"], [306, ""], [480, "start"], [486, ""], [700, null]]
+  },
+  {
+    "id": "2048",
+    "file": "2048.gb",
+    "title": "2048",
+    "author": "Sanqui",
+    "license": "zlib",
+    "url": "https://github.com/Sanqui/2048-gb",
+    "thumb": [[120, "start"], [126, ""], [200, "left"], [206, ""], [240, "up"], [246, ""], [300, "right"], [306, ""], [360, null]]
+  }
+]

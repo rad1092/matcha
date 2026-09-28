@@ -128,6 +128,9 @@ pub struct Ppu {
     framebuffer: [u8; WIDTH * HEIGHT],
     frame_ready: bool,
     frame_count: u64,
+    /// Per visible line: mode 3 length (bits 0–8), objects on the line
+    /// (bits 9–12) and window (bit 13). Debug view only; not saved.
+    line_timing: [u16; HEIGHT],
 }
 
 impl core::fmt::Debug for Ppu {
@@ -198,6 +201,7 @@ impl Ppu {
             framebuffer: [0; WIDTH * HEIGHT],
             frame_ready: false,
             frame_count: 0,
+            line_timing: [0; HEIGHT],
         }
     }
 
@@ -546,7 +550,11 @@ impl Ppu {
         let count = self.scan_oam(&mut objects);
         let objects = &objects[..count];
         let window = self.window_visible_on_line();
-        self.mode3_end = dot + self.mode3_length(objects, window);
+        let length = self.mode3_length(objects, window);
+        self.mode3_end = dot + length;
+        if let Some(t) = self.line_timing.get_mut(usize::from(self.line)) {
+            *t = length | (count as u16) << 9 | u16::from(window) << 13;
+        }
         self.render_line(objects, window);
         if window {
             self.window_line = self.window_line.wrapping_add(1);
@@ -738,6 +746,12 @@ impl Ppu {
     /// Dot position within the current line (0..455) and the internal line.
     pub fn position(&self) -> (u8, u16) {
         (self.line, self.dot)
+    }
+
+    /// Per-line timing of the most recent frame: mode 3 length in dots
+    /// (bits 0–8), objects on the line (bits 9–12), window active (bit 13).
+    pub fn line_timing(&self) -> &[u16; HEIGHT] {
+        &self.line_timing
     }
 
     /// Decodes tile `index` (0..384) of VRAM into 64 colour indices.

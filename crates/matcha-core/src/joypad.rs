@@ -58,8 +58,8 @@ pub struct Joypad {
 
 impl Joypad {
     pub fn new() -> Self {
-        // Post-boot P1 reads 0xCF: both rows deselected.
-        Self { select: 0x30, pressed: Buttons::NONE, last_lines: 0x0F }
+        // Post-boot P1 reads 0xCF: both rows selected, nothing pressed.
+        Self { select: 0x00, pressed: Buttons::NONE, last_lines: 0x0F }
     }
 
     /// Current state of input lines P10–P13 (0 = low / pressed).

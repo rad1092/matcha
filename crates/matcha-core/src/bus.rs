@@ -93,6 +93,8 @@ pub struct SystemBus {
     hram: [u8; 0x7F],
     ie: u8,
     if_: u8,
+    /// IF bits raised too late in the current M-cycle to be dispatched yet.
+    if_deferred: u8,
     dma: Dma,
     boot_rom: Option<Box<[u8; 0x100]>>,
     boot_rom_mapped: bool,
@@ -129,6 +131,7 @@ impl SystemBus {
             hram: [0; 0x7F],
             ie: 0,
             if_: if booting { 0 } else { 0x01 },
+            if_deferred: 0,
             dma: Dma { reg: 0xFF, ..Dma::default() },
             boot_rom_mapped: booting,
             boot_rom,
@@ -146,6 +149,7 @@ impl SystemBus {
     #[inline]
     fn tick(&mut self) {
         self.cycles += 1;
+        self.if_deferred = 0;
         let t = self.timer.tick();
         if t.interrupt {
             self.if_ |= irq::TIMER;
@@ -157,12 +161,8 @@ impl SystemBus {
             self.if_ |= irq::SERIAL;
         }
         let p = self.ppu.tick();
-        if p.vblank {
-            self.if_ |= irq::VBLANK;
-        }
-        if p.stat {
-            self.if_ |= irq::STAT;
-        }
+        self.if_deferred |= p.late & !self.if_;
+        self.if_ |= p.now | p.late;
         self.apu.tick();
         self.tick_dma();
         self.cart.tick_rtc(4);
@@ -213,7 +213,7 @@ impl SystemBus {
             }
             0x0000..=0x7FFF => self.cart.read_rom(addr),
             0x8000..=0x9FFF => {
-                if self.ppu.vram_accessible() {
+                if self.ppu.vram_readable() {
                     self.ppu.vram[usize::from(addr - 0x8000)]
                 } else {
                     0xFF
@@ -222,14 +222,14 @@ impl SystemBus {
             0xA000..=0xBFFF => self.cart.read_ram(addr),
             0xC000..=0xFDFF => self.wram[usize::from(addr & 0x1FFF)],
             0xFE00..=0xFE9F => {
-                if self.ppu.oam_accessible() && !self.dma.active {
+                if self.ppu.oam_readable() && !self.dma.active {
                     self.ppu.oam[usize::from(addr - 0xFE00)]
                 } else {
                     0xFF
                 }
             }
             0xFEA0..=0xFEFF => {
-                if self.ppu.oam_accessible() && !self.dma.active { 0x00 } else { 0xFF }
+                if self.ppu.oam_readable() && !self.dma.active { 0x00 } else { 0xFF }
             }
             0xFF00..=0xFF7F => self.read_io(addr),
             0xFF80..=0xFFFE => self.hram[usize::from(addr - 0xFF80)],
@@ -254,14 +254,14 @@ impl SystemBus {
         match addr {
             0x0000..=0x7FFF => self.cart.write_rom(addr, value),
             0x8000..=0x9FFF => {
-                if self.ppu.vram_accessible() {
+                if self.ppu.vram_writable() {
                     self.ppu.vram[usize::from(addr - 0x8000)] = value;
                 }
             }
             0xA000..=0xBFFF => self.cart.write_ram(addr, value),
             0xC000..=0xFDFF => self.wram[usize::from(addr & 0x1FFF)] = value,
             0xFE00..=0xFE9F => {
-                if self.ppu.oam_accessible() && !self.dma.active {
+                if self.ppu.oam_writable() && !self.dma.active {
                     self.ppu.oam[usize::from(addr - 0xFE00)] = value;
                 }
             }
@@ -296,11 +296,7 @@ impl SystemBus {
                 self.dma.pending_source = value;
                 self.dma.start_delay = 2;
             }
-            0xFF40..=0xFF4B => {
-                if self.ppu.write_register(addr, value) {
-                    self.if_ |= irq::STAT;
-                }
-            }
+            0xFF40..=0xFF4B => self.if_ |= self.ppu.write_register(addr, value),
             0xFF50 => {
                 if value != 0 {
                     self.boot_rom_mapped = false;
@@ -393,7 +389,7 @@ impl SystemBus {
         self.serial.save(w);
         w.u8s(&self.wram[..]);
         w.u8s(&self.hram);
-        w.u8s(&[self.ie, self.if_]);
+        w.u8s(&[self.ie, self.if_, self.if_deferred]);
         let d = &self.dma;
         w.u8s(&[d.reg, d.source, d.index, u8::from(d.active), d.start_delay, d.pending_source]);
         w.bool(self.boot_rom_mapped);
@@ -409,9 +405,9 @@ impl SystemBus {
         self.serial.load(r)?;
         r.u8s(&mut self.wram[..])?;
         r.u8s(&mut self.hram)?;
-        let mut b = [0u8; 2];
+        let mut b = [0u8; 3];
         r.u8s(&mut b)?;
-        [self.ie, self.if_] = [b[0], b[1] & 0x1F];
+        [self.ie, self.if_, self.if_deferred] = [b[0], b[1] & 0x1F, b[2] & 0x1F];
         let mut d = [0u8; 6];
         r.u8s(&mut d)?;
         if d[2] > 160 || d[4] > 2 {
@@ -458,7 +454,7 @@ impl CpuBus for SystemBus {
 
     #[inline]
     fn pending_interrupts(&self) -> u8 {
-        self.ie & self.if_ & 0x1F
+        self.ie & self.if_ & !self.if_deferred & 0x1F
     }
 
     #[inline]

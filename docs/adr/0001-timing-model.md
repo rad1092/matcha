@@ -88,4 +88,19 @@ access window (ADR-0005).
 1. [x] `CpuBus` trait; `SystemBus` access-then-tick.
 2. [x] SingleStepTests harness checking every bus cycle (498,000 cases).
 3. [x] PPU event dots and IRQ sampling phase; Mooneye 94/94.
-4. [ ] Per-register write-phase offsets if the FIFO work needs them.
+4. [x] Per-register palette, LCDC, STAT and IF write phases for the FIFO (ADR-0009).
+
+## Refinement for the FIFO renderer (2026-09-30)
+
+[ADR-0009](0009-pixel-fifo.md) keeps the access-before-tick bus, while
+distinguishing instruction-boundary interrupt sampling from the earlier
+sample during HALT. Applying the HALT sample to running instructions had
+made normal mode-2 interrupts arrive one M-cycle late; Mealybug's explicit
+line-0 compensation exposes that error. Interrupt entry now places the
+stack writes at dots 12/16 and acknowledgement at dot 18 of its 20 dots.
+Peripheral requests after the acknowledge point can reassert IF.
+
+Palette output latches, LCDC window restarts, STAT enables and the CPU's IF
+write use their individual dot phases. The generated conformance scoreboard records remaining register
+and window edge cases; this refinement does not claim all DMG quirks are
+resolved.

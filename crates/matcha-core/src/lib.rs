@@ -738,6 +738,60 @@ mod tests {
     }
 
     #[test]
+    fn save_state_during_drawing_replays_window_objects_and_register_writes() {
+        // A debugger can save between any two instructions, including while
+        // the PPU holds partly fetched tiles and overlapping object pixels.
+        // Exercise that public contract on a moving, nonuniform scene rather
+        // than only at the frame boundary used by rewind.
+        let rom = rom_with_program(&[0x18, 0xFE]); // jr $0150; no PPU writes
+        let mut gb = GameBoy::new(rom.clone()).unwrap();
+        gb.bus.ppu.write_register(0xFF40, 0);
+        for (i, byte) in gb.bus.ppu.vram.iter_mut().enumerate() {
+            *byte = (i as u8).wrapping_mul(73).rotate_left((i % 7) as u32);
+        }
+        for i in 0..10 {
+            gb.bus.ppu.oam[i * 4..i * 4 + 4].copy_from_slice(&[32, 5 + i as u8 * 13, i as u8 * 2, (i as u8 % 8) << 4]);
+        }
+        for (addr, value) in [(0xFF43, 5), (0xFF47, 0xE4), (0xFF48, 0xD2), (0xFF49, 0x6C), (0xFF4A, 12), (0xFF4B, 63)] {
+            gb.bus.ppu.write_register(addr, value);
+        }
+        gb.bus.ppu.write_register(0xFF40, 0xF7);
+        run(&mut gb, 2); // get past the blank LCD-on frame
+
+        let replay = |machine: &mut GameBoy| {
+            machine.clear_audio();
+            for n in 0..80 {
+                if n % 7 == 0 {
+                    machine.bus.ppu.write_register(0xFF47, (n as u8).wrapping_mul(31));
+                    machine.bus.ppu.write_register(0xFF42, n as u8);
+                }
+                machine.step();
+            }
+            run(machine, 2);
+        };
+        let mut checked = 0;
+        for _ in 0..20_000 {
+            gb.step();
+            if gb.peek(0xFF44) != 18 || gb.peek(0xFF41) & 3 != 3 {
+                continue;
+            }
+            let state = gb.save_state();
+            let mut resumed = GameBoy::new(rom.clone()).unwrap();
+            resumed.load_state(&state).unwrap();
+            replay(&mut gb);
+            replay(&mut resumed);
+            assert_eq!(snapshot(&gb), snapshot(&resumed), "mid-line replay {checked}");
+            assert_eq!(gb.save_state(), resumed.save_state(), "all machine state must resume identically");
+            gb.load_state(&state).unwrap();
+            checked += 1;
+            if checked == 16 {
+                break;
+            }
+        }
+        assert_eq!(checked, 16, "sample drawing at multiple instruction boundaries");
+    }
+
+    #[test]
     fn bad_states_are_rejected_without_side_effects() {
         let mut gb = GameBoy::new(test_rom(b"MATCHATEST")).unwrap();
         run(&mut gb, 10);

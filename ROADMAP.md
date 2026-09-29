@@ -28,24 +28,29 @@ acceptance tests, SameSuite, Blargg `cgb_sound`; then rerun the corpus with
 `SystemBus::new`, and implement WRAM/VRAM banking with a unit test; bump
 `STATE_VERSION`.
 
-## 2. Pixel FIFO renderer
+## 2. Remaining pixel-fetch and window quirks
 
 **Why.** 39% of the homebrew that runs takes STAT interrupts — the tool for
-raster effects — and Mealybug Tearoom, which checks mid-scanline register
-changes, passes 1 of 24. The line renderer draws each line from the
-registers as they are at the start of mode 3.
+raster effects. The new FIFO applies register changes during mode 3, but
+the remaining Mealybug and Gambatte failures still expose fetch, window
+restart and register-write collision details.
 
-**What.** Keep the event scheduler and the measured mode-3 lengths (all
-Mooneye timing tests depend on them); replace `render_line` with a
-background fetcher + pixel FIFO advanced dot by dot through mode 3, so
-SCX/SCY/BGP/LCDC/WX writes take effect mid-line. Only mode 3 needs per-dot
-work, so the fast path elsewhere stays.
+**Implemented.** A background/window fetcher and BG/OBJ queues advance
+per dot during mode 3. Live palettes, independent bitplane fetches,
+scrolling, window restarts and object stalls determine the picture and
+HBlank boundary. The event scheduler remains the fast path outside drawing
+(ADR-0009). In-flight state is serialized and validated.
+
+**What remains.** Use the named failing ROMs in `docs/conformance.json`
+to refine LCDC bitplane/address changes, window and object-fetch conflicts.
+Do not introduce ROM-specific offsets or replace hardware screenshots.
 
 **Verify.** Mealybug (24 screenshots), dmg-acid2 and every current test
 stay green; `matcha run` stays above 30× real time.
 
-**First step.** Port the Mealybug `m3_bgp_change` case first: it only needs
-BGP sampled per pixel.
+**First step.** Compare a remaining single-register Mealybug failure with
+its hardware screenshot and assembly, then trace the relevant fetch phase.
+The palette-change cases now pass and provide a timing anchor.
 
 ## 3. Quality and reach
 

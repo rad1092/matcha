@@ -54,7 +54,7 @@ a crash; `--watch ADDR` shows which instructions changed a byte.
 |---|---|
 | `crates/matcha-core/src/cpu.rs` | SM83 interpreter over the `CpuBus` trait |
 | `crates/matcha-core/src/bus.rs` | Memory map, interrupts, OAM DMA, per-M-cycle clocking |
-| `crates/matcha-core/src/ppu.rs` | LCD timing (event-scheduled), access windows, line renderer |
+| `crates/matcha-core/src/ppu.rs` | LCD timing (event-scheduled), access windows, per-dot BG/OBJ pixel FIFOs |
 | `crates/matcha-core/src/apu.rs` | Sound: channels, frame sequencer, mixer, resampler |
 | `crates/matcha-core/src/{timer,joypad,serial,cartridge,state,disasm,profile}.rs` | The rest of the machine and its tooling |
 | `crates/matcha-core/src/lib.rs` | `GameBoy` facade: run loop, debugger API, unit tests |

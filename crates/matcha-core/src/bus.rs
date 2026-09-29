@@ -105,8 +105,11 @@ pub struct SystemBus {
     hram: [u8; 0x7F],
     ie: u8,
     if_: u8,
-    /// IF bits raised too late in the current M-cycle to be dispatched yet.
+    /// IF bits raised after the HALT sampling point in this M-cycle.
     if_deferred: u8,
+    /// Peripheral edges in the final two dots, including reasserted bits.
+    /// Interrupt-entry acknowledge is at the middle of its last M-cycle.
+    if_reasserted_late: u8,
     dma: Dma,
     boot_rom: Option<Box<[u8; 0x100]>>,
     boot_rom_mapped: bool,
@@ -153,6 +156,7 @@ impl SystemBus {
             ie: 0,
             if_: if booting { 0 } else { 0x01 },
             if_deferred: 0,
+            if_reasserted_late: 0,
             dma: Dma { reg: 0xFF, ..Dma::default() },
             boot_rom_mapped: booting,
             boot_rom,
@@ -198,21 +202,35 @@ impl SystemBus {
     /// Advances every peripheral by one M-cycle.
     #[inline]
     fn tick(&mut self) {
+        self.tick_with_if_write(false);
+    }
+
+    #[inline]
+    fn tick_with_if_write(&mut self, cpu_if_write: bool) {
         self.cycles += 1;
         self.if_deferred = 0;
+        self.if_reasserted_late = 0;
         let t = self.timer.tick();
         if t.interrupt {
             self.if_ |= irq::TIMER;
+            // DIV advances in complete M-cycles; overflow reload and serial
+            // edges land at the final dot, after the ISR acknowledge point.
+            self.if_reasserted_late |= irq::TIMER;
         }
         if t.div_apu {
             self.apu.frame_sequencer();
         }
         if t.serial_clock && self.serial.clock() {
             self.if_ |= irq::SERIAL;
+            self.if_reasserted_late |= irq::SERIAL;
         }
         let p = self.ppu.tick();
+        self.if_reasserted_late |= p.late;
         self.if_deferred |= p.late & !self.if_;
-        self.if_ |= p.now | p.late;
+        // IF is driven by the CPU one dot later than ordinary I/O writes
+        // (SameBoy's GB_CONFLICT_WRITE_CPU). A PPU edge on that first dot
+        // loses to the write; subsequent edges can set the written bit again.
+        self.if_ |= if cpu_if_write { p.after_first } else { p.now | p.late };
         self.apu.tick();
         self.tick_dma();
         self.cart.tick_rtc(4);
@@ -467,7 +485,7 @@ impl SystemBus {
         self.serial.save(w);
         w.u8s(&self.wram[..]);
         w.u8s(&self.hram);
-        w.u8s(&[self.ie, self.if_, self.if_deferred]);
+        w.u8s(&[self.ie, self.if_, self.if_deferred, self.if_reasserted_late]);
         let d = &self.dma;
         w.u8s(&[d.reg, d.source, d.index, u8::from(d.active), d.start_delay, d.pending_source]);
         w.bool(self.boot_rom_mapped);
@@ -483,9 +501,9 @@ impl SystemBus {
         self.serial.load(r)?;
         r.u8s(&mut self.wram[..])?;
         r.u8s(&mut self.hram)?;
-        let mut b = [0u8; 3];
+        let mut b = [0u8; 4];
         r.u8s(&mut b)?;
-        [self.ie, self.if_, self.if_deferred] = [b[0], b[1] & 0x1F, b[2] & 0x1F];
+        [self.ie, self.if_, self.if_deferred, self.if_reasserted_late] = [b[0], b[1] & 0x1F, b[2] & 0x1F, b[3] & 0x1F];
         let mut d = [0u8; 6];
         r.u8s(&mut d)?;
         if d[2] > 160 || d[4] > 2 || (d[3] != 0 && d[2] == 160) {
@@ -536,7 +554,8 @@ impl CpuBus for SystemBus {
         if addr & 0xFF00 == 0xFE00 && !self.ppu.oam_writable() {
             self.ppu.oam_bug_write();
         }
-        match self.dma_conflict(addr) {
+        let conflict = self.dma_conflict(addr);
+        match conflict {
             // The write lands on the DMA's address instead (on ROM that is a
             // mapper register) ...
             Some(dma_addr) if dma_addr < 0xA000 => self.dma.collided = Some(Collision::Redirect(dma_addr, value)),
@@ -545,7 +564,7 @@ impl CpuBus for SystemBus {
             Some(_) => self.dma.collided = Some(Collision::MaskOam(value)),
             None => self.write_mem(addr, value),
         }
-        self.tick();
+        self.tick_with_if_write(addr == 0xFF0F && conflict.is_none());
     }
 
     #[inline]
@@ -563,12 +582,20 @@ impl CpuBus for SystemBus {
 
     #[inline]
     fn pending_interrupts(&self) -> u8 {
-        self.ie & self.if_ & !self.if_deferred & 0x1F
+        self.ie & self.if_ & 0x1F
+    }
+
+    fn halted_pending_interrupts(&self) -> u8 {
+        // SameBoy sm83_cpu.c: a halted CPU samples IE/IF halfway through
+        // its idle cycle. A running CPU samples after flushing that cycle.
+        // Applying the early sample to both delays normal mode-2 IRQs by
+        // one M-cycle (Mealybug m3_bgp_change's line-0 compensation).
+        self.pending_interrupts() & !self.if_deferred
     }
 
     #[inline]
     fn acknowledge_interrupt(&mut self, mask: u8) {
-        self.if_ &= !mask;
+        self.if_ = (self.if_ & !mask) | (mask & self.if_reasserted_late);
     }
 
     fn stop(&mut self) -> bool {

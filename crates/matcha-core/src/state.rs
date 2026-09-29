@@ -12,7 +12,7 @@ use core::fmt;
 /// File magic: "MTCHST" + format version.
 const MAGIC: &[u8; 6] = b"MTCHST";
 /// Bump whenever any component's save layout changes.
-pub const STATE_VERSION: u16 = 1;
+pub const STATE_VERSION: u16 = 2;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StateError {

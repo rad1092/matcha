@@ -1,6 +1,6 @@
 # ADR-0002: Scanline renderer with modelled mode-3 timing; pixel FIFO deferred
 
-**Status:** Accepted (FIFO tracked as the next accuracy milestone)
+**Status:** Superseded by [ADR-0009](0009-pixel-fifo.md) for rendering; the LCD timing event model is retained.
 **Date:** 2026-09-28
 **Deciders:** HONGDAE KIM (owner), Claude (implementation)
 
@@ -58,4 +58,4 @@ real stretch from objects and the window.
 
 1. [x] Scanline renderer, object priority, 10-object limit, 8x16, window line counter.
 2. [x] Mode-3 penalty model; per-line timing exposed to debuggers.
-3. [ ] Fetcher/FIFO renderer behind the same event timeline; target Mealybug.
+3. [x] Fetcher/FIFO renderer (ADR-0009); remaining Mealybug quirks tracked in the scoreboard.

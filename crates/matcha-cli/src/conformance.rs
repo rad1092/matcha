@@ -7,7 +7,7 @@
 //!   then check the Fibonacci registers or compare the screen.
 
 use crate::image;
-use matcha_core::{GameBoy, RunEvent};
+use matcha_core::{GameBoy, Model, RunEvent};
 use serde_json::json;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -41,6 +41,7 @@ pub enum Judge {
 #[derive(Clone, Debug)]
 pub struct Case {
     pub suite: &'static str,
+    pub model: Model,
     pub name: String,
     pub path: PathBuf,
     pub judge: Judge,
@@ -111,8 +112,53 @@ fn mooneye_runs_on_dmg(stem: &str) -> bool {
     }
 }
 
-/// Discovers all DMG-relevant cases under the unpacked release directory.
-pub fn discover(root: &Path) -> Vec<Case> {
+/// Discovers hardware-specific cases under the unpacked release directory.
+pub struct Discovery {
+    pub cases: Vec<Case>,
+    pub excluded: Vec<ExcludedCase>,
+}
+
+pub struct ExcludedCase {
+    pub suite: &'static str,
+    pub name: String,
+    pub reason: &'static str,
+}
+
+pub fn discover(root: &Path, model: Model) -> Discovery {
+    if model == Model::Cgb {
+        let (excluded, cases): (Vec<_>, Vec<_>) =
+            discover_cgb(root).into_iter().partition(|case| cgb_compatibility_reason(case).is_some());
+        return Discovery {
+            cases,
+            excluded: excluded
+                .into_iter()
+                .map(|case| {
+                    let reason = cgb_compatibility_reason(&case).unwrap();
+                    ExcludedCase { suite: case.suite, name: case.name, reason }
+                })
+                .collect(),
+        };
+    }
+    Discovery { cases: discover_dmg(root), excluded: Vec::new() }
+}
+
+/// Model::Cgb currently forces native CGB operation. A non-colour ROM's
+/// compatibility-mode screenshots and boot state are therefore inapplicable.
+/// Common CPU/timer/interrupt protocol tests remain useful diagnostics.
+fn cgb_compatibility_reason(case: &Case) -> Option<&'static str> {
+    if case.suite == "mooneye-cgb" && case.path.file_stem()?.to_string_lossy().starts_with("boot_") {
+        return Some("requires CGB DMG-compatibility boot state; native CGB skips that boot path");
+    }
+    if !matches!(case.suite, "mealybug-cgb" | "gambatte-cgb") {
+        return None;
+    }
+    let rom = std::fs::read(&case.path).ok()?;
+    (rom.get(0x143).copied().unwrap_or(0) & 0x80 == 0).then_some(
+        "header 0x143 has no CGB flag; its CGB hardware reference requires unsupported DMG-compatibility mode",
+    )
+}
+
+fn discover_dmg(root: &Path) -> Vec<Case> {
     let mut cases = Vec::new();
     let b = root.join("blargg");
     let blargg_main: [(&str, u32, Option<&str>); 7] = [
@@ -129,6 +175,7 @@ pub fn discover(root: &Path) -> Vec<Case> {
         if path.exists() {
             cases.push(Case {
                 suite: "blargg",
+                model: Model::Dmg,
                 name: rel(root, &path),
                 judge: Judge::Blargg { seconds, screenshot: png.map(|p| b.join(p)) },
                 path,
@@ -145,6 +192,7 @@ pub fn discover(root: &Path) -> Vec<Case> {
         for path in gb_files(&b.join(sub)) {
             cases.push(Case {
                 suite: "blargg",
+                model: Model::Dmg,
                 name: rel(root, &path),
                 judge: Judge::Blargg { seconds: 30, screenshot: None },
                 path,
@@ -157,7 +205,13 @@ pub fn discover(root: &Path) -> Vec<Case> {
         for path in gb_files(&m.join(sub)) {
             let stem = path.file_stem().unwrap().to_string_lossy().to_string();
             if mooneye_runs_on_dmg(&stem) {
-                cases.push(Case { suite: "mooneye", name: rel(root, &path), judge: Judge::Fibonacci, path });
+                cases.push(Case {
+                    suite: "mooneye",
+                    model: Model::Dmg,
+                    name: rel(root, &path),
+                    judge: Judge::Fibonacci,
+                    path,
+                });
             }
         }
     }
@@ -166,6 +220,7 @@ pub fn discover(root: &Path) -> Vec<Case> {
     if acid.exists() {
         cases.push(Case {
             suite: "dmg-acid2",
+            model: Model::Dmg,
             name: rel(root, &acid),
             judge: Judge::Screenshot(root.join("dmg-acid2/dmg-acid2-dmg.png")),
             path: acid,
@@ -183,17 +238,131 @@ pub fn discover(root: &Path) -> Vec<Case> {
             }
             Judge::GambatteScreenshot(reference)
         };
-        cases.push(Case { suite: "gambatte", name: rel(root, &path), judge, path });
+        cases.push(Case { suite: "gambatte", model: Model::Dmg, name: rel(root, &path), judge, path });
     }
 
     for path in gb_files(&root.join("mealybug-tearoom-tests/ppu")) {
         let reference = path.with_file_name(format!("{}_dmg_blob.png", path.file_stem().unwrap().to_string_lossy()));
         if reference.exists() {
-            cases.push(Case { suite: "mealybug", name: rel(root, &path), judge: Judge::Screenshot(reference), path });
+            cases.push(Case {
+                suite: "mealybug",
+                model: Model::Dmg,
+                name: rel(root, &path),
+                judge: Judge::Screenshot(reference),
+                path,
+            });
         }
     }
     cases.retain(|c| !EXCLUDED.iter().any(|(name, _)| c.name == *name));
     cases
+}
+
+/// CGB cases have separate suite identities; never compare their results to
+/// DMG expectations. References target CGB C where a silicon revision matters.
+/// All resources are already in the checksum-pinned test-ROM release.
+fn discover_cgb(root: &Path) -> Vec<Case> {
+    let mut cases: Vec<_> = discover_dmg(root)
+        .into_iter()
+        .filter(|case| case.suite == "blargg" && !case.name.contains("dmg_sound") && !case.name.contains("oam_bug"))
+        .map(|mut case| {
+            case.model = Model::Cgb;
+            case.suite = "blargg-cgb";
+            case
+        })
+        .collect();
+    for sub in ["acceptance", "emulator-only", "misc"] {
+        for path in gb_files(&root.join("mooneye-test-suite").join(sub)) {
+            if mooneye_runs_on_cgb(&path.file_stem().unwrap().to_string_lossy()) {
+                cases.push(Case {
+                    suite: "mooneye-cgb",
+                    model: Model::Cgb,
+                    name: rel(root, &path),
+                    path,
+                    judge: Judge::Fibonacci,
+                });
+            }
+        }
+    }
+    for suite in ["cgb-acid2", "cgb-acid-hell"] {
+        let path = root.join(suite).join(format!("{suite}.gbc"));
+        let reference = root.join(suite).join(format!("{suite}.png"));
+        if path.exists() && reference.exists() {
+            cases.push(Case {
+                suite,
+                model: Model::Cgb,
+                name: rel(root, &path),
+                path,
+                judge: Judge::Screenshot(reference),
+            });
+        }
+    }
+    for path in rom_files(&root.join("gambatte"), &["gb", "gbc"]) {
+        let stem = path.file_stem().unwrap().to_string_lossy();
+        let judge = if let Some(hex) = gambatte_cgb_expectation(&stem) {
+            Judge::GambatteHex(hex)
+        } else {
+            let reference = ["_dmg08_cgb04c.png", "_cgb04c.png"]
+                .into_iter()
+                .map(|suffix| path.with_file_name(format!("{stem}{suffix}")))
+                .find(|p| p.exists());
+            let Some(reference) = reference else { continue };
+            Judge::GambatteScreenshot(reference)
+        };
+        cases.push(Case { suite: "gambatte-cgb", model: Model::Cgb, name: rel(root, &path), path, judge });
+    }
+    for path in gb_files(&root.join("mealybug-tearoom-tests/ppu")) {
+        let reference = path.with_file_name(format!("{}_cgb_c.png", path.file_stem().unwrap().to_string_lossy()));
+        if reference.exists() {
+            cases.push(Case {
+                suite: "mealybug-cgb",
+                model: Model::Cgb,
+                name: rel(root, &path),
+                path,
+                judge: Judge::Screenshot(reference),
+            });
+        }
+    }
+    // These tests exercise CGB registers and use the documented Fibonacci
+    // protocol. Exclude SGB and APU tests with other model/revision assumptions.
+    for sub in ["dma", "ppu", "interrupt"] {
+        for path in gb_files(&root.join("same-suite").join(sub)) {
+            cases.push(Case {
+                suite: "same-suite-cgb",
+                model: Model::Cgb,
+                name: rel(root, &path),
+                path,
+                judge: Judge::Fibonacci,
+            });
+        }
+    }
+    cases
+}
+
+fn mooneye_runs_on_cgb(stem: &str) -> bool {
+    let Some((_, suffix)) = stem.rsplit_once('-') else { return true };
+    if let Some(revisions) = suffix.strip_prefix("cgb") {
+        return revisions.is_empty() || revisions.contains('C');
+    }
+    if suffix.chars().all(|c| c.is_ascii_uppercase()) {
+        return suffix.contains('C');
+    }
+    !["dmg", "mgb", "sgb", "agb", "ags"].iter().any(|prefix| suffix.starts_with(prefix))
+}
+
+/// Matches the original runner's shared, model-specific and CGB-only names.
+fn gambatte_cgb_expectation(stem: &str) -> Option<String> {
+    let rest = if let Some((_, rest)) = stem.split_once("_cgb04c_out") {
+        rest
+    } else if stem.contains("_dmg08_") {
+        return None;
+    } else {
+        stem.split_once("_out")?.1
+    };
+    if rest.starts_with("audio") {
+        return None;
+    }
+    let hex: String = rest.chars().take_while(char::is_ascii_hexdigit).collect();
+    (!hex.is_empty()).then_some(hex)
 }
 
 /// Blargg's result protocol in cartridge RAM: Some(status) once finished.
@@ -263,11 +432,34 @@ fn run_blargg(gb: &mut GameBoy, seconds: u32, screenshot: Option<&Path>) -> Verd
     }
 }
 
+// The original Gambatte runner compares these black/white hex glyphs.
+// https://github.com/pokemon-speedrunning/gambatte-core/blob/master/test/testrunner.cpp
+const HEX_GLYPHS: [[u8; 8]; 16] = [
+    [0x00, 0x7F, 0x41, 0x41, 0x41, 0x41, 0x41, 0x7F],
+    [0x00, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08],
+    [0x00, 0x7F, 0x01, 0x01, 0x7F, 0x40, 0x40, 0x7F],
+    [0x00, 0x7F, 0x01, 0x01, 0x3F, 0x01, 0x01, 0x7F],
+    [0x00, 0x41, 0x41, 0x41, 0x7F, 0x01, 0x01, 0x01],
+    [0x00, 0x7F, 0x40, 0x40, 0x7E, 0x01, 0x01, 0x7E],
+    [0x00, 0x7F, 0x40, 0x40, 0x7F, 0x41, 0x41, 0x7F],
+    [0x00, 0x7F, 0x01, 0x02, 0x04, 0x08, 0x10, 0x10],
+    [0x00, 0x3E, 0x41, 0x41, 0x3E, 0x41, 0x41, 0x3E],
+    [0x00, 0x7F, 0x41, 0x41, 0x7F, 0x01, 0x01, 0x7F],
+    [0x00, 0x08, 0x22, 0x41, 0x7F, 0x41, 0x41, 0x41],
+    [0x00, 0x7E, 0x41, 0x41, 0x7E, 0x41, 0x41, 0x7E],
+    [0x00, 0x3E, 0x41, 0x40, 0x40, 0x40, 0x41, 0x3E],
+    [0x00, 0x7E, 0x41, 0x41, 0x41, 0x41, 0x41, 0x7E],
+    [0x00, 0x7F, 0x40, 0x40, 0x7F, 0x40, 0x40, 0x7F],
+    [0x00, 0x7F, 0x40, 0x40, 0x7F, 0x40, 0x40, 0x40],
+];
 /// Reads the hex digits a Gambatte test printed. Its output routine draws
 /// digit N with tile N from the top-left of the background map; to make sure
 /// the judgement is about what is on screen, each tile is also compared with
 /// the pixels actually rendered there.
 fn gambatte_printed(gb: &GameBoy, len: usize) -> Result<String, String> {
+    if gb.model() == Model::Cgb {
+        return gambatte_cgb_printed(gb, len);
+    }
     let regs = gb.ppu_registers(); // LCDC STAT SCY SCX LY LYC BGP ...
     let (lcdc, scy, scx, bgp) = (regs[0], regs[2], regs[3], regs[6]);
     let map = if lcdc & 0x08 != 0 { 0x9C00u16 } else { 0x9800 };
@@ -313,7 +505,7 @@ fn run_case(case: &Case) -> Outcome {
             return Outcome { case: case.clone(), verdict: Verdict::Error(e.to_string()), frames: 0 };
         }
     };
-    let mut gb = match GameBoy::new(rom) {
+    let mut gb = match GameBoy::new_with_model(rom, case.model) {
         Ok(mut gb) => {
             gb.set_audio_output(false);
             gb
@@ -353,7 +545,7 @@ fn run_case(case: &Case) -> Outcome {
             while gb.frame_count() < 15 {
                 gb.run_frame();
             }
-            match image::diff_against(&gb, reference) {
+            match image::diff_gambatte(&gb, reference) {
                 Ok(0) => Verdict::Pass,
                 Ok(n) => Verdict::Fail(format!("{n} pixels differ from reference")),
                 Err(e) => Verdict::Error(e),
@@ -396,17 +588,24 @@ pub fn run_all(cases: &[Case], threads: usize) -> Vec<Outcome> {
 }
 
 /// Suites in scoreboard order, with a one-line description.
-const SUITES: [(&str, &str); 5] = [
+const SUITES: &[(&str, &str)] = &[
     ("blargg", "CPU, timing, sound and OAM-bug tests by Shay Green"),
     ("mooneye", "Mooneye Test Suite: acceptance + emulator-only (DMG-applicable)"),
     ("dmg-acid2", "PPU rendering torture test"),
     ("gambatte", "Gambatte hardware-verified tests: DMG hex-result and screenshot cases"),
     ("mealybug", "Mealybug Tearoom: mid-scanline register, fetch and window effects"),
+    ("blargg-cgb", "Blargg CPU and timing on CGB"),
+    ("mooneye-cgb", "Mooneye acceptance, emulator-only and CGB misc cases"),
+    ("cgb-acid2", "CGB rendering and priority"),
+    ("cgb-acid-hell", "CGB rendering stress test"),
+    ("gambatte-cgb", "CGB-C hardware references; Gambatte color conversion"),
+    ("mealybug-cgb", "CGB-C reference screenshots"),
+    ("same-suite-cgb", "SameSuite CGB DMA, palette and interrupt tests"),
 ];
 
-pub fn scoreboard_markdown(outcomes: &[Outcome]) -> String {
+pub fn scoreboard_markdown(outcomes: &[Outcome], excluded: &[ExcludedCase]) -> String {
     let mut md = String::from("| Suite | Passed | Total | |\n|---|---:|---:|---|\n");
-    for (suite, desc) in SUITES {
+    for &(suite, desc) in SUITES {
         let of: Vec<_> = outcomes.iter().filter(|o| o.case.suite == suite).collect();
         if of.is_empty() {
             continue;
@@ -417,9 +616,19 @@ pub fn scoreboard_markdown(outcomes: &[Outcome]) -> String {
     let total = outcomes.len();
     let pass = outcomes.iter().filter(|o| o.verdict == Verdict::Pass).count();
     md += &format!("| **all** | **{pass}** | **{total}** | |\n");
-    md += "\nLeft out because they cannot pass on hardware either:\n\n";
-    for (name, why) in EXCLUDED {
-        md += &format!("- `{name}`: {why}\n");
+    if outcomes.iter().any(|o| o.case.model == Model::Dmg) {
+        md += "\nLeft out because they cannot pass on hardware either:\n\n";
+        for (name, why) in EXCLUDED {
+            md += &format!("- `{name}`: {why}\n");
+        }
+    } else {
+        md += "\nNative CGB screenshots use CGB C references where revision-specific. Common CPU/timer/interrupt tests also run as diagnostics. CGB DMG-compatibility mode is not implemented. Gambatte audio-result tests and SameSuite APU/SGB tests are outside this scoreboard.\n";
+    }
+    if !excluded.is_empty() {
+        md += &format!("\n{} incompatible cases excluded from the total (not counted as passes):\n\n", excluded.len());
+        for case in excluded {
+            md += &format!("- `{}`: {}\n", case.name, case.reason);
+        }
     }
     let failures: Vec<_> = outcomes.iter().filter(|o| o.verdict != Verdict::Pass).collect();
     if !failures.is_empty() {
@@ -458,17 +667,18 @@ pub fn compare<'a>(outcomes: &'a [Outcome], baseline: &serde_json::Value) -> Res
             return Err("scoreboard row without suite/rom/status".into());
         };
         if status == "pass" {
-            passed.insert((suite, rom));
+            passed.insert((suite, rom, row["model"].as_str().unwrap_or("dmg")));
         }
     }
-    let was_passing = |o: &Outcome| passed.contains(&(o.case.suite, o.case.name.as_str()));
+    let was_passing =
+        |o: &Outcome| passed.contains(&(o.case.suite, o.case.name.as_str(), crate::model_name(o.case.model)));
     Ok(BaselineDiff {
         regressed: outcomes.iter().filter(|o| o.verdict != Verdict::Pass && was_passing(o)).collect(),
         fixed: outcomes.iter().filter(|o| o.verdict == Verdict::Pass && !was_passing(o)).collect(),
     })
 }
 
-pub fn scoreboard_json(outcomes: &[Outcome]) -> serde_json::Value {
+pub fn scoreboard_json(outcomes: &[Outcome], excluded: &[ExcludedCase]) -> serde_json::Value {
     let rows: Vec<_> = outcomes
         .iter()
         .map(|o| {
@@ -479,6 +689,7 @@ pub fn scoreboard_json(outcomes: &[Outcome]) -> serde_json::Value {
             };
             json!({
                 "suite": o.case.suite,
+                "model": crate::model_name(o.case.model),
                 "rom": o.case.name,
                 "status": status,
                 "detail": detail,
@@ -486,5 +697,97 @@ pub fn scoreboard_json(outcomes: &[Outcome]) -> serde_json::Value {
             })
         })
         .collect();
-    json!({ "emulator": "matcha", "version": env!("CARGO_PKG_VERSION"), "results": rows })
+    let mut report = json!({ "emulator": "matcha", "version": env!("CARGO_PKG_VERSION"), "results": rows });
+    if outcomes.iter().any(|o| o.case.model == Model::Cgb) || !excluded.is_empty() {
+        report["mode"] = json!("native-cgb");
+        report["excluded_count"] = json!(excluded.len());
+        report["excluded"] = json!(
+            excluded
+                .iter()
+                .map(|case| json!({
+                    "suite": case.suite, "model": "cgb", "rom": case.name, "reason": case.reason,
+                }))
+                .collect::<Vec<_>>()
+        );
+    }
+    report
+}
+
+fn gambatte_cgb_printed(gb: &GameBoy, len: usize) -> Result<String, String> {
+    let mut rgba = vec![0; matcha_core::WIDTH * matcha_core::HEIGHT * 4];
+    gb.render_rgba(&matcha_core::palettes::GREY, &mut rgba);
+    (0..len.min(20))
+        .map(|column| {
+            HEX_GLYPHS
+                .iter()
+                .position(|glyph| {
+                    (0..64).all(|p| {
+                        let offset = ((p / 8) * matcha_core::WIDTH + column * 8 + p % 8) * 4;
+                        let expected = if glyph[p / 8] & (0x80 >> (p % 8)) != 0 { 0 } else { 0xF8 };
+                        rgba[offset..offset + 3].iter().all(|c| c & 0xF8 == expected)
+                    })
+                })
+                .map(|digit| char::from_digit(digit as u32, 16).unwrap().to_ascii_uppercase())
+                .ok_or_else(|| format!("column {column}: the screen does not show a hex digit"))
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn model_specific_names_do_not_borrow_dmg_results() {
+        assert_eq!(gambatte_cgb_expectation("x_dmg08_out6576_cgb04c_out65AA"), Some("65AA".into()));
+        assert_eq!(gambatte_cgb_expectation("x_dmg08_cgb04c_outF"), Some("F".into()));
+        assert_eq!(gambatte_cgb_expectation("x_out0"), Some("0".into()));
+        assert_eq!(gambatte_cgb_expectation("x_dmg08_out3"), None);
+        assert_eq!(gambatte_cgb_expectation("x_cgb04c_outaudio1"), None);
+        assert!(mooneye_runs_on_cgb("boot_div-cgbABCDE"));
+        assert!(!mooneye_runs_on_cgb("boot_div-cgb0"));
+        assert!(!mooneye_runs_on_cgb("stat_write-GS"));
+        assert!(mooneye_runs_on_cgb("unused_hwio-C"));
+    }
+    #[test]
+    fn compatibility_cases_are_excluded_explicitly_without_becoming_passes() {
+        let path = std::env::temp_dir().join(format!("matcha-compat-{}.gb", std::process::id()));
+        let mut rom = vec![0; 0x150];
+        std::fs::write(&path, &rom).unwrap();
+        let mut case = Case {
+            suite: "mealybug-cgb",
+            model: Model::Cgb,
+            name: "compat.gb".into(),
+            path: path.clone(),
+            judge: Judge::Screenshot("compat.png".into()),
+        };
+        let reason = cgb_compatibility_reason(&case).expect("DMG-compatible CGB screenshot is inapplicable");
+        case.suite = "mooneye-cgb";
+        assert!(cgb_compatibility_reason(&case).is_none(), "ordinary protocol tests stay available");
+        case.suite = "mealybug-cgb";
+        rom[0x143] = 0x80;
+        std::fs::write(&path, &rom).unwrap();
+        assert!(cgb_compatibility_reason(&case).is_none(), "native CGB references remain applicable");
+        std::fs::remove_file(path).unwrap();
+        let excluded = [ExcludedCase { suite: "mealybug-cgb", name: "compat.gb".into(), reason }];
+        let report = scoreboard_json(&[], &excluded);
+        assert_eq!(report["excluded_count"], 1);
+        assert!(report["results"].as_array().unwrap().is_empty());
+        assert_eq!(report["excluded"][0]["rom"], "compat.gb");
+    }
+
+    #[test]
+    fn legacy_baseline_is_dmg_only() {
+        let case = Case {
+            suite: "example",
+            model: Model::Cgb,
+            name: "same.gb".into(),
+            path: "same.gb".into(),
+            judge: Judge::Fibonacci,
+        };
+        let outcomes = [Outcome { case, verdict: Verdict::Fail("failed".into()), frames: 1 }];
+        let baseline = json!({ "results": [{ "suite":"example", "rom":"same.gb", "status":"pass" }] });
+        assert!(compare(&outcomes, &baseline).unwrap().regressed.is_empty());
+        let cgb = json!({ "results": [{ "suite":"example", "rom":"same.gb", "status":"pass", "model":"cgb" }] });
+        assert_eq!(compare(&outcomes, &cgb).unwrap().regressed.len(), 1);
+    }
 }

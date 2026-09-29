@@ -1,8 +1,9 @@
 //! `matcha profile`: run ROMs headless with the execution profiler on and
 //! emit one JSON record per ROM (the input to `analysis/`).
 
+use crate::{ModelChoice, model_name};
 use matcha_core::profile::REGION_NAMES;
-use matcha_core::{Buttons, GameBoy, Options, RunEvent};
+use matcha_core::{Buttons, GameBoy, Model, Options, RunEvent};
 use serde_json::{Value, json};
 use std::time::Instant;
 
@@ -120,7 +121,7 @@ impl InputDriver {
 }
 
 /// Profiles one ROM; returns a JSON record (never fails: errors are recorded).
-pub fn profile_rom(path: &str, seconds: f64, mode: InputMode, options: &Options) -> Value {
+pub fn profile_rom(path: &str, seconds: f64, mode: InputMode, options: &Options, model: ModelChoice) -> Value {
     let started = Instant::now();
     let rom = match std::fs::read(path) {
         Ok(r) => r,
@@ -128,7 +129,13 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode, options: &Options)
     };
     let rom_len = rom.len();
     let mut input = InputDriver::new(mode, &rom);
-    let mut gb = match GameBoy::with_options(rom, options.clone()) {
+    let mut options = options.clone();
+    options.model = model.resolve(&rom);
+    let power_on_ram = match options.power_on_ram {
+        matcha_core::PowerOnRam::Zero => json!({"mode": "zero"}),
+        matcha_core::PowerOnRam::Noise(seed) => json!({"mode": "noise", "seed": seed}),
+    };
+    let mut gb = match GameBoy::with_options(rom, options) {
         Ok(gb) => gb,
         Err(e) => {
             return json!({
@@ -141,7 +148,8 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode, options: &Options)
     let header = gb.header().clone();
     gb.set_audio_output(false);
     gb.enable_profiling();
-    let frames = (seconds * matcha_core::FRAME_RATE).round() as u64;
+    let ticks = (seconds * 4_194_304.0).round() as u64;
+    let mut rgba = vec![0; matcha_core::WIDTH * matcha_core::HEIGHT * 4];
     let mut lcd_on_frames = 0u64;
     let mut nonblank_frames = 0u64;
     let mut distinct_frames = std::collections::HashSet::new();
@@ -149,7 +157,7 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode, options: &Options)
     // comparable across emulators regardless of small timing offsets.
     let mut static_screens: Vec<u64> = Vec::new();
     let (mut last_hash, mut run) = (0u64, 0u32);
-    while gb.frame_count() < frames {
+    while gb.base_clock_ticks() < ticks {
         let frame = gb.frame_count();
         input.drive(&mut gb);
         match gb.run_frame() {
@@ -159,11 +167,23 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode, options: &Options)
         if gb.frame_count() == frame {
             continue; // no frame completed (CPU in STOP with the LCD off)
         }
-        let fb = gb.framebuffer();
+        // Keep DMG fingerprints compatible with the existing corpus. CGB
+        // colors must participate: equal indices can refer to eight palettes.
+        let fb: &[u8] = if gb.model() == Model::Cgb {
+            gb.render_rgba(&matcha_core::palettes::GREY, &mut rgba);
+            &rgba
+        } else {
+            gb.framebuffer()
+        };
         if gb.ppu_registers()[0] & 0x80 != 0 {
             lcd_on_frames += 1;
         }
-        if fb.iter().any(|&p| p != fb[0]) {
+        let nonblank = if gb.model() == Model::Cgb {
+            fb.chunks_exact(4).any(|p| p != &fb[..4])
+        } else {
+            fb.iter().any(|&p| p != fb[0])
+        };
+        if nonblank {
             nonblank_frames += 1;
         }
         let h = fnv1a(fb);
@@ -193,6 +213,12 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode, options: &Options)
         "cart_type": header.cart_type,
         "cart_type_name": header.cart_type_name(),
         "cgb_flag": header.cgb_flag,
+        "model": model_name(gb.model()),
+        "power_on_ram": power_on_ram,
+        "double_speed": gb.double_speed(),
+        "base_clock_ticks": gb.base_clock_ticks(),
+        "emulated_seconds": gb.base_clock_ticks() as f64 / 4_194_304.0,
+        "frame_hash_format": if gb.model() == Model::Cgb { "rgba8" } else { "dmg-shade-indices" },
         "sgb_flag": header.sgb_flag,
         "header_checksum_ok": header.header_checksum_ok,
         "input": if mode == InputMode::Monkey { "monkey" } else { "none" },
@@ -226,8 +252,12 @@ pub fn cmd_profile(
     input: Option<&str>,
     seconds: Result<f64, String>,
     options: &Options,
+    model: ModelChoice,
 ) -> Result<bool, String> {
     let seconds = seconds?;
+    if !seconds.is_finite() || seconds <= 0.0 {
+        return Err("profile: --seconds must be a positive finite number".into());
+    }
     if roms.is_empty() {
         return Err("profile: give at least one ROM".into());
     }
@@ -241,7 +271,7 @@ pub fn cmd_profile(
                 loop {
                     let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     let Some(rom) = roms.get(i) else { break };
-                    let rec = profile_rom(rom, seconds, mode, options);
+                    let rec = profile_rom(rom, seconds, mode, options, model);
                     results.lock().unwrap()[i] = rec;
                 }
             });

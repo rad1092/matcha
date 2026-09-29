@@ -1,7 +1,8 @@
 # Every push runs the whole definition of done (docs/adr/0008-verification.md):
 # formatting, lints, unit tests, all 498k SingleStepTests CPU cases, the
-# conformance suites (failing only on regressions against the committed
-# scoreboard), the WebAssembly build, and the MCP server end-to-end test.
+# DMG and native CGB conformance suites (failing only on regressions against
+# their separate committed scoreboards), the WebAssembly build, and the MCP
+# server end-to-end test.
 name: ci
 
 on:
@@ -30,16 +31,27 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace   # opt-level 3 with overflow checks (see Cargo.toml)
-      - name: conformance (fails on regressions only)
+      - name: DMG conformance (fails on regressions only)
+        id: dmg_conformance
         run: >
           cargo run --release -p matcha-cli --
-          test testdata/roms --baseline docs/conformance.json
+          test testdata/roms --model dmg --baseline docs/conformance.json
           --json conformance.json --markdown conformance.md
+      - name: native CGB conformance (fails on regressions only)
+        if: ${{ !cancelled() && (success() || steps.dmg_conformance.outcome == 'failure') }}
+        run: >
+          cargo run --release -p matcha-cli --
+          test testdata/roms --model cgb --baseline docs/conformance-cgb.json
+          --json conformance-cgb.json --markdown conformance-cgb.md
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: conformance
-          path: conformance.*
+          path: |
+            conformance.json
+            conformance.md
+            conformance-cgb.json
+            conformance-cgb.md
 
   wasm:
     name: wasm, web bundle, MCP server

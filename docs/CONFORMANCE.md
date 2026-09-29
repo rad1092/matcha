@@ -3,9 +3,9 @@
 | blargg | 43 | 43 | CPU, timing, sound and OAM-bug tests by Shay Green |
 | mooneye | 94 | 94 | Mooneye Test Suite: acceptance + emulator-only (DMG-applicable) |
 | dmg-acid2 | 1 | 1 | PPU rendering torture test |
-| gambatte | 1595 | 1783 | Gambatte hardware-verified tests: DMG hex-result and screenshot cases |
+| gambatte | 1642 | 1783 | Gambatte hardware-verified tests: DMG hex-result and screenshot cases |
 | mealybug | 9 | 24 | Mealybug Tearoom: mid-scanline register, fetch and window effects |
-| **all** | **1742** | **1945** | |
+| **all** | **1789** | **1945** | |
 
 Left out because they cannot pass on hardware either:
 
@@ -37,8 +37,6 @@ Left out because they cannot pass on hardware either:
 | `gambatte/dmgpalette_during_m3/scx3/dmgpalette_during_m3_5.gb` | fail: 144 pixels differ from reference |
 | `gambatte/enable_display/enable_display_ly0_sprites_m0stat_2_dmg08_cgb04c_out0.gbc` | fail: printed 3, expected 0 |
 | `gambatte/enable_display/ly0_late_scx7_m3stat_scx0_2_dmg08_out87_cgb04c_out84.gbc` | fail: printed 84, expected 87 |
-| `gambatte/irq_precedence/late_m0irq_vs_tima_scx2_halt_1_dmg08_cgb04c_out4.gbc` | fail: printed 2, expected 4 |
-| `gambatte/irq_precedence/late_m0irq_vs_tima_scx3_halt_1_dmg08_cgb04c_out4.gbc` | fail: printed 2, expected 4 |
 | `gambatte/ly0/lycint152_lyc153irq_late_retrigger_2_dmg08_cgb04c_outE0.gbc` | fail: printed E2, expected E0 |
 | `gambatte/lyc153int_m2irq/lyc153int_m2irq_ifw_1_dmg08_cgb04c_out2.gbc` | fail: printed 0, expected 2 |
 | `gambatte/lycEnable/ff41_disable_2_dmg08_out0_cgb04c_out2.gbc` | fail: printed 2, expected 0 |
@@ -134,51 +132,6 @@ Left out because they cannot pass on hardware either:
 | `gambatte/sprites/sprite_late_enable_spx1A_1_dmg08_out3.gb` | fail: printed 0, expected 3 |
 | `gambatte/sprites/sprite_late_late_disable_spx1A_1_dmg08_out0.gb` | fail: printed 3, expected 0 |
 | `gambatte/sprites/sprite_late_late_disable_spx1B_1_dmg08_out0.gb` | fail: printed 3, expected 0 |
-| `gambatte/tima/tc00_1stopstart_ff_tma_2_dmg08_cgb04c_out00.gbc` | fail: printed FF, expected 00 |
-| `gambatte/tima/tc00_1stopstart_ff_tma_3_dmg08_cgb04c_outFE.gbc` | fail: printed 00, expected FE |
-| `gambatte/tima/tc00_1stopstart_offset1_ff_tma_2_dmg08_cgb04c_out00.gbc` | fail: printed FF, expected 00 |
-| `gambatte/tima/tc00_1stopstart_offset1_ff_tma_3_dmg08_cgb04c_outFE.gbc` | fail: printed 00, expected FE |
-| `gambatte/tima/tc00_1stopstart_offset2_ff_tma_1_dmg08_cgb04c_outFF.gbc` | fail: printed FE, expected FF |
-| `gambatte/tima/tc00_1stopstart_offset2_ff_tma_2_dmg08_cgb04c_out00.gbc` | fail: printed FE, expected 00 |
-| `gambatte/tima/tc00_1stopstart_offset2_ff_tma_3_dmg08_cgb04c_outFE.gbc` | fail: printed FF, expected FE |
-| `gambatte/tima/tc00_fe_ff_2_dmg08_cgb04c_outFF.gbc` | fail: printed FE, expected FF |
-| `gambatte/tima/tc00_ff_tma_2_dmg08_cgb04c_out00.gbc` | fail: printed FF, expected 00 |
-| `gambatte/tima/tc00_ff_tma_3_dmg08_cgb04c_outFE.gbc` | fail: printed 00, expected FE |
-| `gambatte/tima/tc00_irq_2_dmg08_cgb04c_outE4.gbc` | fail: printed E0, expected E4 |
-| `gambatte/tima/tc00_late_stop_inc_2_dmg08_cgb04c_outFF.gbc` | fail: printed FE, expected FF |
-| `gambatte/tima/tc00_late_stop_irq_2_dmg08_cgb04c_outE4.gbc` | fail: printed E0, expected E4 |
-| `gambatte/tima/tc00_late_stop_of_2_dmg08_cgb04c_outFE.gbc` | fail: printed FF, expected FE |
-| `gambatte/tima/tc00_tc01_ff_tma_2_dmg08_cgb04c_out00.gbc` | fail: printed FF, expected 00 |
-| `gambatte/tima/tc00_tc01_ff_tma_3_dmg08_cgb04c_outF0.gbc` | fail: printed 00, expected F0 |
-| `gambatte/tima/tc00_tc01_late_tc00_of_2_dmg08_cgb04c_outF0.gbc` | fail: printed FF, expected F0 |
-| `gambatte/tima/tc01_1stopstart_ff_tma_2_dmg08_cgb04c_out00.gbc` | fail: printed FF, expected 00 |
-| `gambatte/tima/tc01_1stopstart_ff_tma_3_dmg08_cgb04c_outF0.gbc` | fail: printed 00, expected F0 |
-| `gambatte/tima/tc01_1stopstart_irq_2_dmg08_cgb04c_outE4.gbc` | fail: printed E0, expected E4 |
-| `gambatte/tima/tc01_1stopstart_offset1_ff_tma_1_dmg08_cgb04c_outFF.gbc` | fail: printed FE, expected FF |
-| `gambatte/tima/tc01_1stopstart_offset1_ff_tma_2_dmg08_cgb04c_out00.gbc` | fail: printed FE, expected 00 |
-| `gambatte/tima/tc01_1stopstart_offset1_ff_tma_3_dmg08_cgb04c_outF0.gbc` | fail: printed FF, expected F0 |
-| `gambatte/tima/tc01_1stopstart_offset1_irq_2_dmg08_cgb04c_outE4.gbc` | fail: printed E0, expected E4 |
-| `gambatte/tima/tc01_1stopstart_offset2_ff_tma_1_dmg08_cgb04c_outFF.gbc` | fail: printed F0, expected FF |
-| `gambatte/tima/tc01_1stopstart_offset2_ff_tma_2_dmg08_cgb04c_out00.gbc` | fail: printed F0, expected 00 |
-| `gambatte/tima/tc01_1stopstart_offset2_ff_tma_3_dmg08_cgb04c_outF0.gbc` | fail: printed F1, expected F0 |
-| `gambatte/tima/tc01_1stopstart_offset2_irq_1_dmg08_cgb04c_outE0.gbc` | fail: printed E4, expected E0 |
-| `gambatte/tima/tc01_1stopstart_offset3_ff_tma_2_dmg08_cgb04c_out00.gbc` | fail: printed FF, expected 00 |
-| `gambatte/tima/tc01_1stopstart_offset3_ff_tma_3_dmg08_cgb04c_outF0.gbc` | fail: printed 00, expected F0 |
-| `gambatte/tima/tc01_1stopstart_offset3_irq_2_dmg08_cgb04c_outE4.gbc` | fail: printed E0, expected E4 |
-| `gambatte/tima/tc01_fe_ff_2_dmg08_cgb04c_outFF.gbc` | fail: printed FE, expected FF |
-| `gambatte/tima/tc01_ff_tma_2_dmg08_cgb04c_out00.gbc` | fail: printed FF, expected 00 |
-| `gambatte/tima/tc01_ff_tma_3_dmg08_cgb04c_outF0.gbc` | fail: printed 00, expected F0 |
-| `gambatte/tima/tc01_irq_2_dmg08_cgb04c_outE4.gbc` | fail: printed E0, expected E4 |
-| `gambatte/tima/tc01_late_stop_inc_2_dmg08_cgb04c_outFE.gbc` | fail: printed FD, expected FE |
-| `gambatte/tima/tc01_late_stop_irq_2_dmg08_cgb04c_outE4.gbc` | fail: printed E0, expected E4 |
-| `gambatte/tima/tc01_late_stop_of_2_dmg08_cgb04c_outF0.gbc` | fail: printed FF, expected F0 |
-| `gambatte/tima/tc01_late_tima_inc_2_dmg08_cgb04c_out10.gbc` | fail: printed 11, expected 10 |
-| `gambatte/tima/tc01_late_tima_irq_2_dmg08_cgb04c_outE4.gbc` | fail: printed E0, expected E4 |
-| `gambatte/tima/tc01_late_tima_tma_1_dmg08_cgb04c_out11.gbc` | fail: printed 12, expected 11 |
-| `gambatte/tima/tc01_late_tima_tma_2_dmg08_cgb04c_outF1.gbc` | fail: printed 11, expected F1 |
-| `gambatte/tima/tc01_late_tima_tma_3_dmg08_cgb04c_out11.gbc` | fail: printed F1, expected 11 |
-| `gambatte/tima/tc01_late_tma_2_dmg08_cgb04c_outF1.gbc` | fail: printed 11, expected F1 |
-| `gambatte/tima/tc01_tma_next_2_dmg08_cgb04c_outF1.gbc` | fail: printed F0, expected F1 |
 | `gambatte/window/arg/late_scx_late_wy_FFto4_ly4_wx00_2_dmg08_out3_cgb04c_out0.gbc` | fail: printed 0, expected 3 |
 | `gambatte/window/arg/late_scx_late_wy_FFto4_ly4_wx20_2_dmg08_out3_cgb04c_out0.gbc` | fail: printed 0, expected 3 |
 | `gambatte/window/arg/late_wy_10to1_ly1_2_dmg08_out3_cgb04c_out0.gbc` | fail: printed 0, expected 3 |

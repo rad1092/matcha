@@ -1,18 +1,29 @@
 ---
 name: debug-gameboy-rom
-description: Debugs Game Boy homebrew and test ROMs in the matcha emulator using breakpoints, watchpoints, single-stepping, disassembly, memory dumps, VRAM tile views and serial output. Use when a .gb ROM crashes, hangs, shows garbage graphics, a test ROM fails, or when asked to explain what some Game Boy code is doing.
+description: Debugs Game Boy homebrew and test ROMs in the matcha emulator using breakpoints, watchpoints, single-stepping, disassembly, memory dumps, VRAM tile views and serial output. Use when a .gb/.gbc ROM crashes, hangs, shows garbage graphics, a test ROM fails, or when asked to explain what some Game Boy code is doing.
 ---
 
 # Debugging a Game Boy ROM with matcha
 
-matcha passes the SM83 SingleStepTests, the DMG Mooneye suite and dmg-acid2,
-so when a ROM misbehaves, suspect the ROM before the emulator. The one known
-gap: mid-scanline PPU effects (writes to SCX/BGP/LCDC during mode 3) render
-per line, not per pixel.
+matcha supports DMG and native Game Boy Color. It passes the SM83
+SingleStepTests, DMG Mooneye suite, dmg-acid2, cgb-acid2 and cgb-acid-hell.
+Its pixel FIFO models mid-scanline effects, but some precise DMG and CGB
+PPU, interrupt and DMA timings still differ from hardware. Compare the
+ROM's state and behaviour with a hardware reference or another emulator
+before assigning the cause of a failure.
 
-Hardware facts (memory map, registers, interrupt vectors, test-ROM result
-protocols) are in `references/hardware.md`. Read it when a question depends
-on an address or register meaning.
+`load_rom` defaults to `model: "auto"`: colour-capable headers select
+native CGB; other cartridges select DMG. Use explicit `dmg` or `cgb`
+overrides for controlled comparisons and record the selected model.
+CGB DMG-compatibility mode is not implemented; its test references are
+not valid expectations for forced native CGB.
+
+DMG hardware facts (memory map, registers, interrupt vectors and test-ROM
+result protocols) are in `references/hardware.md`. CGB adds VRAM banking
+at $FF4F, WRAM banking at $FF70, colour palettes at $FF68–$FF6B, KEY1
+speed switching at $FF4D and VRAM DMA at $FF51–$FF55. One M-cycle is four
+base-clock dots normally and two in double-speed mode; screen timing
+remains 70,224 base-clock dots per frame.
 
 ## Triage in this order
 
@@ -29,7 +40,9 @@ on an address or register meaning.
 3. Graphics wrong: `tiles` shows what reached VRAM. Missing tiles mean the
    copy never happened or happened while VRAM was locked (writes during mode
    3 are dropped); correct tiles with a wrong picture point to the tile map
-   ($9800/$9C00), LCDC tile-data select, or palettes (BGP $FF47).
+   ($9800/$9C00), LCDC tile-data select, or palettes. DMG uses BGP $FF47;
+   native CGB uses colour palette RAM and tile attributes in VRAM bank 1.
+   `tiles` and memory reads show the currently selected VRAM bank.
 
 ## Breakpoints and watchpoints
 
@@ -62,7 +75,8 @@ on an address or register meaning.
 - Blargg: output arrives over the link port — check `serial_output` for
   "Passed" or "Failed" with the failing sub-test, and cartridge RAM at $A000
   (status byte, then signature DE B0 61 at $A001, then text).
-- Mooneye / dmg-acid2 / Mealybug: the test ends at `ld b, b` (opcode $40).
+- Mooneye / dmg-acid2 / cgb-acid2 / cgb-acid-hell / Mealybug: the test ends
+  at `ld b, b` (opcode $40).
   Mooneye passes when B,C,D,E,H,L = 3,5,8,13,21,34; all $42 means failure.
 
 ## Report

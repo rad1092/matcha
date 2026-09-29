@@ -1,4 +1,4 @@
-//! matcha-core: a cycle-accurate Game Boy (DMG) emulator core.
+//! matcha-core: a Game Boy and Game Boy Color emulator core.
 //!
 //! * `no_std` + `alloc`, zero dependencies, `#![forbid(unsafe_code)]`.
 //! * Deterministic: the same ROM, inputs and save state always produce the
@@ -72,6 +72,16 @@ pub mod palettes {
     pub const DMG: [u32; 4] = [0x9BBC0F, 0x8BAC0F, 0x306230, 0x0F380F];
 }
 
+/// Console hardware used by the machine. The original Game Boy remains
+/// the default so callers can explicitly compare its hardware behaviour.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[repr(u8)]
+pub enum Model {
+    #[default]
+    Dmg = 0,
+    Cgb = 1,
+}
+
 /// What WRAM, HRAM, OAM and wave RAM hold at power-on.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum PowerOnRam {
@@ -88,6 +98,7 @@ pub enum PowerOnRam {
 /// [`GameBoy::new`] builds.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Options {
+    pub model: Model,
     pub power_on_ram: PowerOnRam,
 }
 
@@ -118,6 +129,13 @@ impl GameBoy {
         Self::with_options(rom, Options::default())
     }
 
+    /// Creates a machine using the selected console's post-boot state.
+    /// CGB selects native colour hardware; callers choosing automatically
+    /// should use it for cartridges with header bit 7 at $0143 set.
+    pub fn new_with_model(rom: Vec<u8>, model: Model) -> Result<Self, CartridgeError> {
+        Self::with_options(rom, Options { model, ..Options::default() })
+    }
+
     /// Like [`GameBoy::new`], with non-default [`Options`].
     pub fn with_options(rom: Vec<u8>, options: Options) -> Result<Self, CartridgeError> {
         let cart = Cartridge::new(rom)?;
@@ -135,20 +153,25 @@ impl GameBoy {
         let mut cpu = Cpu::new();
         if boot.is_none() {
             let checksum_zero = cart.header().header_checksum == 0;
-            cpu.regs = Registers {
-                a: 0x01,
-                f: if checksum_zero { 0x80 } else { 0xB0 },
-                b: 0x00,
-                c: 0x13,
-                d: 0x00,
-                e: 0xD8,
-                h: 0x01,
-                l: 0x4D,
-                sp: 0xFFFE,
-                pc: 0x0100,
+            cpu.regs = if options.model == Model::Cgb {
+                // Pan Docs, Power-Up Sequence: native CGB hand-off at $0100.
+                Registers { a: 0x11, f: 0x80, b: 0, c: 0, d: 0xFF, e: 0x56, h: 0, l: 0x0D, sp: 0xFFFE, pc: 0x0100 }
+            } else {
+                Registers {
+                    a: 0x01,
+                    f: if checksum_zero { 0x80 } else { 0xB0 },
+                    b: 0x00,
+                    c: 0x13,
+                    d: 0x00,
+                    e: 0xD8,
+                    h: 0x01,
+                    l: 0x4D,
+                    sp: 0xFFFE,
+                    pc: 0x0100,
+                }
             };
         }
-        let mut bus = SystemBus::new(cart, boot.clone());
+        let mut bus = SystemBus::new_with_model(cart, boot.clone(), options.model);
         if let PowerOnRam::Noise(seed) = options.power_on_ram {
             bus.fill_power_on_noise(seed);
         }
@@ -176,6 +199,14 @@ impl GameBoy {
     /// The options the machine was powered on with.
     pub fn options(&self) -> &Options {
         &self.options
+    }
+
+    pub fn model(&self) -> Model {
+        self.options.model
+    }
+
+    pub fn double_speed(&self) -> bool {
+        self.bus.double_speed()
     }
 
     // --- running -----------------------------------------------------------------
@@ -233,7 +264,8 @@ impl GameBoy {
     /// a safety net. A breakpoint at the current PC is stepped over, so
     /// calling this again after a breakpoint continues.
     pub fn run_frame(&mut self) -> RunEvent {
-        self.run_cycles(MCYCLES_PER_FRAME * 2, true)
+        let multiplier = if self.model() == Model::Cgb { 4 } else { 2 };
+        self.run_cycles(MCYCLES_PER_FRAME * multiplier, true)
     }
 
     /// Runs for at most `budget` M-cycles. With `stop_at_frame`, also returns
@@ -280,13 +312,25 @@ impl GameBoy {
         self.bus.joypad.pressed()
     }
 
-    /// 160x144 shade indices (0 = lightest .. 3 = darkest), row-major.
+    /// 160x144 shade indices (DMG) or source colour indices (CGB), row-major.
+    /// Use [`Self::render_rgba`] for the actual CGB colours.
     pub fn framebuffer(&self) -> &[u8; WIDTH * HEIGHT] {
         self.bus.ppu.framebuffer()
     }
 
-    /// Converts the framebuffer to RGBA8 using `palette` (0xRRGGBB, lightest first).
+    /// Converts the framebuffer to RGBA8. DMG uses `palette` (0xRRGGBB,
+    /// lightest first); CGB uses native RGB555 colours with no LCD filter.
     pub fn render_rgba(&self, palette: &[u32; 4], out: &mut [u8]) {
+        if self.model() == Model::Cgb {
+            for (px, &color) in out.chunks_exact_mut(4).zip(self.bus.ppu.frame_rgb555().iter()) {
+                let expand = |v: u16| {
+                    let v = (v & 31) as u8;
+                    (v << 3) | (v >> 2)
+                };
+                px.copy_from_slice(&[expand(color), expand(color >> 5), expand(color >> 10), 0xFF]);
+            }
+            return;
+        }
         for (px, &shade) in out.chunks_exact_mut(4).zip(self.framebuffer().iter()) {
             let c = palette[usize::from(shade & 3)];
             px.copy_from_slice(&[(c >> 16) as u8, (c >> 8) as u8, c as u8, 0xFF]);
@@ -301,6 +345,12 @@ impl GameBoy {
     /// M-cycles since power-on.
     pub fn cycles(&self) -> u64 {
         self.bus.cycles
+    }
+
+    /// Elapsed dots at the 4,194,304 Hz base clock. Unlike CPU M-cycles,
+    /// this represents the same elapsed time in both CGB speed modes.
+    pub fn base_clock_ticks(&self) -> u64 {
+        self.bus.base_clock_ticks()
     }
 
     /// Interleaved stereo f32 samples produced since the last [`Self::clear_audio`].
@@ -650,9 +700,139 @@ mod tests {
     }
 
     #[test]
+    fn cgb_boot_registers_and_reset_preserve_the_selected_model() {
+        let mut gb = GameBoy::new_with_model(test_rom(b"COLOR"), Model::Cgb).unwrap();
+        assert_eq!(
+            gb.registers(),
+            Registers { a: 0x11, f: 0x80, b: 0, c: 0, d: 0xFF, e: 0x56, h: 0, l: 0x0D, sp: 0xFFFE, pc: 0x0100 }
+        );
+        run(&mut gb, 2);
+        gb.reset();
+        assert_eq!(gb.model(), Model::Cgb);
+        assert_eq!(gb.registers().a, 0x11);
+        assert!(!gb.double_speed());
+        assert_eq!(gb.base_clock_ticks(), 0);
+    }
+
+    #[test]
+    fn cgb_stop_switches_speed_and_continues_execution() {
+        // Pan Docs KEY1: STOP with prepare set switches CPU speed and resumes
+        // after its padding byte, rather than entering the ordinary STOP gate.
+        let rom = rom_with_program(&[0xF3, 0x3E, 0x01, 0xE0, 0x4D, 0x10, 0x00, 0x06, 0x42, 0x18, 0xFE]);
+        let mut gb = GameBoy::new_with_model(rom, Model::Cgb).unwrap();
+        for _ in 0..16 {
+            gb.step();
+        }
+        assert_eq!(gb.power_state(), PowerState::Running);
+        assert_eq!(gb.registers().b, 0x42, "instruction after STOP ran");
+        assert!(gb.double_speed());
+        assert_eq!(gb.peek(0xFF4D) & 0x81, 0x80);
+        let (cycles, ticks) = (gb.cycles(), gb.base_clock_ticks());
+        gb.run_cycles(100, false);
+        assert_eq!(gb.base_clock_ticks() - ticks, (gb.cycles() - cycles) * 2);
+        let state = gb.save_state();
+        let mut resumed = GameBoy::new_with_model(gb.cartridge().rom().to_vec(), Model::Cgb).unwrap();
+        resumed.load_state(&state).unwrap();
+        assert!(resumed.double_speed());
+        run(&mut gb, 2);
+        run(&mut resumed, 2);
+        assert_eq!(gb.save_state(), resumed.save_state());
+    }
+
+    #[test]
+    fn cgb_snapshot_replays_banked_color_rendering() {
+        let rom = rom_with_program(&[0x18, 0xFE]);
+        let mut gb = GameBoy::new_with_model(rom.clone(), Model::Cgb).unwrap();
+        gb.poke(0xFF40, 0);
+        for bank in 0..=1 {
+            gb.poke(0xFF4F, bank);
+            for addr in 0x8000..0xA000 {
+                gb.poke(addr, (addr as u8).wrapping_mul(73).rotate_left(u32::from(bank) + 1));
+            }
+        }
+        for index in [0xFF68, 0xFF6A] {
+            gb.poke(index, 0x80);
+            for value in 0u8..64 {
+                gb.poke(index + 1, value.wrapping_mul(37));
+            }
+        }
+        gb.poke(0xFF40, 0x93);
+        run(&mut gb, 2);
+        gb.run_cycles(250, false); // snapshot while a line can be in flight
+        let state = gb.save_state();
+        let mut resumed = GameBoy::new_with_model(rom, Model::Cgb).unwrap();
+        resumed.load_state(&state).unwrap();
+        run(&mut gb, 3);
+        run(&mut resumed, 3);
+        assert_eq!(gb.save_state(), resumed.save_state());
+        let mut color = vec![0; WIDTH * HEIGHT * 4];
+        let mut replayed = color.clone();
+        gb.render_rgba(&palettes::GREY, &mut color);
+        resumed.render_rgba(&palettes::MATCHA, &mut replayed);
+        assert_eq!(color, replayed, "CGB uses its palette RAM, not the host's DMG tint");
+        assert!(color.chunks_exact(4).any(|p| p[0] != p[1] || p[1] != p[2]));
+    }
+
+    #[test]
+    fn cgb_speed_switch_with_pending_interrupt_keeps_the_next_opcode() {
+        let rom = rom_with_program(&[
+            0xF3, 0x3E, 0x01, 0xE0, 0x4D, // di; KEY1 = 1
+            0xE0, 0xFF, 0xE0, 0x0F, // IE = IF = 1, IME stays off
+            0x10, 0x04, // one-byte STOP; inc b must execute
+            0x18, 0xFE,
+        ]);
+        let mut gb = GameBoy::new_with_model(rom, Model::Cgb).unwrap();
+        for _ in 0..16 {
+            gb.step();
+        }
+        assert!(gb.double_speed());
+        assert_eq!(gb.registers().b, 1);
+        assert_eq!(gb.power_state(), PowerState::Running);
+        assert!(gb.cycles() < 100, "a pending interrupt suppresses the long switch pause");
+    }
+
+    #[test]
+    fn snapshots_cannot_change_the_machine_model() {
+        let rom = test_rom(b"MODELS");
+        let mut dmg = GameBoy::new(rom.clone()).unwrap();
+        let mut cgb = GameBoy::new_with_model(rom, Model::Cgb).unwrap();
+        let (dmg_state, cgb_state) = (dmg.save_state(), cgb.save_state());
+        assert!(dmg.load_state(&cgb_state).is_err());
+        assert!(cgb.load_state(&dmg_state).is_err());
+        assert_eq!(dmg.save_state(), dmg_state);
+        assert_eq!(cgb.save_state(), cgb_state);
+    }
+
+    #[test]
+    fn cgb_snapshot_after_halt_wake_preserves_pending_hblank_dma() {
+        let rom = rom_with_program(&[0xF3, 0x76, 0x18, 0xFE]);
+        let mut gb = GameBoy::new_with_model(rom.clone(), Model::Cgb).unwrap();
+        for _ in 0..5 {
+            gb.step();
+        }
+        assert_eq!(gb.power_state(), PowerState::Halted);
+        gb.poke(0xFF40, 0); // LCD-off mode 0, CPU is still halted
+        gb.poke(0xC000, 0xA7);
+        for (addr, value) in [(0xFF51, 0xC0), (0xFF52, 0), (0xFF53, 0), (0xFF54, 0), (0xFF55, 0x80)] {
+            gb.poke(addr, value);
+        }
+        gb.poke(0xFFFF, 1);
+        gb.poke(0xFF0F, 1);
+        gb.step(); // wake, with an HBlank transfer ready for the next CPU cycle
+        assert_eq!(gb.power_state(), PowerState::Running);
+        let state = gb.save_state();
+        let mut resumed = GameBoy::new_with_model(rom, Model::Cgb).unwrap();
+        resumed.load_state(&state).unwrap();
+        gb.run_cycles(20, false);
+        resumed.run_cycles(20, false);
+        assert_eq!(gb.peek(0x8000), 0xA7);
+        assert_eq!(gb.save_state(), resumed.save_state());
+    }
+
+    #[test]
     fn power_on_noise_is_deterministic_biased_and_survives_reset() {
         let noisy = |seed| {
-            let options = Options { power_on_ram: PowerOnRam::Noise(seed) };
+            let options = Options { power_on_ram: PowerOnRam::Noise(seed), ..Options::default() };
             GameBoy::with_options(test_rom(b"NOISE"), options).unwrap()
         };
         let ram = |gb: &GameBoy| -> Vec<u8> {
@@ -818,47 +998,66 @@ mod tests {
 
     #[test]
     fn corrupted_states_never_panic() {
-        // MBC3 with RTC and RAM, so every component's loader is exercised.
-        let mut rom = test_rom(b"FUZZ");
-        rom[0x147] = 0x10;
-        rom[0x149] = 0x02;
-        let mut gb = GameBoy::new(rom).unwrap();
-        run(&mut gb, 5);
-        let earlier = gb.save_state();
-        run(&mut gb, 3);
-        let good = gb.save_state();
-        // Bytes that changed between the two states are live counters and
-        // registers; corrupting around them reaches every component's fields
-        // instead of mostly hitting RAM.
-        let live: Vec<usize> = (12..good.len()).filter(|&i| earlier[i] != good[i]).collect();
-        let mut seed = 0x2545_F491_4F6C_DD1Du64;
-        let mut next = move || {
-            seed ^= seed << 13;
-            seed ^= seed >> 7;
-            seed ^= seed << 17;
-            seed
-        };
-        let mut accepted = 0;
-        for _ in 0..4000 {
-            let mut bad = good.clone();
-            for _ in 0..1 + next() % 4 {
-                let near = live[(next() as usize) % live.len()] + (next() as usize) % 48;
-                let i = (near.saturating_sub(24)).clamp(12, bad.len() - 4);
-                if next() % 2 == 0 {
-                    bad[i] = next() as u8;
-                } else {
-                    bad[i..i + 4].fill(0xFF); // extremes find overflow bugs
+        for model in [Model::Dmg, Model::Cgb] {
+            // MBC3 with RTC and RAM, so every component's loader is exercised.
+            let mut rom = test_rom(b"FUZZ");
+            rom[0x147] = 0x10;
+            rom[0x149] = 0x02;
+            let mut gb = GameBoy::new_with_model(rom, model).unwrap();
+            run(&mut gb, 5);
+            let earlier = gb.save_state();
+            run(&mut gb, 3);
+            if model == Model::Cgb {
+                for (addr, value) in [
+                    (0xFF4F, 1),
+                    (0xFF70, 7),
+                    (0xFF68, 0x80),
+                    (0xFF69, 0x42),
+                    (0xFF6A, 0xB6),
+                    (0xFF6B, 0x77),
+                    (0xFF51, 0xC0),
+                    (0xFF52, 0x10),
+                    (0xFF53, 0x08),
+                    (0xFF54, 0x20),
+                    (0xFF55, 0x87),
+                ] {
+                    gb.poke(addr, value);
                 }
             }
-            if gb.load_state(&bad).is_ok() {
-                accepted += 1;
-                gb.run_frame(); // must not panic, whatever the values
-                gb.run_frame();
-                gb.rtc_advance_seconds(90_000);
-                gb.load_state(&good).unwrap();
+            let good = gb.save_state();
+            // Bytes that changed between the two states are live counters and
+            // registers; corrupting around them reaches every component's fields
+            // instead of mostly hitting RAM.
+            let live: Vec<usize> = (12..good.len()).filter(|&i| earlier[i] != good[i]).collect();
+            let mut seed = 0x2545_F491_4F6C_DD1Du64;
+            let mut next = move || {
+                seed ^= seed << 13;
+                seed ^= seed >> 7;
+                seed ^= seed << 17;
+                seed
+            };
+            let mut accepted = 0;
+            for _ in 0..4000 {
+                let mut bad = good.clone();
+                for _ in 0..1 + next() % 4 {
+                    let near = live[(next() as usize) % live.len()] + (next() as usize) % 48;
+                    let i = (near.saturating_sub(24)).clamp(12, bad.len() - 4);
+                    if next() % 2 == 0 {
+                        bad[i] = next() as u8;
+                    } else {
+                        bad[i..i + 4].fill(0xFF); // extremes find overflow bugs
+                    }
+                }
+                if gb.load_state(&bad).is_ok() {
+                    accepted += 1;
+                    gb.run_frame(); // must not panic, whatever the values
+                    gb.run_frame();
+                    gb.rtc_advance_seconds(90_000);
+                    gb.load_state(&good).unwrap();
+                }
             }
+            assert!(accepted > 1000, "most corruptions still describe a valid {model:?} machine ({accepted})");
         }
-        assert!(accepted > 1000, "most corruptions still describe a valid machine ({accepted})");
     }
 
     #[test]

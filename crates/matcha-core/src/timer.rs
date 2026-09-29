@@ -5,6 +5,7 @@
 //! detector. That single model produces all the famous glitches — DIV writes
 //! and TAC writes that tick TIMA, and the one-cycle-late TMA reload.
 
+use crate::Model;
 use crate::state::{StateError, StateReader, StateWriter};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -22,6 +23,7 @@ enum Reload {
 
 #[derive(Clone, Debug)]
 pub struct Timer {
+    cgb: bool,
     /// System counter in T-cycles; DIV is the upper 8 bits.
     counter: u16,
     tima: u8,
@@ -38,6 +40,8 @@ pub struct TimerEvents {
     pub div_apu: bool,
     /// Falling edge of counter bit 8: shifts one serial bit (8192 Hz).
     pub serial_clock: bool,
+    /// CGB fast link clock, counter bit 3 (262144 Hz at normal speed).
+    pub serial_fast_clock: bool,
 }
 
 /// Counter bit selected by TAC's clock-select field.
@@ -49,12 +53,22 @@ impl Timer {
     /// Post-boot state for DMG (A/B/C): DIV = 0xAB with the internal phase
     /// the boot ROM leaves behind (mooneye `boot_div-dmgABCmgb`).
     pub fn new() -> Self {
-        Self { counter: 0xABCC, tima: 0, tma: 0, tac: 0, reload: Reload::Idle }
+        Self { cgb: false, counter: 0xABCC, tima: 0, tma: 0, tac: 0, reload: Reload::Idle }
+    }
+
+    pub fn new_with_model(model: Model) -> Self {
+        // The CGB boot divider phase depends on the boot animation/input.
+        // Use a deterministic phase; do not apply the DMG-only calibration.
+        if model == Model::Cgb { Self { cgb: true, ..Self::power_on() } } else { Self::new() }
     }
 
     /// Power-on state (used when running a boot ROM).
     pub fn power_on() -> Self {
-        Self { counter: 0, tima: 0, tma: 0, tac: 0, reload: Reload::Idle }
+        Self { cgb: false, counter: 0, tima: 0, tma: 0, tac: 0, reload: Reload::Idle }
+    }
+
+    pub fn power_on_with_model(model: Model) -> Self {
+        Self { cgb: model == Model::Cgb, ..Self::power_on() }
     }
 
     /// Counter bit feeding TIMA's edge detector (0 when the timer is off).
@@ -80,6 +94,10 @@ impl Timer {
     /// Advances one M-cycle (4 T-cycles).
     #[inline]
     pub fn tick(&mut self) -> TimerEvents {
+        self.tick_with_speed(false)
+    }
+
+    pub fn tick_with_speed(&mut self, double_speed: bool) -> TimerEvents {
         let mut ev = TimerEvents::default();
         match self.reload {
             Reload::Idle => {}
@@ -98,8 +116,9 @@ impl Timer {
         if fell & self.input_mask() != 0 {
             self.increment_tima();
         }
-        ev.div_apu = fell & DIV_APU_BIT != 0;
+        ev.div_apu = fell & (DIV_APU_BIT << u8::from(double_speed)) != 0;
         ev.serial_clock = fell & SERIAL_BIT != 0;
+        ev.serial_fast_clock = fell & (1 << 3) != 0;
         ev
     }
 
@@ -114,6 +133,10 @@ impl Timer {
 
     /// Returns events caused by the write itself (DIV reset glitches).
     pub fn write(&mut self, addr: u16, value: u8) -> TimerEvents {
+        self.write_with_speed(addr, value, false)
+    }
+
+    pub fn write_with_speed(&mut self, addr: u16, value: u8, double_speed: bool) -> TimerEvents {
         let mut ev = TimerEvents::default();
         match addr {
             0xFF04 => {
@@ -121,8 +144,9 @@ impl Timer {
                 if self.input(old) {
                     self.increment_tima();
                 }
-                ev.div_apu = old & DIV_APU_BIT != 0;
+                ev.div_apu = old & (DIV_APU_BIT << u8::from(double_speed)) != 0;
                 ev.serial_clock = old & SERIAL_BIT != 0;
+                ev.serial_fast_clock = old & (1 << 3) != 0;
                 self.counter = 0;
             }
             0xFF05 => match self.reload {
@@ -143,7 +167,7 @@ impl Timer {
                 let was = self.input(self.counter);
                 self.tac = value & 0x07;
                 // DMG: a 1 -> 0 transition of the multiplexed input ticks TIMA.
-                if was && !self.input(self.counter) {
+                if was && !self.input(self.counter) && (!self.cgb || self.tac & 4 != 0) {
                     self.increment_tima();
                 }
             }
@@ -162,11 +186,15 @@ impl Timer {
     }
 
     pub(crate) fn save(&self, w: &mut StateWriter) {
+        w.bool(self.cgb);
         w.u16(self.counter);
         w.u8s(&[self.tima, self.tma, self.tac, self.reload as u8]);
     }
 
     pub(crate) fn load(&mut self, r: &mut StateReader) -> Result<(), StateError> {
+        if r.bool()? != self.cgb {
+            return Err(StateError::Corrupt("timer model"));
+        }
         self.counter = r.u16()?;
         let mut b = [0u8; 4];
         r.u8s(&mut b)?;
@@ -184,5 +212,40 @@ impl Timer {
 impl Default for Timer {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apu_divider_uses_bit_13_in_double_speed() {
+        for double in [false, true] {
+            let mut t = Timer::power_on_with_model(Model::Cgb);
+            let mut edges = 0;
+            for _ in 0..if double { 8192 } else { 4096 } {
+                edges += usize::from(t.tick_with_speed(double).div_apu);
+            }
+            assert_eq!(edges, 2);
+        }
+        let mut t = Timer::power_on_with_model(Model::Cgb);
+        t.counter = 0x1000;
+        assert!(!t.write_with_speed(0xFF04, 0, true).div_apu);
+        t.counter = 0x2000;
+        assert!(t.write_with_speed(0xFF04, 0, true).div_apu);
+    }
+
+    #[test]
+    fn disabling_timer_does_not_generate_the_dmg_glitch_on_cgb() {
+        // Pan Docs Timer Obscure Behaviour: enable gates the CGB output,
+        // after its falling-edge detector, unlike the DMG input gate.
+        for model in [Model::Dmg, Model::Cgb] {
+            let mut t = Timer::power_on_with_model(model);
+            t.counter = 8;
+            t.tac = 5;
+            t.write(0xFF07, 0);
+            assert_eq!(t.tima, u8::from(model == Model::Dmg));
+        }
     }
 }

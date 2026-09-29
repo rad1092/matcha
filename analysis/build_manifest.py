@@ -8,7 +8,7 @@ cartridge header, fingerprints the toolchain, and writes one CSV row.
 
 Get the database with (blobless keeps it to the ROMs you actually read):
     git clone --filter=blob:none --sparse https://github.com/gbdev/database
-    git -C database sparse-checkout set --no-cone '/entries/*/game.json' '/entries/*/*.gb' '/entries/*/*.gbc'
+    git -C database sparse-checkout set --no-cone '/entries/*/game.json' '/entries/**/*.gb' '/entries/**/*.gbc' '/entries/**/*.GB' '/entries/**/*.GBC'
 """
 
 import csv

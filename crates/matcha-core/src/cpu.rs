@@ -32,6 +32,11 @@ pub trait CpuBus {
     fn halted_pending_interrupts(&self) -> u8 {
         self.pending_interrupts()
     }
+    /// CGB samples HALT wake-up before the idle M-cycle; DMG samples halfway
+    /// through it (SameBoy sm83_cpu.c, GB_cpu_run halted path).
+    fn halt_samples_at_start(&self) -> bool {
+        false
+    }
     /// Clears the given bit in `IF` (interrupt acknowledged).
     fn acknowledge_interrupt(&mut self, mask: u8);
     /// Called when `STOP` executes. Returns false if a selected button is
@@ -41,6 +46,14 @@ pub trait CpuBus {
     fn stop(&mut self) -> bool {
         true
     }
+    /// Performs a prepared CGB KEY1 speed switch. A handled switch resumes
+    /// execution after STOP's padding byte instead of entering STOP/HALT.
+    fn speed_switch(&mut self) -> bool {
+        false
+    }
+    /// Reports the CPU clock-gate state before any accesses in this step.
+    /// CGB HBlank DMA is suspended while the CPU is halted (Pan Docs).
+    fn set_halted(&mut self, _halted: bool) {}
     /// One M-cycle in STOP mode: the system clock is stopped, so on a DMG
     /// the PPU, timer and APU do not advance. Defaults to [`CpuBus::idle`].
     fn idle_stopped(&mut self) {
@@ -203,6 +216,7 @@ impl Cpu {
 
     /// Executes one instruction, one interrupt dispatch, or one halted cycle.
     pub fn step<B: CpuBus>(&mut self, bus: &mut B) -> Step {
+        bus.set_halted(self.power == PowerState::Halted);
         let pc = self.regs.pc;
         match self.power {
             PowerState::Running => {}
@@ -210,7 +224,7 @@ impl Cpu {
                 // Idle until an interrupt is pending (or the bus asks us to
                 // yield); each iteration is exactly one M-cycle.
                 loop {
-                    let pending = if core::mem::take(&mut self.just_halted) {
+                    let pending = if core::mem::take(&mut self.just_halted) || bus.halt_samples_at_start() {
                         let pending = bus.pending_interrupts();
                         bus.idle();
                         pending
@@ -221,6 +235,9 @@ impl Cpu {
                     if pending != 0 {
                         // Wake-up: the interrupt (if IME) is dispatched next step.
                         self.power = PowerState::Running;
+                        // Release the HDMA gate before exposing a snapshot
+                        // boundary; restoring derives the gate from CPU power.
+                        bus.set_halted(false);
                         break;
                     }
                     if bus.halt_should_yield() {
@@ -641,13 +658,21 @@ impl Cpu {
             // --- control -----------------------------------------------------
             0x00 => {}
             0x10 => {
+                let pending = bus.pending_interrupts() != 0;
+                if bus.speed_switch() {
+                    // Pending interrupts make STOP one byte long even during
+                    // a prepared CGB switch (SameBoy sm83_cpu.c, stop).
+                    if !pending {
+                        self.regs.pc = self.regs.pc.wrapping_add(1);
+                    }
+                    return;
+                }
                 // STOP (Pan Docs, "Using the STOP instruction", DMG cases):
                 // - a selected button is held: no STOP mode; with no interrupt
                 //   pending the CPU halts instead;
                 // - otherwise: DIV resets and STOP mode begins.
                 // With no interrupt pending STOP is two bytes long (the next
                 // byte is skipped); with one pending, the next byte executes.
-                let pending = bus.pending_interrupts() != 0;
                 let entered = bus.stop();
                 if !pending {
                     self.regs.pc = self.regs.pc.wrapping_add(1);

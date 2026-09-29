@@ -58,6 +58,7 @@ const S = {
   mod: null,
   gb: null,
   romKey: "",
+  stateKey: "",
   cartId: "",
   running: true,
   ff: false,
@@ -286,6 +287,7 @@ function insert(bytes, meta) {
   S.gb = gb;
   const header = gb.header();
   S.romKey = `${header.title}:${fnv32(bytes).toString(16)}`;
+  S.stateKey = `${S.romKey}:${gb.model}`;
   S.cartId = meta.id;
   gb.setPalette(PALETTES[S.palette]);
   if (audio.ctx) gb.setSampleRate(audio.ctx.sampleRate);
@@ -301,7 +303,10 @@ function insert(bytes, meta) {
   S.viewAddr = null;
   if (S.tab === "heat") gb.setProfiling(true);
   $("cart-name").textContent = meta.title || header.title || "untitled";
-  $("cart-kind").textContent = header.cartTypeName.toLowerCase().replaceAll("+", " + ");
+  $("cart-kind").textContent = `${gb.model.toUpperCase()} · ${header.cartTypeName.toLowerCase().replaceAll("+", " + ")}`;
+  document.title = `${meta.title || header.title || "untitled"} · ${gb.model.toUpperCase()} · matcha`;
+  $("swatches").title = gb.model === "cgb" ? "Game Boy Color uses the game's own colors" : "Screen palette";
+  for (const swatch of $("swatches").children) swatch.disabled = gb.model === "cgb";
   for (const el of document.querySelectorAll(".cart[data-id]")) {
     el.setAttribute("aria-current", String(el.dataset.id === meta.id));
   }
@@ -352,7 +357,7 @@ function buildShelf() {
   }
   const open = document.createElement("label");
   open.className = "cart open";
-  open.innerHTML = `<input type="file" id="file" accept=".gb,.gbc,.bin"><span class="cart-title">Open a ROM…</span><span class="cart-meta">.gb · or drop it on the screen</span>`;
+  open.innerHTML = `<input type="file" id="file" accept=".gb,.gbc,.bin"><span class="cart-title">Open a ROM…</span><span class="cart-meta">.gb / .gbc · or drop it on the screen</span>`;
   shelf.append(open);
   $("file").addEventListener("change", (e) => openFile(e.target.files[0]));
 
@@ -462,6 +467,9 @@ function applyChannelMask() {
 function updatePanels() {
   if (!S.gb) return;
   const s = S.gb.snapshot();
+  $("hardware-spec").textContent = s.model === "cgb"
+    ? `Game Boy Color · ${s.doubleSpeed ? "8.388608" : "4.194304"} MHz · 160×144 · game colors · 59.73 Hz`
+    : "Game Boy · 4.194304 MHz · 160×144 · 4 shades · 59.73 Hz";
   updateCpu(s);
   updateTiming(s);
   if (S.tab === "vram") updateVram();
@@ -482,7 +490,7 @@ function updateCpu(s) {
     [`BANK ${s.romBank}`, false],
   ];
   $("cpu-chips").innerHTML = chips.map(([t, on]) => `<span class="chip${on ? " on" : ""}">${t}</span>`).join("");
-  $("cpu-readout").textContent = `${s.cycles.toLocaleString()} M-cycles · frame ${s.frames.toLocaleString()}`;
+  $("cpu-readout").textContent = `${s.model.toUpperCase()}${s.doubleSpeed ? " · double CPU speed" : ""} · ${s.cycles.toLocaleString()} M-cycles · frame ${s.frames.toLocaleString()}`;
   const start = S.viewAddr ?? s.pc;
   const lines = S.gb.disassemble(start, 12);
   const list = $("disasm");
@@ -703,13 +711,14 @@ function isTyping(target) {
 function quickSave() {
   if (!S.gb) return;
   S.quick = S.gb.saveState();
-  store.set(`matcha:state:${S.romKey}`, b64.encode(S.quick));
+  store.set(`matcha:state:${S.stateKey}`, b64.encode(S.quick));
   showEvent("Saved. L loads it back.");
 }
 
 function quickLoad() {
   if (!S.gb) return;
-  const stored = S.quick ?? (store.get(`matcha:state:${S.romKey}`) ? b64.decode(store.get(`matcha:state:${S.romKey}`)) : null);
+  const encoded = store.get(`matcha:state:${S.stateKey}`);
+  const stored = S.quick ?? (encoded ? b64.decode(encoded) : null);
   if (!stored) {
     showEvent("No saved state for this cartridge yet. Press S first.");
     return;

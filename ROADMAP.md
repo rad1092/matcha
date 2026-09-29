@@ -4,29 +4,30 @@ Ordered by what the [corpus study](docs/analysis.md) says real software
 needs, then by what the test suites still flag. Each item says why, what,
 how to verify, and the first concrete step, so it can be picked up cold.
 
-## 1. Game Boy Color mode
+## 1. CGB compatibility and timing refinement
 
-**Why.** 367 of the 1,266 Homebrew Hub cartridges (29%) are CGB-only and
-cannot run at all. Among the 306 "CGB-enhanced" ones matcha does run as a
-DMG, 27 hang in STOP attempting a CGB speed switch and 29 never draw a
-picture (19 of them both) — on an original Game Boy they fail the same way,
-but the people who made them expect a Color.
+**Implemented.** Native CGB mode now has RGB555 rendering, VRAM attributes
+and banks, WRAM banks, KEY1 double speed, GDMA/HDMA, CGB object priority,
+fast serial and model-specific sound behavior. cgb-acid2 and cgb-acid-hell
+match their reference screenshots. Hosts auto-select CGB for cartridges
+with the colour-capability flag. See ADR-0010 and `docs/CONFORMANCE-CGB.md`.
 
-**What.** A `Model` choice at construction (`Dmg` | `Cgb`), CGB boot state,
-double-speed mode (KEY1 + STOP), VRAM bank 1 and background attributes
-(palette, bank, flips, priority), WRAM banks 1–7 (SVBK), background/object
-palette RAM (BCPS/BCPD/OCPS/OCPD), general-purpose and HBlank HDMA, CGB
-object priority (by OAM index), and the CGB's different PPU timing quirks.
-The bus/PPU split already isolates these; the renderer's per-pixel colour
-lookup becomes palette-RAM based.
+**What remains.** DMG-on-CGB compatibility palettes/KEY0 and boot-ROM state,
+exact speed-switch access gates, DMA contention and mid-line timing. The
+current CGB test runner explicitly excludes compatibility-mode tests whose
+reference requires a mode that is not yet implemented; it lists every
+excluded ROM and reason. Implement that mode before enabling those cases.
 
-**Verify.** cgb-acid2 and cgb-acid-hell (pixel-exact), Mooneye's CGB
-acceptance tests, SameSuite, Blargg `cgb_sound`; then rerun the corpus with
-`reference/` switched to SameBoy's CGB model and compare as for DMG.
+**Verify.** Preserve every named DMG and CGB baseline pass, retain exact
+acid screenshots, then rerun the affected corpus cases. Full automatic
+DMG/CGB corpus revalidation lives in `docs/cgb-analysis.md`; outcome
+agreement is a coarse signal, not proof of game or pixel compatibility.
 
-**First step.** Add `Model` to `GameBoy::new_with_model`, thread it into
-`SystemBus::new`, and implement WRAM/VRAM banking with a unit test; bump
-`STATE_VERSION`.
+**First step.** Select a failing CGB DMA/speed-change family and trace its
+bus phases against the test assembly and a pinned primary reference.
+Alternatively, introduce a hardware-model/program-mode distinction for
+DMG software on CGB, covering palette indirection and disabled CGB ports
+before enabling the excluded compatibility references.
 
 ## 2. Remaining pixel-fetch and window quirks
 

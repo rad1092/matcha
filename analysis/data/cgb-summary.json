@@ -1,0 +1,185 @@
+{
+ "database_commit": "50293559a496a3e20382fbf6a2e84b70ec622f88",
+ "input_sha256": "e289c1ee8263a12722e0b742263317dd96644030537594a613c3bdc2421ef298",
+ "seconds": 60,
+ "corpus_entries": 1266,
+ "tested": 1235,
+ "unsupported_mapper": 31,
+ "agree": 1229,
+ "groups": {
+  "CGB enhanced": {
+   "n": 306,
+   "agree": 301,
+   "matcha": {
+    "running": 290,
+    "blank": 5,
+    "static": 9,
+    "crashed": 2
+   },
+   "sameboy": {
+    "running": 290,
+    "blank": 5,
+    "static": 10,
+    "crashed": 1
+   }
+  },
+  "CGB only": {
+   "n": 367,
+   "agree": 367,
+   "matcha": {
+    "running": 362,
+    "static": 2,
+    "crashed": 3
+   },
+   "sameboy": {
+    "running": 362,
+    "static": 2,
+    "crashed": 3
+   }
+  },
+  "DMG": {
+   "n": 562,
+   "agree": 561,
+   "matcha": {
+    "running": 544,
+    "static": 16,
+    "crashed": 2
+   },
+   "sameboy": {
+    "running": 545,
+    "static": 15,
+    "crashed": 2
+   }
+  }
+ },
+ "disagreements": [
+  {
+   "slug": "bomber",
+   "title": "Bomber",
+   "cgb_mode": "CGB enhanced",
+   "model": "cgb",
+   "rom_path": "entries/bomber/Bomber.gbc",
+   "rom_sha256": "1614fecc3ccf5b96a4981ee27c1662b99af6104a7208db6b0438c6123b954955",
+   "logo_ok": "1",
+   "header_checksum_ok": "1",
+   "matcha": "blank",
+   "sameboy": "running",
+   "agreement": false
+  },
+  {
+   "slug": "font-demo-waugh",
+   "title": "Font Demo",
+   "cgb_mode": "CGB enhanced",
+   "model": "cgb",
+   "rom_path": "entries/font-demo-waugh/Font Demo (Jonathan Waugh) (PD) [C].gbc",
+   "rom_sha256": "0c1e256c15994a4076e97a6db7e8812a13198353850b031880e80dee4ca63abd",
+   "logo_ok": "1",
+   "header_checksum_ok": "1",
+   "matcha": "running",
+   "sameboy": "static",
+   "agreement": false
+  },
+  {
+   "slug": "gb-pda",
+   "title": "GB-PDA",
+   "cgb_mode": "CGB enhanced",
+   "model": "cgb",
+   "rom_path": "entries/gb-pda/pda.gb",
+   "rom_sha256": "c867046b584788ff3cb08a60c1efe409efc2a630ffe4e0662f3378f7fccea59a",
+   "logo_ok": "1",
+   "header_checksum_ok": "1",
+   "matcha": "running",
+   "sameboy": "blank",
+   "agreement": false
+  },
+  {
+   "slug": "headache-boy",
+   "title": "Headache Boy",
+   "cgb_mode": "CGB enhanced",
+   "model": "cgb",
+   "rom_path": "entries/headache-boy/headache-boy.gb",
+   "rom_sha256": "5e4ec1a489b50d3be2c0036b9ef8d5bae961bd3691d98e4c7bf88dad1f4cb555",
+   "logo_ok": "1",
+   "header_checksum_ok": "1",
+   "matcha": "blank",
+   "sameboy": "running",
+   "agreement": false
+  },
+  {
+   "slug": "hybrid-gbplot",
+   "title": "Hybrid GBPlot",
+   "cgb_mode": "DMG",
+   "model": "dmg",
+   "rom_path": "entries/hybrid-gbplot/Hybrid GBPlot (PD).gb",
+   "rom_sha256": "d9fd46fd64c3576c45978a0c6bccd3305fa8a62819c4b937294530d31eb6f88e",
+   "logo_ok": "1",
+   "header_checksum_ok": "1",
+   "matcha": "static",
+   "sameboy": "running",
+   "agreement": false
+  },
+  {
+   "slug": "vip",
+   "title": "VIP",
+   "cgb_mode": "CGB enhanced",
+   "model": "cgb",
+   "rom_path": "entries/vip/vip.gb",
+   "rom_sha256": "197bf27270d5faed78f22e241d11a48ee543ac4477be3567b085daa1d7f05ebc",
+   "logo_ok": "0",
+   "header_checksum_ok": "0",
+   "matcha": "crashed",
+   "sameboy": "blank",
+   "agreement": false
+  }
+ ],
+ "historical_dmg_to_auto": [
+  {
+   "before": "blank",
+   "after": "blank",
+   "n": 1
+  },
+  {
+   "before": "blank",
+   "after": "running",
+   "n": 27
+  },
+  {
+   "before": "blank",
+   "after": "static",
+   "n": 1
+  },
+  {
+   "before": "crashed",
+   "after": "crashed",
+   "n": 4
+  },
+  {
+   "before": "crashed",
+   "after": "running",
+   "n": 5
+  },
+  {
+   "before": "running",
+   "after": "blank",
+   "n": 4
+  },
+  {
+   "before": "running",
+   "after": "running",
+   "n": 784
+  },
+  {
+   "before": "static",
+   "after": "running",
+   "n": 18
+  },
+  {
+   "before": "static",
+   "after": "static",
+   "n": 24
+  }
+ ],
+ "matcha_executable_sha256": "79b3e53f285a869810729bb5a4cee2ff785d133eb44313e1c319e3108c28869a",
+ "sameboy_commit": "213a12ce93d66b105a113debd9396306066a7cfc",
+ "matcha_source_commit": "170b9d7346a34fa7f77d529ad23de7042e7e8618"
+}

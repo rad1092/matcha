@@ -6,6 +6,7 @@
 //! timer. Output is produced once per M-cycle, box-filtered down to the host
 //! sample rate, then passed through the DMG's DC-blocking high-pass filter.
 
+use crate::Model;
 use crate::state::{StateError, StateReader, StateWriter};
 use alloc::vec::Vec;
 
@@ -260,6 +261,7 @@ impl Noise {
 }
 
 pub struct Apu {
+    cgb: bool,
     powered: bool,
     nr50: u8,
     nr51: u8,
@@ -325,6 +327,7 @@ impl Apu {
 
     pub fn power_on() -> Self {
         Self {
+            cgb: false,
             powered: true,
             nr50: 0,
             nr51: 0,
@@ -340,7 +343,7 @@ impl Apu {
             acc_n: 0,
             hpf_l: 0.0,
             hpf_r: 0.0,
-            hpf_factor: hpf_factor(48_000),
+            hpf_factor: hpf_factor(48_000, false),
             buffer: Vec::new(),
             channel_mask: 0x0F,
             mix_l: 0.0,
@@ -348,6 +351,14 @@ impl Apu {
             mix_dirty: true,
             output_enabled: true,
         }
+    }
+
+    pub fn new_with_model(model: Model) -> Self {
+        Self { cgb: model == Model::Cgb, hpf_factor: hpf_factor(48_000, model == Model::Cgb), ..Self::new() }
+    }
+
+    pub fn power_on_with_model(model: Model) -> Self {
+        Self { cgb: model == Model::Cgb, hpf_factor: hpf_factor(48_000, model == Model::Cgb), ..Self::power_on() }
     }
 
     /// Turns sample output on or off (see `output_enabled`).
@@ -368,7 +379,7 @@ impl Apu {
     pub fn set_sample_rate(&mut self, rate: u32) {
         let rate = rate.clamp(8_000, 192_000);
         self.sample_rate = rate;
-        self.hpf_factor = hpf_factor(rate);
+        self.hpf_factor = hpf_factor(rate, self.cgb);
         self.phase = 0;
     }
 
@@ -520,7 +531,11 @@ impl Apu {
             0xFF30..=0xFF3F => {
                 if self.ch3.enabled {
                     // DMG: only readable in the cycle the channel itself reads.
-                    if self.ch3.just_read { self.ch3.ram[usize::from(self.ch3.position >> 1)] } else { 0xFF }
+                    if self.cgb || self.ch3.just_read {
+                        self.ch3.ram[usize::from(self.ch3.position >> 1)]
+                    } else {
+                        0xFF
+                    }
                 } else {
                     self.ch3.ram[usize::from(addr - 0xFF30)]
                 }
@@ -562,7 +577,7 @@ impl Apu {
         self.mix_dirty = true;
         if let 0xFF30..=0xFF3F = addr {
             if self.ch3.enabled {
-                if self.ch3.just_read {
+                if self.cgb || self.ch3.just_read {
                     self.ch3.ram[usize::from(self.ch3.position >> 1)] = value;
                 }
             } else {
@@ -581,6 +596,9 @@ impl Apu {
             return;
         }
         if !self.powered {
+            if self.cgb {
+                return;
+            }
             // DMG: length counters stay writable while powered off.
             match addr {
                 0xFF11 => self.ch1.length.counter = 64 - u16::from(value & 0x3F),
@@ -666,7 +684,7 @@ impl Apu {
                 if value & 0x80 != 0 {
                     // DMG: retriggering while the channel is about to read
                     // corrupts the first bytes of wave RAM.
-                    if ch.enabled && ch.timer == 1 {
+                    if !self.cgb && ch.enabled && ch.timer == 1 {
                         let pos = usize::from(((ch.position + 1) & 31) >> 1);
                         if pos < 4 {
                             ch.ram[0] = ch.ram[pos];
@@ -712,8 +730,11 @@ impl Apu {
 
     fn power_off(&mut self) {
         // Registers clear; DMG keeps length counters and wave RAM.
-        let lengths =
-            [self.ch1.length.counter, self.ch2.length.counter, self.ch3.length.counter, self.ch4.length.counter];
+        let lengths = if self.cgb {
+            [0; 4]
+        } else {
+            [self.ch1.length.counter, self.ch2.length.counter, self.ch3.length.counter, self.ch4.length.counter]
+        };
         let ram = self.ch3.ram;
         self.ch1 = Pulse::default();
         self.ch2 = Pulse::default();
@@ -744,6 +765,7 @@ impl Apu {
     }
 
     pub(crate) fn save(&self, w: &mut StateWriter) {
+        w.bool(self.cgb);
         w.bool(self.powered);
         w.u8s(&[self.nr50, self.nr51, self.frame_step]);
         for ch in [&self.ch1, &self.ch2] {
@@ -774,6 +796,9 @@ impl Apu {
     }
 
     pub(crate) fn load(&mut self, r: &mut StateReader) -> Result<(), StateError> {
+        if r.bool()? != self.cgb {
+            return Err(StateError::Corrupt("apu model"));
+        }
         self.powered = r.bool()?;
         let mut b = [0u8; 3];
         r.u8s(&mut b)?;
@@ -821,9 +846,10 @@ impl Default for Apu {
     }
 }
 
-fn hpf_factor(rate: u32) -> f32 {
-    // 0.999958^(4194304 / rate), via exp/ln-free repeated squaring.
-    powf(0.999_958, 4_194_304.0 / rate as f32)
+fn hpf_factor(rate: u32, cgb: bool) -> f32 {
+    // Pan Docs Audio Details: CGB uses the stronger 0.998943 capacitor factor.
+    // Raise the per-dot coefficient to 4194304/rate without a libm dependency.
+    powf(if cgb { 0.998_943 } else { 0.999_958 }, 4_194_304.0 / rate as f32)
 }
 
 /// `base^exp` for 0 < base < 1 without libm (core has no powf).
@@ -928,4 +954,49 @@ fn load_pulse(ch: &mut Pulse, r: &mut StateReader) -> Result<(), StateError> {
     }
     ch.sweep_negated_once = r.bool()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cgb_active_wave_ram_access_uses_the_current_byte_without_dmg_lock() {
+        for model in [Model::Dmg, Model::Cgb] {
+            let mut apu = Apu::power_on_with_model(model);
+            apu.ch3.enabled = true;
+            apu.ch3.position = 4;
+            apu.ch3.ram[2] = 0xAB;
+            assert_eq!(apu.read(0xFF3F), if model == Model::Cgb { 0xAB } else { 0xFF });
+            apu.write(0xFF30, 0x55);
+            assert_eq!(apu.ch3.ram[2], if model == Model::Cgb { 0x55 } else { 0xAB });
+        }
+    }
+
+    #[test]
+    fn cgb_power_off_clears_and_locks_length_counters() {
+        for model in [Model::Dmg, Model::Cgb] {
+            let mut apu = Apu::power_on_with_model(model);
+            apu.write(0xFF11, 10);
+            apu.write(0xFF26, 0);
+            assert_eq!(apu.ch1.length.counter, if model == Model::Cgb { 0 } else { 54 });
+            apu.write(0xFF11, 20);
+            assert_eq!(apu.ch1.length.counter, if model == Model::Cgb { 0 } else { 44 });
+        }
+    }
+
+    #[test]
+    fn cgb_retrigger_does_not_corrupt_wave_ram() {
+        let mut apu = Apu::power_on_with_model(Model::Cgb);
+        for (index, byte) in apu.ch3.ram.iter_mut().enumerate() {
+            *byte = index as u8;
+        }
+        let original = apu.ch3.ram;
+        apu.ch3.enabled = true;
+        apu.ch3.dac = true;
+        apu.ch3.position = 15;
+        apu.ch3.timer = 1;
+        apu.write(0xFF1E, 0x80);
+        assert_eq!(apu.ch3.ram, original);
+    }
 }

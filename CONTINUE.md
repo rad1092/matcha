@@ -16,9 +16,10 @@ Done and verified:
 - **Hosts**: web player (`web/`, bundled into `dist/matcha.html`), MCP server
   and Claude plugin (`mcp/`, `plugin/`, packaged as `dist/matcha.plugin`),
   CLI (`crates/matcha-cli`: run, test, profile, trace, disasm, info).
-- **Docs**: architecture, nine ADRs, roadmap, this file.
+- **Docs**: architecture, ten ADRs, roadmap, this file.
 - **Corpus study** (`analysis/`, report in [`docs/analysis.md`](docs/analysis.md)):
-  868 homebrew programs through matcha and SameBoy; 866 same outcome.
+  historical 868-ROM DMG comparison (866 same outcome), plus the new
+  1,235-ROM automatic DMG/CGB run in `docs/cgb-analysis.md`.
 - **CI** (`.github/workflows/ci.yml`, on [GitHub](https://github.com/rad1092/matcha/actions)):
   fmt, clippy, unit tests + 498k CPU cases, conformance against the
   committed scoreboard, wasm build, MCP e2e, plugin build.
@@ -26,17 +27,20 @@ Done and verified:
 Not done (in order — details, verification and first steps in
 [`ROADMAP.md`](ROADMAP.md)):
 
-1. Game Boy Color mode — the biggest compatibility gap (29% of the corpus).
-2. Remaining pixel-fetch/window quirks — the FIFO is implemented; use the
+1. Remaining native CGB timing and DMG-on-CGB compatibility mode; native
+   colour graphics, memory banking, speed switching and VRAM DMA are implemented.
+2. Remaining DMG pixel-fetch/window and OAM DMA quirks — the FIFO is implemented; use the
    failing Mealybug and Gambatte cases in the scoreboard to guide refinement.
 
 The interrupted Claude work was recovered from upstream `fe2d0ed`: OAM
 corruption and seeded RAM noise were already committed there. The FIFO
 change also corrects running-versus-halted interrupt sampling, interrupt
 entry bus phases, and IF register-write collisions exposed by raster tests.
-See ADR-0009 and the update to ADR-0001. Save states are version 3; old
+See ADR-0009 and the update to ADR-0001. Save states are version 4; old
 quick-save snapshots are rejected, while battery saves remain compatible.
-The 868-ROM corpus study predates this renderer and has not been rerun.
+The historical 868-ROM DMG study is preserved. A new 1,235-ROM automatic
+DMG/CGB comparison is in `docs/cgb-analysis.md`, with pinned ROM hashes and
+strict coverage/model checks.
 
 Initial FIFO verification: 221 newly passing ROMs and zero regressions against
 `fe2d0ed` (Gambatte 1,567/1,783; Mealybug 8/24; Blargg 43/43, Mooneye
@@ -52,9 +56,21 @@ Mealybug object-size cases improve to 15/30 differing pixels but still fail.
 All recent address/read latches and the prior object queue are included in
 version-3 snapshots. Test selection and hardware references are unchanged.
 
-The remaining 203 ROM failures span several devices, not only the PPU:
-the largest groups include OAM DMA and timer tests. Keep those separate
-from fetch/window timing work. The full list is in the generated scoreboard.
+Native CGB support is now implemented (ADR-0010): VRAM/WRAM banking,
+RGB555 palettes and BG attributes, OAM-index sprite priority, KEY1 speed
+switching, GDMA/HDMA with CPU stalls, fast serial and CGB APU behavior.
+CGB HALT samples interrupts before its idle cycle, unlike DMG; both
+cgb-acid2 and cgb-acid-hell now pass exactly. The separate CGB scoreboard
+records native-mode scope and explicitly lists excluded compatibility tests.
+Hosts auto-select the model; the existing Rust constructor remains DMG.
+Snapshots are v4 and model-specific; battery saves retain their format.
+
+The DMG timer follow-up fixes final-dot interrupt sampling during HALT:
+47 more ROMs pass with zero regressions (Gambatte 1,642/1,783). The remaining
+156 DMG failures include pixel-fetch/window and OAM DMA behavior. Native
+CGB still has detailed timing failures, boot-phase approximations and no
+DMG-on-CGB colourization. Use both generated scoreboards rather than
+assuming that an acid test or coarse corpus outcome proves compatibility.
 
 ## Set up a machine
 
@@ -77,11 +93,12 @@ corpus is a sparse checkout of [gbdev/database](https://github.com/gbdev/databas
 cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo run --release -p matcha-cli -- test testdata/roms --baseline docs/conformance.json
+cargo run --release -p matcha-cli -- test testdata/roms --model cgb --baseline docs/conformance-cgb.json
 scripts/build-wasm.sh && node mcp/test.mjs
 node scripts/build-web.mjs && scripts/build-plugin.sh
 ```
 
-All of these passed on the commit that added this file.
+CI runs both model baselines; known failures are recorded rather than hidden.
 
 ## Things that are easy to get wrong
 
@@ -90,7 +107,8 @@ All of these passed on the commit that added this file.
   or they drift from the Rust code.
 - **Scoreboard numbers are generated.** Regenerate `docs/conformance.json`
   and `docs/CONFORMANCE.md` with `matcha test … --json … --markdown …`, then
-  rebuild the web bundle; update the summary table in `README.md` by hand.
+  also regenerate `docs/conformance-cgb.json` and `docs/CONFORMANCE-CGB.md`
+  with `--model cgb`. Rebuild the web bundle; update the summary table in `README.md` by hand.
 - **Analysis numbers are generated.** `analysis/report.py` writes
   `summary.json`; `analysis/publish.py` renders `docs/analysis.md` and the
   page from it and asserts the facts its prose depends on, so a rerun that
@@ -99,18 +117,21 @@ All of these passed on the commit that added this file.
   `load` for every new field (the targeted fuzz test in `lib.rs` corrupts
   live fields and fails if a state it accepts panics while loading or
   running).
-- **matcha skips the boot ROM** and starts in the DMG post-boot state
-  (registers, I/O, the logo in VRAM, PPU at the hand-over point). Mooneye's
-  `boot_*` tests pin this down; keep them green.
+- **matcha skips the boot ROM** and starts in a model-specific post-boot
+  state. DMG `boot_*` baselines remain mandatory; native CGB boot DIV and
+  register phases are approximate. DMG-on-CGB boot expectations are excluded
+  explicitly until that program mode is implemented.
 
 ## Where the published pages are
 
-Both are private Artifacts in the owner's Claude account (shared from each
-page's Share menu):
+The original versions remain private Artifacts in the owner's Claude account
+(shared from each page's Share menu). These have not been updated by the
+recovery work; current builds are the local `dist/` files and GitHub sources:
 
 - Web player: https://claude.ai/artifact/EfQ79j2rnaaS4NHw5CKgyG — from
   `dist/matcha.fragment.html` (`node scripts/build-web.mjs`)
 - Corpus report: https://claude.ai/artifact/AKXM7XyW8TTq27dTuBgSrz — from
   `dist/analysis.fragment.html` (`python3 analysis/publish.py`)
 
-Republish to the same links after rebuilding.
+The current player is `dist/matcha.html`; the new colour-corpus report is
+`dist/cgb-analysis.html`. Rebuilding locally does not republish a Claude Artifact.

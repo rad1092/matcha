@@ -5,12 +5,12 @@ mod image;
 mod profile;
 
 use matcha_core::cpu::StepKind;
-use matcha_core::{Buttons, GameBoy, Options, PowerOnRam, palettes};
+use matcha_core::{Buttons, GameBoy, Model, Options, PowerOnRam, palettes};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 const USAGE: &str = "\
-matcha — a Game Boy (DMG) emulator you can see inside
+matcha — a Game Boy / Game Boy Color emulator you can see inside
 
 USAGE:
   matcha info <rom>
@@ -25,6 +25,8 @@ USAGE:
                    [--count N | --last N [--watch HEX]]
 
 BUTTONS is a comma list: a,b,start,select,up,down,left,right
+--model auto|dmg|cgb selects hardware (ROM commands default auto; test defaults dmg).
+auto uses the cartridge's CGB header flag. test accepts dmg or cgb explicitly.
 --ram noise fills RAM at power-on with DMG-like junk (seed 0 unless given)
 instead of zeros, to catch software that reads memory before writing it.
 
@@ -107,25 +109,61 @@ pub fn parse_ram(value: Option<&str>) -> Result<Options, String> {
             _ => return Err(format!("--ram: expected zero, noise or noise:SEED, got '{other}'")),
         },
     };
-    Ok(Options { power_on_ram })
+    Ok(Options { power_on_ram, ..Options::default() })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum ModelChoice {
+    Auto,
+    Dmg,
+    Cgb,
+}
+
+impl ModelChoice {
+    fn parse(value: Option<&str>) -> Result<Self, String> {
+        match value.unwrap_or("auto") {
+            "auto" => Ok(Self::Auto),
+            "dmg" => Ok(Self::Dmg),
+            "cgb" => Ok(Self::Cgb),
+            other => Err(format!("--model: expected auto, dmg or cgb, got '{other}'")),
+        }
+    }
+
+    pub fn resolve(self, rom: &[u8]) -> Model {
+        match self {
+            Self::Dmg => Model::Dmg,
+            Self::Cgb => Model::Cgb,
+            Self::Auto if rom.get(0x143).is_some_and(|flag| flag & 0x80 != 0) => Model::Cgb,
+            Self::Auto => Model::Dmg,
+        }
+    }
+}
+
+pub fn model_name(model: Model) -> &'static str {
+    match model {
+        Model::Dmg => "dmg",
+        Model::Cgb => "cgb",
+    }
 }
 
 /// Creates a machine for headless use (no audio output).
-fn boot(rom: Vec<u8>, path: &str, options: Options) -> Result<GameBoy, String> {
+fn boot(rom: Vec<u8>, path: &str, mut options: Options, model: ModelChoice) -> Result<GameBoy, String> {
+    options.model = model.resolve(&rom);
     let mut gb = GameBoy::with_options(rom, options).map_err(|e| format!("{path}: {e}"))?;
     gb.set_audio_output(false);
     Ok(gb)
 }
 
-fn load(path: &str) -> Result<GameBoy, String> {
-    boot(read_rom(path)?, path, Options::default())
+fn load(path: &str, args: &Args) -> Result<GameBoy, String> {
+    boot(read_rom(path)?, path, Options::default(), ModelChoice::parse(args.get("model"))?)
 }
 
 fn cmd_info(args: &Args) -> Result<(), String> {
     let path = args.positional.first().ok_or("info: missing <rom>")?;
-    let gb = load(path)?;
+    let gb = load(path, args)?;
     let h = gb.header();
     println!("title        {}", h.title);
+    println!("model        {}", model_name(gb.model()));
     println!("cartridge    {:#04x} {}", h.cart_type, h.cart_type_name());
     println!("rom size     {} KiB", h.rom_size / 1024);
     println!("ram size     {} KiB", h.ram_size / 1024);
@@ -155,16 +193,18 @@ fn cmd_run(args: &Args) -> Result<(), String> {
         }
         None => None,
     };
-    let mut gb = boot(rom, path, parse_ram(args.get("ram"))?)?;
+    let mut gb = boot(rom, path, parse_ram(args.get("ram"))?, ModelChoice::parse(args.get("model"))?)?;
     if let Some(sav) = args.get("sav") {
         if let Ok(data) = std::fs::read(sav) {
             gb.load_battery_ram(&data);
         }
     }
-    let frames: u64 = match args.get("frames") {
-        Some(_) => args.number("frames", 60u64)?,
-        None => (args.number("seconds", 5.0f64)? * matcha_core::FRAME_RATE).round() as u64,
-    };
+    let frames = args.get("frames").map(|_| args.number("frames", 60u64)).transpose()?;
+    let seconds = args.number("seconds", 5.0f64)?;
+    if !seconds.is_finite() || seconds < 0.0 {
+        return Err("--seconds must be a nonnegative finite number".into());
+    }
+    let target_ticks = (seconds * 4_194_304.0).round() as u64;
     if let Some(list) = args.get("hold") {
         if input.is_some() {
             return Err("use either --hold or --input".into());
@@ -176,7 +216,7 @@ fn cmd_run(args: &Args) -> Result<(), String> {
         gb.set_audio_output(true);
     }
     let started = std::time::Instant::now();
-    while gb.frame_count() < frames {
+    while frames.map_or(gb.base_clock_ticks() < target_ticks, |n| gb.frame_count() < n) {
         if let Some(input) = &mut input {
             input.drive(&mut gb);
         }
@@ -184,7 +224,8 @@ fn cmd_run(args: &Args) -> Result<(), String> {
         gb.clear_audio(); // a host would play these
     }
     let elapsed = started.elapsed().as_secs_f64();
-    let emulated = frames as f64 / matcha_core::FRAME_RATE;
+    let frames = gb.frame_count();
+    let emulated = gb.base_clock_ticks() as f64 / 4_194_304.0;
     eprintln!(
         "ran {frames} frames ({emulated:.1}s emulated) in {elapsed:.3}s — {:.1}x realtime",
         emulated / elapsed.max(1e-9)
@@ -208,15 +249,25 @@ fn cmd_test(args: &Args) -> Result<bool, String> {
     if !root.is_dir() {
         return Err(format!("{} is not a directory (run scripts/fetch-testdata.sh)", root.display()));
     }
-    let mut cases = conformance::discover(&root);
+    let model = match args.get("model").unwrap_or("dmg") {
+        "dmg" => Model::Dmg,
+        "cgb" => Model::Cgb,
+        _ => return Err("test: --model must be dmg or cgb; auto would mix hardware expectations".into()),
+    };
+    let conformance::Discovery { mut cases, mut excluded } = conformance::discover(&root, model);
     if let Some(suite) = args.get("suite") {
         cases.retain(|c| c.suite == suite);
+        excluded.retain(|c| c.suite == suite);
     }
     if let Some(f) = args.get("filter") {
         cases.retain(|c| c.name.contains(f));
+        excluded.retain(|c| c.name.contains(f));
     }
     if cases.is_empty() {
-        return Err("no test ROMs matched".into());
+        return Err(format!(
+            "no applicable test ROMs matched ({} require unsupported CGB DMG-compatibility mode)",
+            excluded.len()
+        ));
     }
     let threads = args.number("threads", std::thread::available_parallelism().map_or(2, |n| n.get()))?;
     let started = std::time::Instant::now();
@@ -229,14 +280,14 @@ fn cmd_test(args: &Args) -> Result<bool, String> {
         };
         println!("{:<10} {:<70} {mark}", o.case.suite, o.case.name);
     }
-    let md = conformance::scoreboard_markdown(&outcomes);
+    let md = conformance::scoreboard_markdown(&outcomes, &excluded);
     println!("\n{md}");
     eprintln!("{} ROMs in {:.1}s", outcomes.len(), started.elapsed().as_secs_f64());
     if let Some(out) = args.get("markdown") {
         std::fs::write(out, &md).map_err(|e| format!("{out}: {e}"))?;
     }
     if let Some(out) = args.get("json") {
-        let json = serde_json::to_string_pretty(&conformance::scoreboard_json(&outcomes)).unwrap();
+        let json = serde_json::to_string_pretty(&conformance::scoreboard_json(&outcomes, &excluded)).unwrap();
         std::fs::write(out, json).map_err(|e| format!("{out}: {e}"))?;
     }
     if let Some(path) = args.get("baseline") {
@@ -308,7 +359,7 @@ fn cmd_trace(args: &Args) -> Result<(), String> {
     let rom = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
     let mut input =
         profile::InputDriver::new(profile::InputMode::parse(args.get("input"), profile::InputMode::None)?, &rom);
-    let mut gb = boot(rom, path, parse_ram(args.get("ram"))?)?;
+    let mut gb = boot(rom, path, parse_ram(args.get("ram"))?, ModelChoice::parse(args.get("model"))?)?;
     let frames = args.number("frames", 0u64)?;
     let last = args.number("last", 0usize)?;
     let watch = args.get("watch").map(parse_hex).transpose()?;
@@ -391,7 +442,7 @@ fn cmd_trace(args: &Args) -> Result<(), String> {
 
 fn cmd_disasm(args: &Args) -> Result<(), String> {
     let path = args.positional.first().ok_or("disasm: missing <rom>")?;
-    let gb = load(path)?;
+    let gb = load(path, args)?;
     let mut addr = parse_hex(args.get("addr").unwrap_or("0100"))?;
     for _ in 0..args.number("count", 24usize)? {
         let ins = gb.disassemble(addr);
@@ -420,6 +471,7 @@ fn main() -> ExitCode {
                 args.get("input"),
                 args.number("seconds", 30.0f64),
                 &options,
+                ModelChoice::parse(args.get("model"))?,
             )
         }),
         "disasm" => cmd_disasm(&args).map(|()| true),
@@ -437,5 +489,22 @@ fn main() -> ExitCode {
             eprintln!("error: {e}");
             ExitCode::from(2)
         }
+    }
+}
+
+#[cfg(test)]
+mod model_tests {
+    use super::*;
+    #[test]
+    fn auto_follows_header_and_explicit_model_overrides_it() {
+        let mut rom = vec![0; 0x150];
+        assert_eq!(ModelChoice::Auto.resolve(&rom), Model::Dmg);
+        for flag in [0x80, 0xC0] {
+            rom[0x143] = flag;
+            assert_eq!(ModelChoice::Auto.resolve(&rom), Model::Cgb);
+            assert_eq!(ModelChoice::Dmg.resolve(&rom), Model::Dmg);
+        }
+        assert_eq!(ModelChoice::Cgb.resolve(&[]), Model::Cgb);
+        assert!(ModelChoice::parse(Some("bad")).is_err());
     }
 }

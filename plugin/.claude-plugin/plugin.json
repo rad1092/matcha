@@ -1,10 +1,10 @@
 {
   "name": "matcha",
   "version": "0.1.0",
-  "description": "A cycle-accurate Game Boy (DMG) emulator Claude can see, play and debug: load .gb ROMs, press buttons, take screenshots, set breakpoints and watchpoints, step, inspect memory and find game values.",
+  "description": "A Game Boy and native Game Boy Color emulator Claude can see, play and debug: load .gb/.gbc ROMs, press buttons, take screenshots, set breakpoints and watchpoints, step, inspect memory and find game values.",
   "author": {
     "name": "HONGDAE KIM"
   },
   "license": "MIT OR Apache-2.0",
-  "keywords": ["game boy", "emulator", "retro", "homebrew", "debugging"]
+  "keywords": ["game boy", "game boy color", "emulator", "retro", "homebrew", "debugging"]
 }

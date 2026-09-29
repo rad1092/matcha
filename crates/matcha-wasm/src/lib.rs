@@ -10,7 +10,7 @@
 //! obtained from [`matcha_alloc`] (or otherwise valid for `len` bytes).
 
 use matcha_core::cpu::StepKind;
-use matcha_core::{Buttons, GameBoy, HEIGHT, Options, PowerOnRam, RunEvent, WIDTH, palettes};
+use matcha_core::{Buttons, GameBoy, HEIGHT, Model, Options, PowerOnRam, RunEvent, WIDTH, palettes};
 use std::fmt::Write as _;
 use std::sync::Mutex;
 
@@ -98,9 +98,30 @@ pub extern "C" fn matcha_last_error_len() -> u32 {
 /// `(rom, len)` must be readable.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn matcha_new(rom: *const u8, len: u32) -> *mut Emu {
+    // Preserve the original C ABI's DMG default.
+    unsafe { matcha_new_with_model(rom, len, 0) }
+}
+
+/// Creates a machine: model 0 = DMG, 1 = CGB, 2 = auto from the ROM header.
+/// Returns null for invalid ROMs or model values.
+///
+/// # Safety
+/// `(rom, len)` must be readable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn matcha_new_with_model(rom: *const u8, len: u32, model: u32) -> *mut Emu {
     // SAFETY: forwarded caller guarantee.
     let rom = unsafe { bytes(rom, len) }.to_vec();
-    match GameBoy::new(rom) {
+    let model = match model {
+        0 => Model::Dmg,
+        1 => Model::Cgb,
+        2 if rom.get(0x143).is_some_and(|flag| flag & 0x80 != 0) => Model::Cgb,
+        2 => Model::Dmg,
+        _ => {
+            set_error("model must be 0 (DMG), 1 (CGB) or 2 (auto)");
+            return std::ptr::null_mut();
+        }
+    };
+    match GameBoy::new_with_model(rom, model) {
         Ok(gb) => Box::into_raw(Box::new(Emu {
             gb,
             palette: palettes::MATCHA,
@@ -143,7 +164,35 @@ pub unsafe extern "C" fn matcha_reset(e: *mut Emu) {
 pub unsafe extern "C" fn matcha_power_cycle(e: *mut Emu, noise: u32, seed_lo: u32, seed_hi: u32) {
     let power_on_ram =
         if noise != 0 { PowerOnRam::Noise(u64::from(seed_hi) << 32 | u64::from(seed_lo)) } else { PowerOnRam::Zero };
-    unsafe { emu(e) }.gb.reset_with(Options { power_on_ram });
+    let e = unsafe { emu(e) };
+    e.gb.reset_with(Options { power_on_ram, model: e.gb.model() });
+}
+
+/// Current hardware: 0 = DMG, 1 = CGB.
+/// # Safety
+/// See module docs.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn matcha_model(e: *mut Emu) -> u32 {
+    match unsafe { emu(e) }.gb.model() {
+        Model::Dmg => 0,
+        Model::Cgb => 1,
+    }
+}
+
+/// Whether KEY1 has selected the CGB's double CPU speed.
+/// # Safety
+/// See module docs.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn matcha_double_speed(e: *mut Emu) -> u32 {
+    u32::from(unsafe { emu(e) }.gb.double_speed())
+}
+
+/// Elapsed 4.194304 MHz base-clock ticks, independent of CPU speed.
+/// # Safety
+/// See module docs.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn matcha_base_clock_ticks(e: *mut Emu) -> f64 {
+    unsafe { emu(e) }.gb.base_clock_ticks() as f64
 }
 
 // --- running ---------------------------------------------------------------------
@@ -636,4 +685,33 @@ pub unsafe extern "C" fn matcha_remove_watchpoint(e: *mut Emu, addr: u32, write:
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn matcha_set_audio_output(e: *mut Emu, on: u32) {
     unsafe { emu(e) }.gb.set_audio_output(on != 0);
+}
+
+#[cfg(test)]
+mod model_tests {
+    use super::*;
+
+    #[test]
+    fn old_constructor_and_explicit_models_remain_distinct_across_reset() {
+        let mut rom = vec![0; 0x8000];
+        rom[0x143] = 0x80;
+        // SAFETY: ROM buffers outlive construction; every returned live
+        // handle is destroyed exactly once below.
+        unsafe {
+            let legacy = matcha_new(rom.as_ptr(), rom.len() as u32);
+            assert!(!legacy.is_null());
+            assert_eq!(matcha_model(legacy), 0);
+            matcha_destroy(legacy);
+            let color = matcha_new_with_model(rom.as_ptr(), rom.len() as u32, 2);
+            assert!(!color.is_null());
+            assert_eq!(matcha_model(color), 1);
+            matcha_power_cycle(color, 1, 7, 0);
+            assert_eq!(matcha_model(color), 1);
+            matcha_reset(color);
+            assert_eq!(matcha_model(color), 1);
+            assert_eq!(matcha_double_speed(color), 0);
+            matcha_destroy(color);
+            assert!(matcha_new_with_model(rom.as_ptr(), rom.len() as u32, 3).is_null());
+        }
+    }
 }

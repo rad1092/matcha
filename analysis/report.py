@@ -22,6 +22,7 @@ Outputs:
 
 import datetime
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -538,9 +539,22 @@ def main():
             "lcd_on_frames", "nonblank_frames", "distinct_frames_sampled"]
     cols += [c for c in ("z_outcome", "r_outcome") if c in df]
     df[cols].to_csv(DATA / "roms.csv", index=False)
-    (DATA / "summary.json").write_text(json.dumps(summary, indent=1, default=int) + "\n")
+    # Missing years are pandas NaN internally; JSON consumers require null.
+    # Keep the serializer strict so new non-finite values cannot leak again.
+    summary = json_safe(summary)
+    (DATA / "summary.json").write_text(json.dumps(summary, indent=1, default=int, allow_nan=False) + "\n")
     charts(summary)
     print(json.dumps({k: v for k, v in summary.items() if k not in ("opcodes",)}, indent=1, default=int)[:6000])
+
+
+def json_safe(value):
+    if isinstance(value, dict):
+        return {k: json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(v) for v in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
 
 
 if __name__ == "__main__":

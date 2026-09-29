@@ -20,6 +20,7 @@ Accuracy is defined by public test suites, run automatically:
 | System | Blargg cpu/timing/sound/oam_bug | result code in cartridge RAM / serial text / screenshot |
 | System | Mooneye acceptance + MBC (DMG-applicable) | Fibonacci registers at `ld b, b` |
 | PPU | dmg-acid2 | pixel-exact screenshot |
+| System | Gambatte (DMG tests) | hex result read from the tile map and checked against the screen; reference screenshots |
 | PPU (stretch) | Mealybug Tearoom | pixel-exact screenshots |
 | Core API | unit tests | determinism, save-state round trip and atomicity, breakpoints, profiler |
 | Frontends | `mcp/test.mjs` | MCP protocol, images, state round trip |
@@ -36,18 +37,30 @@ Test data is fetched by `scripts/fetch-testdata.sh`, not committed. CI sets
 - **Hand-written unit tests only:** tests encode the author's understanding,
   including its mistakes.
 - **Differential testing against another emulator:** useful, but inherits
-  the reference emulator's bugs; kept as a possible addition.
+  the reference emulator's bugs, so it complements the suites rather than
+  replacing them. Added later as a corpus-wide check (see below).
 
 ## Consequences
 
 - Easier: every change has a measurable effect; regressions are loud.
 - Harder: some suites need exact sub-cycle behaviour, pushing work toward
   accuracy that few games need (tracked, not required: Mealybug, oam_bug).
-- Revisit: add SameSuite and Gambatte's DMG tests as the next layers.
+- Revisit: add SameSuite as the next layer.
+
+## Update (2026-09-29)
+
+Gambatte's DMG tests joined the scoreboard, and `analysis/` now runs every
+DMG-runnable Homebrew Hub program through matcha and SameBoy with identical
+input. That comparison found three bugs the suites had missed (post-boot
+VRAM, DMG STOP, OAM DMA bus conflicts); Gambatte's `oamdma` tests then
+pinned the DMA timing. Differential testing stays a complement: every
+disagreement is traced to its first diverging instruction before either
+emulator is assumed right.
 
 ## Action Items
 
-1. [x] SST harness; conformance runner with Blargg/Mooneye/acid2/Mealybug judges.
+1. [x] SST harness; conformance runner with Blargg/Mooneye/acid2/Gambatte/Mealybug judges.
 2. [x] Scoreboard JSON/Markdown; page numbers generated from it.
 3. [x] CI workflow (`.github/workflows/ci.yml`).
-4. [ ] OAM corruption bug (Blargg `oam_bug`), pixel FIFO (Mealybug).
+4. [x] Corpus-wide comparison with SameBoy (`analysis/reference/`).
+5. [ ] OAM corruption bug (Blargg `oam_bug`), pixel FIFO (Mealybug).

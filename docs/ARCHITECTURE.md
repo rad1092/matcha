@@ -19,14 +19,14 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
 | F3 | Inspect a running game: registers, disassembly, breakpoints, watchpoints, VRAM, audio channels, memory search | web debugger panels, MCP tools |
 | F4 | Let an AI agent load, play, screenshot, inspect and debug ROMs through tools | `mcp/server.mjs`, `plugin/` |
 | F5 | Measure accuracy against public test suites and publish the scoreboard | `matcha test`, `docs/CONFORMANCE.md` |
-| F6 | Profile ROMs headlessly (opcodes, interrupts, memory regions, CPU idle time) for corpus analysis | `matcha profile`, `analysis/` |
+| F6 | Profile and trace ROMs headlessly (opcodes, interrupts, memory regions, CPU idle time; instruction traces) for corpus analysis and debugging | `matcha profile`, `matcha trace`, `analysis/` |
 
 ### Non-functional
 
 | Property | Target | Status |
 |---|---|---|
-| Accuracy | Pass the CPU, timing, sound and PPU suites real games depend on | SST 498,000/498,000; Blargg 38/44; Mooneye 94/94; dmg-acid2 1/1 ([scoreboard](CONFORMANCE.md)) |
-| Speed | Full speed with audio in a browser on a phone-class CPU | 51× real time headless, 37× with audio (native, one core of the 2-vCPU build container) |
+| Accuracy | Pass the CPU, timing, sound and PPU suites real games depend on; agree with a reference emulator on real software | SST 498,000/498,000; Mooneye 94/94; dmg-acid2 1/1; Blargg 38/44; Gambatte 1,353/1,783; Mealybug 1/24 ([scoreboard](CONFORMANCE.md)); same outcome as SameBoy on 866 of 868 homebrew programs ([analysis](analysis.md)) |
+| Speed | Full speed with audio in a browser on a phone-class CPU | Median 52× real time across 150 homebrew programs, slowest 37×; 40–47× with 48 kHz audio (native, one core of the 2-vCPU build container) |
 | Determinism | Same ROM + inputs + state ⇒ identical frames and audio, bit for bit | Unit-tested (two machines, save/replay) |
 | Portability | One core for browser, Node and native; no OS services | `no_std` + `alloc`, zero dependencies |
 | Safety | Any byte sequence is a valid ROM or state input: no panics, no UB | `#![forbid(unsafe_code)]` in the core; bounds-checked state reader; atomic state load |
@@ -59,7 +59,7 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
                  ┌───────────────┴──────────┐              ┌───────────┴────────────┐
                  │ matcha-wasm (C ABI)      │              │ matcha-cli (native)    │
                  │ handle + owned buffers   │              │ run · test · profile   │
-                 └───────────────┬──────────┘              │ disasm · info          │
+                 └───────────────┬──────────┘              │ trace · disasm · info  │
                                  │ matcha.wasm             └───────────┬────────────┘
                      ┌───────────┴────────────┐                        │
                      │ web/matcha.js wrapper  │              docs/conformance.json
@@ -76,8 +76,8 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
 
 | Module | Responsibility | Notes |
 |---|---|---|
-| `cpu.rs` | SM83 interpreter over the `CpuBus` trait | One bus access per M-cycle, EI delay, HALT bug, IE-push dispatch quirk, illegal-opcode lock |
-| `bus.rs` | Memory map, interrupts, OAM DMA, clocking of all devices | Implements `CpuBus`; the only place devices are ticked |
+| `cpu.rs` | SM83 interpreter over the `CpuBus` trait | One bus access per M-cycle, EI delay, HALT bug, IE-push dispatch quirk, DMG STOP, illegal-opcode lock |
+| `bus.rs` | Memory map, interrupts, OAM DMA, clocking of all devices | Implements `CpuBus`; the only place devices are ticked; DMA bus conflicts (the CPU sees the DMA's byte on the bus it occupies) |
 | `ppu.rs` | LCD timing, STAT/LY interrupts, access blocking, rendering | Event-scheduled line timing (ADR-0001, ADR-0002) |
 | `apu.rs` | Four channels, frame sequencer, mixer, resampler | Cached mix + box filter + DMG high-pass (ADR-0005) |
 | `timer.rs` | 16-bit system counter, falling-edge TIMA, DIV-APU and serial clocks | TIMA reload state machine |
@@ -86,7 +86,7 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
 | `state.rs` | Versioned binary writer/reader | ADR-0006 |
 | `disasm.rs` | RGBDS-syntax disassembler | Used by the debugger, MCP and CLI |
 | `profile.rs` | Opt-in execution profile | Opcode counts, cycles by state, memory regions, coverage |
-| `lib.rs` | `GameBoy` facade | Run loop, breakpoints, palettes, public API |
+| `lib.rs` | `GameBoy` facade | Post-boot state (including the boot logo left in VRAM), run loop, breakpoints, palettes, public API |
 
 ## 3. How time works
 
@@ -123,8 +123,9 @@ Three mechanisms keep the per-M-cycle work small:
    boundary, using the per-line register values (ADR-0002).
 2. **HALT fast path.** A halted CPU loops on `idle()` inside `Cpu::step`
    until an interrupt is pending or the bus says to yield (end of frame,
-   breakpoint budget). No instruction decode happens while halted — and most
-   games spend most of their time halted (see [`analysis.md`](analysis.md)).
+   breakpoint budget). No instruction decode happens while halted — and
+   homebrew made with GB Studio or GBDK spends more than half its time halted
+   (see [`analysis.md`](analysis.md)).
 3. **Cached audio mix.** Channels report when their output level changes; the
    stereo mix is recomputed only then, and each M-cycle adds the cached value
    to an accumulator.
@@ -169,7 +170,7 @@ Claude ──tools/call press {buttons:["a"]}──▶ server.mjs
 | Rust ↔ JavaScript | 45 `extern "C"` exports over an opaque handle; bulk data in handle-owned buffers; errors via `matcha_last_error_*` | `crates/matcha-wasm/src/lib.rs` (ADR-0004) |
 | JS wrapper | `loadMatcha(bytes)` → `MatchaModule.create(rom)` → `Emulator` methods; shared by browser and Node | `web/matcha.js` |
 | Agent ↔ server | MCP over stdio, protocol 2024-11-05 … 2025-11-25; 17 tools | `mcp/server.mjs` (ADR-0007) |
-| Shell ↔ CLI | `matcha info/run/test/profile/disasm`; JSON and Markdown outputs | `crates/matcha-cli/src/main.rs` |
+| Shell ↔ CLI | `matcha info/run/test/profile/trace/disasm`; JSON and Markdown outputs | `crates/matcha-cli/src/main.rs` |
 
 ## 5. State and storage
 
@@ -187,27 +188,36 @@ machine.
 
 ## 6. Performance
 
-Measured with `matcha run --seconds 60` (release build, native, audio off
-unless stated) on one core of the 2-vCPU build container:
+Measured with `matcha run --seconds 60 --input monkey` (release build,
+native, one ROM at a time on one core of the 2-vCPU build container):
 
-| Configuration | Speed |
+| Configuration | Speed (× real time) |
 |---|---|
-| Before optimisation (per-dot PPU loop, uncached mixer) | 18× real time |
-| Current, video only | 51× real time |
-| Current, with 48 kHz audio | 37× real time |
+| Before optimisation (per-dot PPU loop, uncached mixer), one game | 18 |
+| 150 random corpus programs, video only (`analysis/bench.py`) | median 52, slowest 37, fastest 155 |
+| The four bundled games, video only | 53–66 |
+| The four bundled games, with 48 kHz audio (`--audio`) | 40–47 |
 
-A frame is 17,556 M-cycles (16.74 ms of Game Boy time). At 37× the core
-needs ≈ 0.45 ms per frame, leaving the browser most of its 16.7 ms budget
-for painting and the debugger panels even when WebAssembly runs a few times
-slower than native. Fast-forward runs four frames per display frame.
+Speed tracks how busy the game keeps the CPU: halted time is skipped in
+bulk, so programs that wait for VBlank with HALT emulate fastest (see
+[`analysis.md`](analysis.md), "Emulation speed").
+
+A frame is 17,556 M-cycles (16.74 ms of Game Boy time). At the slowest
+measured speed (37×, less 17–33% for sound) the core
+needs well under 1 ms per frame, leaving the browser most of its 16.7 ms
+budget for painting and the debugger panels even when WebAssembly runs a few
+times slower than native. Fast-forward runs at four times speed (at most eight
+emulated frames per display frame).
 
 ## 7. Reliability and safety
 
 - **Untrusted input.** ROMs, save states and battery files come from users.
-  Unknown mapper types are rejected with an error; every other byte sequence
-  runs. Illegal opcodes lock the CPU (as on hardware) instead of panicking.
-  The state reader is bounds-checked and validates enumerations and
-  counters.
+  Unknown mapper types are rejected with an error; ROMs are truncated to what
+  their mapper can address (8 MiB at most); every other byte sequence runs.
+  Illegal opcodes lock the CPU (as on hardware) instead of panicking. The
+  state reader is bounds-checked and validates every enumeration, counter and
+  register that could break an invariant; a targeted fuzz test loads
+  thousands of corrupted states with overflow checks on.
 - **No unsafe in the core.** `matcha-core` forbids `unsafe`; the unsafe code
   is confined to the thin WASM export layer, each function documenting its
   pointer contract.
@@ -215,8 +225,13 @@ slower than native. Fast-forward runs four frames per display frame.
   source; the MBC3 RTC advances with emulated cycles, and hosts that want
   wall-clock time call `rtc_advance_seconds` explicitly.
 - **Failures are visible.** The CLI's test runner reports each ROM as pass,
-  fail or error; CI sets `MATCHA_REQUIRE_TESTDATA=1` so missing test data
-  fails instead of silently skipping.
+  fail or error, and `--baseline` turns any newly failing ROM into a CI
+  failure; CI sets `MATCHA_REQUIRE_TESTDATA=1` so missing test data fails
+  instead of silently skipping.
+- **Checked against a second emulator.** The corpus study runs 868 homebrew
+  programs through matcha and SameBoy with identical input and compares
+  outcomes and screens; it found three bugs the test suites had missed
+  ([`analysis.md`](analysis.md)).
 
 ## 8. Trade-offs
 

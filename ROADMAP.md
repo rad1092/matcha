@@ -7,10 +7,10 @@ how to verify, and the first concrete step, so it can be picked up cold.
 ## 1. Game Boy Color mode
 
 **Why.** 367 of the 1,266 Homebrew Hub cartridges (29%) are CGB-only and
-cannot run at all. Among the "CGB-enhanced" ones matcha does run as a DMG,
-27 get stuck in STOP attempting a CGB speed switch and 20 never draw a
-picture — on an original Game Boy they fail the same way, but the people
-who made them expect a Color.
+cannot run at all. Among the 306 "CGB-enhanced" ones matcha does run as a
+DMG, 27 hang in STOP attempting a CGB speed switch and 29 never draw a
+picture (19 of them both) — on an original Game Boy they fail the same way,
+but the people who made them expect a Color.
 
 **What.** A `Model` choice at construction (`Dmg` | `Cgb`), CGB boot state,
 double-speed mode (KEY1 + STOP), VRAM bank 1 and background attributes

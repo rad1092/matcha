@@ -1,0 +1,1955 @@
+{
+ "date": "2026-09-29",
+ "corpus": {
+  "fingerprints": {
+   "tagged": {
+    "GB Studio": {
+     "entries": 15,
+     "fingerprinted_as_tagged": 15
+    },
+    "GBDK": {
+     "entries": 6,
+     "fingerprinted_as_tagged": 6
+    }
+   },
+   "fingerprinted_before_2019": 0,
+   "dated_before_2019": 413,
+   "fingerprinted_share_2019_on_pct": 74.52
+  },
+  "waves": {
+   "1997-2002": {
+    "n": 311,
+    "color_pct": 74.6,
+    "demo_pct": 55.63
+   },
+   "2019-": {
+    "n": 259,
+    "competition_pct": 66.41,
+    "game_pct": 85.33
+   }
+  },
+  "entries_with_rom": 1266,
+  "hardware": {
+   "DMG": 576,
+   "CGB only": 367,
+   "CGB enhanced": 323
+  },
+  "cgb_only_pct": 28.99,
+  "mapper": {
+   "MBC5": 518,
+   "none": 425,
+   "MBC1": 282,
+   "UNKNOWN": 28,
+   "MBC3": 10,
+   "MMM01+RAM+BATTERY": 1,
+   "MBC6": 1,
+   "BANDAI TAMA5": 1
+  },
+  "unsupported_mapper": 31,
+  "unsupported_mapper_types": {
+   "UNKNOWN": 28,
+   "MMM01+RAM+BATTERY": 1,
+   "MBC6": 1,
+   "BANDAI TAMA5": 1
+  },
+  "unsupported_mapper_with_valid_logo": 0,
+  "sgb_flag": 64,
+  "toolchain": {
+   "other / unknown": 803,
+   "GB Studio 3+": 250,
+   "GBDK-2020 (C)": 213
+  },
+  "typetag": {
+   "game": 832,
+   "demo": 282,
+   "tool": 112,
+   "music": 35,
+   "": 5
+  },
+  "dated": 672,
+  "by_era": {
+   "1995-2005": 337,
+   "2006-2018": 76,
+   "2019-": 259
+  },
+  "peak_year": 2023,
+  "peak_year_count": 156,
+  "boots_on_dmg": 1204,
+  "bad_logo": 46,
+  "bad_header_checksum": 53,
+  "dmg_runnable": 868,
+  "per_year": {
+   "years": [
+    1995,
+    1996,
+    1997,
+    1998,
+    1999,
+    2000,
+    2001,
+    2002,
+    2003,
+    2004,
+    2005,
+    2006,
+    2007,
+    2008,
+    2009,
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+   ],
+   "DMG": [
+    3,
+    6,
+    18,
+    29,
+    16,
+    8,
+    5,
+    3,
+    1,
+    2,
+    1,
+    5,
+    0,
+    1,
+    5,
+    1,
+    2,
+    1,
+    3,
+    0,
+    4,
+    2,
+    11,
+    5,
+    6,
+    5,
+    18,
+    13,
+    65,
+    8,
+    3,
+    2
+   ],
+   "CGB enhanced": [
+    0,
+    0,
+    0,
+    3,
+    40,
+    54,
+    57,
+    7,
+    4,
+    2,
+    1,
+    2,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    3,
+    1,
+    8,
+    3,
+    6,
+    4,
+    1,
+    3,
+    7,
+    7,
+    4,
+    2,
+    0
+   ],
+   "CGB only": [
+    0,
+    0,
+    0,
+    0,
+    9,
+    27,
+    26,
+    9,
+    3,
+    1,
+    2,
+    0,
+    0,
+    1,
+    2,
+    1,
+    0,
+    2,
+    0,
+    2,
+    1,
+    0,
+    3,
+    0,
+    0,
+    3,
+    8,
+    13,
+    84,
+    0,
+    1,
+    2
+   ]
+  }
+ },
+ "compatibility": {
+  "profiled": 868,
+  "matcha": {
+   "running": 788,
+   "static": 42,
+   "blank": 29,
+   "crashed": 9
+  },
+  "boot_screen_hash": "30f371eb3dc8eb6d",
+  "logo_only": 8,
+  "by_hardware": {
+   "CGB enhanced": {
+    "running": 244,
+    "static": 26,
+    "blank": 29,
+    "crashed": 7
+   },
+   "DMG": {
+    "running": 544,
+    "static": 16,
+    "blank": 0,
+    "crashed": 2
+   }
+  },
+  "bad_header": {
+   "count": 30,
+   "outcomes": {
+    "running": 25,
+    "crashed": 3,
+    "blank": 2
+   }
+  },
+  "stuck_in_stop": 27,
+  "stuck_in_stop_cgb_flag": 27,
+  "stuck_in_stop_wrote_key1": 27
+ },
+ "agreement": {
+  "outcome_agreement_pct": 99.77,
+  "outcome_agree": 866,
+  "sameboy": {
+   "running": 788,
+   "static": 41,
+   "blank": 29,
+   "crashed": 10
+  },
+  "confusion": {
+   "running": {
+    "running": 787,
+    "static": 0,
+    "blank": 0,
+    "crashed": 1
+   },
+   "static": {
+    "running": 1,
+    "static": 41,
+    "blank": 0,
+    "crashed": 0
+   },
+   "blank": {
+    "running": 0,
+    "static": 0,
+    "blank": 29,
+    "crashed": 0
+   },
+   "crashed": {
+    "running": 0,
+    "static": 0,
+    "blank": 0,
+    "crashed": 9
+   }
+  },
+  "with_static_screens_both": 802,
+  "static_sets_identical": 525,
+  "static_share_one": 786,
+  "static_mean_jaccard": 0.793,
+  "static_screens_total_matcha": 5740,
+  "static_screens_found_in_sameboy": 4374,
+  "disagreements": [
+   {
+    "slug": "child-s-play",
+    "cgb_mode": "CGB enhanced",
+    "m_outcome": "running",
+    "z_outcome": "crashed"
+   },
+   {
+    "slug": "hybrid-gbplot",
+    "cgb_mode": "DMG",
+    "m_outcome": "static",
+    "z_outcome": "running"
+   }
+  ],
+  "lcd_on_frames_median_abs_diff": 1.0
+ },
+ "history": {
+  "agreement": [
+   [
+    "`22c3fcc` before the comparison",
+    831
+   ],
+   [
+    "`9e9b8be` + boot logo in VRAM, DMG STOP",
+    858
+   ],
+   [
+    "`2f864c7` + OAM DMA bus conflicts",
+    866
+   ]
+  ]
+ },
+ "ram": {
+  "outcome_changed": 4,
+  "outcome_changed_pct": 0.46,
+  "static_screens_changed": 56,
+  "fixed_by_noise": 1,
+  "broken_by_noise": 1,
+  "transitions": [
+   {
+    "z_outcome": "blank",
+    "r_outcome": "crashed",
+    "n": 1
+   },
+   {
+    "z_outcome": "crashed",
+    "r_outcome": "running",
+    "n": 1
+   },
+   {
+    "z_outcome": "running",
+    "r_outcome": "crashed",
+    "n": 1
+   },
+   {
+    "z_outcome": "static",
+    "r_outcome": "crashed",
+    "n": 1
+   }
+  ],
+  "examples": [
+   {
+    "slug": "beberg",
+    "year": 1999.0,
+    "toolchain": "other / unknown",
+    "z_outcome": "blank",
+    "r_outcome": "crashed"
+   },
+   {
+    "slug": "bubbles",
+    "year": 2001.0,
+    "toolchain": "other / unknown",
+    "z_outcome": "running",
+    "r_outcome": "crashed"
+   },
+   {
+    "slug": "fatass",
+    "year": NaN,
+    "toolchain": "other / unknown",
+    "z_outcome": "crashed",
+    "r_outcome": "running"
+   },
+   {
+    "slug": "rgb-grafx-demo",
+    "year": 2000.0,
+    "toolchain": "other / unknown",
+    "z_outcome": "static",
+    "r_outcome": "crashed"
+   }
+  ]
+ },
+ "cpu": {
+  "n": 859,
+  "median_util": 0.7454,
+  "mean_util": 0.6516,
+  "never_halts_pct": 40.51,
+  "busy_over_95_pct": 42.61,
+  "by_toolchain": {
+   "GB Studio 3+": {
+    "n": 78,
+    "median_util": 0.4126,
+    "never_halts_pct": 0.0
+   },
+   "GBDK-2020 (C)": {
+    "n": 153,
+    "median_util": 0.4534,
+    "never_halts_pct": 2.61
+   },
+   "other / unknown": {
+    "n": 628,
+    "median_util": 0.9969,
+    "never_halts_pct": 54.78
+   }
+  },
+  "era": {
+   "1995-2005": {
+    "n": 247,
+    "median_util": 1.0,
+    "never_halts_pct": 70.04
+   },
+   "2019-": {
+    "n": 132,
+    "median_util": 0.3953,
+    "never_halts_pct": 5.3
+   }
+  },
+  "hist_edges": [
+   0.0,
+   0.05,
+   0.1,
+   0.15,
+   0.2,
+   0.25,
+   0.3,
+   0.35,
+   0.4,
+   0.45,
+   0.5,
+   0.55,
+   0.6,
+   0.65,
+   0.7,
+   0.75,
+   0.8,
+   0.85,
+   0.9,
+   0.95,
+   1.0
+  ],
+  "hist": {
+   "GB Studio 3+": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    5,
+    14,
+    16,
+    10,
+    10,
+    7,
+    5,
+    2,
+    2,
+    4,
+    0,
+    0,
+    2,
+    0,
+    0
+   ],
+   "GBDK-2020 (C)": [
+    3,
+    8,
+    9,
+    9,
+    3,
+    6,
+    8,
+    13,
+    17,
+    14,
+    11,
+    7,
+    7,
+    4,
+    11,
+    4,
+    3,
+    5,
+    3,
+    8
+   ],
+   "other / unknown": [
+    50,
+    24,
+    17,
+    18,
+    19,
+    15,
+    14,
+    6,
+    15,
+    6,
+    11,
+    7,
+    5,
+    10,
+    8,
+    12,
+    11,
+    11,
+    11,
+    358
+   ]
+  }
+ },
+ "opcodes": {
+  "roms": 868,
+  "instructions_total": 14294244753,
+  "opcodes_for_share": {
+   "50": 15,
+   "80": 51,
+   "90": 82,
+   "99": 165
+  },
+  "top": [
+   {
+    "opcode": "18",
+    "text": "jr e8",
+    "share": 7.94
+   },
+   {
+    "opcode": "20",
+    "text": "jr nz, e8",
+    "share": 7.31
+   },
+   {
+    "opcode": "f0",
+    "text": "ldh a, [$ff00+n8]",
+    "share": 7.27
+   },
+   {
+    "opcode": "cb",
+    "text": "prefix cb",
+    "share": 3.71
+   },
+   {
+    "opcode": "c3",
+    "text": "jp a16",
+    "share": 3.37
+   },
+   {
+    "opcode": "e6",
+    "text": "and n8",
+    "share": 2.92
+   },
+   {
+    "opcode": "fe",
+    "text": "cp n8",
+    "share": 2.78
+   },
+   {
+    "opcode": "c2",
+    "text": "jp nz, a16",
+    "share": 2.37
+   },
+   {
+    "opcode": "fa",
+    "text": "ld a, [a16]",
+    "share": 2.37
+   },
+   {
+    "opcode": "3e",
+    "text": "ld a, n8",
+    "share": 2.04
+   },
+   {
+    "opcode": "e0",
+    "text": "ldh [$ff00+n8], a",
+    "share": 1.92
+   },
+   {
+    "opcode": "f8",
+    "text": "ld hl, sp+e8",
+    "share": 1.9
+   },
+   {
+    "opcode": "05",
+    "text": "dec b",
+    "share": 1.84
+   },
+   {
+    "opcode": "3d",
+    "text": "dec a",
+    "share": 1.8
+   },
+   {
+    "opcode": "21",
+    "text": "ld hl, n16",
+    "share": 1.79
+   }
+  ],
+  "cumulative": [
+   7.94,
+   15.25,
+   22.52,
+   26.23,
+   29.6,
+   32.52,
+   35.3,
+   37.67,
+   40.04,
+   42.09,
+   44.0,
+   45.9,
+   47.74,
+   49.54,
+   51.33,
+   53.07,
+   54.64,
+   55.99,
+   57.32,
+   58.62,
+   59.82,
+   60.96,
+   62.07,
+   63.05,
+   64.03,
+   64.96,
+   65.88,
+   66.77,
+   67.66,
+   68.54,
+   69.24,
+   69.94,
+   70.62,
+   71.3,
+   71.96,
+   72.59,
+   73.2,
+   73.81,
+   74.35,
+   74.9,
+   75.42,
+   75.95,
+   76.47,
+   76.98,
+   77.49,
+   77.99,
+   78.48,
+   78.95,
+   79.42,
+   79.87,
+   80.31,
+   80.75,
+   81.18,
+   81.61,
+   82.04,
+   82.45,
+   82.86,
+   83.26,
+   83.65,
+   84.0,
+   84.33,
+   84.67,
+   85.0,
+   85.32,
+   85.64,
+   85.96,
+   86.27,
+   86.56,
+   86.85,
+   87.12,
+   87.4,
+   87.67,
+   87.93,
+   88.19,
+   88.45,
+   88.7,
+   88.94,
+   89.17,
+   89.4,
+   89.63,
+   89.85,
+   90.06,
+   90.27,
+   90.47,
+   90.68,
+   90.88,
+   91.08,
+   91.28,
+   91.47,
+   91.67,
+   91.86,
+   92.05,
+   92.24,
+   92.42,
+   92.6,
+   92.78,
+   92.95,
+   93.11,
+   93.28,
+   93.44,
+   93.6,
+   93.75,
+   93.91,
+   94.06,
+   94.2,
+   94.35,
+   94.49,
+   94.64,
+   94.78,
+   94.92,
+   95.06,
+   95.19,
+   95.31,
+   95.43,
+   95.56,
+   95.67,
+   95.79,
+   95.91,
+   96.02,
+   96.13,
+   96.24,
+   96.34,
+   96.43,
+   96.52,
+   96.61,
+   96.7,
+   96.79,
+   96.88,
+   96.97,
+   97.05,
+   97.14,
+   97.22,
+   97.3,
+   97.38,
+   97.45,
+   97.53,
+   97.6,
+   97.67,
+   97.74,
+   97.8,
+   97.86,
+   97.92,
+   97.98,
+   98.04,
+   98.1,
+   98.15,
+   98.21,
+   98.27,
+   98.32,
+   98.37,
+   98.43,
+   98.48,
+   98.53,
+   98.58,
+   98.62,
+   98.66,
+   98.71,
+   98.75,
+   98.79,
+   98.83,
+   98.87,
+   98.91,
+   98.95,
+   98.99,
+   99.03,
+   99.07,
+   99.11,
+   99.15,
+   99.18,
+   99.22,
+   99.26,
+   99.29,
+   99.33,
+   99.36,
+   99.39,
+   99.42,
+   99.45,
+   99.48,
+   99.5,
+   99.52,
+   99.55,
+   99.57,
+   99.59,
+   99.61,
+   99.63,
+   99.66,
+   99.68,
+   99.69,
+   99.71,
+   99.72,
+   99.74,
+   99.75,
+   99.76,
+   99.77,
+   99.78,
+   99.79,
+   99.81,
+   99.82,
+   99.83,
+   99.84,
+   99.84,
+   99.85,
+   99.86,
+   99.87,
+   99.87,
+   99.88,
+   99.89,
+   99.89,
+   99.9,
+   99.91,
+   99.91,
+   99.92,
+   99.92,
+   99.93,
+   99.93,
+   99.94,
+   99.94,
+   99.94,
+   99.95,
+   99.95,
+   99.95,
+   99.96,
+   99.96,
+   99.97,
+   99.97,
+   99.97,
+   99.97,
+   99.98,
+   99.98,
+   99.98,
+   99.99,
+   99.99,
+   99.99,
+   99.99,
+   99.99,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0,
+   100.0
+  ],
+  "cb_prefix_share": 3.71,
+  "cb_top": [
+   {
+    "opcode": "cb 37",
+    "text": "swap a",
+    "share_of_cb": 20.96
+   },
+   {
+    "opcode": "cb 21",
+    "text": "sla c",
+    "share_of_cb": 5.88
+   },
+   {
+    "opcode": "cb 4f",
+    "text": "bit 1, a",
+    "share_of_cb": 4.5
+   },
+   {
+    "opcode": "cb 10",
+    "text": "rl b",
+    "share_of_cb": 3.98
+   },
+   {
+    "opcode": "cb 23",
+    "text": "sla e",
+    "share_of_cb": 3.48
+   },
+   {
+    "opcode": "cb 12",
+    "text": "rl d",
+    "share_of_cb": 3.42
+   },
+   {
+    "opcode": "cb 11",
+    "text": "rl c",
+    "share_of_cb": 3.41
+   },
+   {
+    "opcode": "cb 3f",
+    "text": "srl a",
+    "share_of_cb": 3.36
+   }
+  ],
+  "never_executed": [],
+  "top_by_toolchain": {
+   "GB Studio 3+": [
+    {
+     "text": "jr nz, e8",
+     "share": 5.5
+    },
+    {
+     "text": "prefix cb",
+     "share": 5.12
+    },
+    {
+     "text": "ld hl, sp+e8",
+     "share": 4.67
+    },
+    {
+     "text": "ld hl, n16",
+     "share": 4.36
+    },
+    {
+     "text": "ld a, [hl+]",
+     "share": 4.32
+    }
+   ],
+   "GBDK-2020 (C)": [
+    {
+     "text": "jr nz, e8",
+     "share": 6.08
+    },
+    {
+     "text": "ldh a, [$ff00+n8]",
+     "share": 4.74
+    },
+    {
+     "text": "ld hl, sp+e8",
+     "share": 4.04
+    },
+    {
+     "text": "prefix cb",
+     "share": 3.54
+    },
+    {
+     "text": "ld hl, n16",
+     "share": 3.42
+    }
+   ],
+   "other / unknown": [
+    {
+     "text": "jr e8",
+     "share": 10.58
+    },
+    {
+     "text": "ldh a, [$ff00+n8]",
+     "share": 8.4
+    },
+    {
+     "text": "jr nz, e8",
+     "share": 7.82
+    },
+    {
+     "text": "jp a16",
+     "share": 4.45
+    },
+    {
+     "text": "prefix cb",
+     "share": 3.58
+    }
+   ]
+  },
+  "ld_hl_sp_e8_rank": {
+   "GB Studio 3+": 3,
+   "GBDK-2020 (C)": 3,
+   "other / unknown": 22
+  }
+ },
+ "interrupts": {
+  "n": 859,
+  "uses_pct": {
+   "vblank": 87.08,
+   "stat": 38.65,
+   "timer": 27.59,
+   "serial": 0.58,
+   "joypad": 1.05
+  },
+  "by_toolchain": {
+   "GB Studio 3+": {
+    "vblank": 100.0,
+    "stat": 98.72,
+    "timer": 98.72,
+    "serial": 0.0,
+    "joypad": 0.0
+   },
+   "GBDK-2020 (C)": {
+    "vblank": 100.0,
+    "stat": 60.78,
+    "timer": 54.25,
+    "serial": 0.0,
+    "joypad": 0.0
+   },
+   "other / unknown": {
+    "vblank": 82.32,
+    "stat": 25.8,
+    "timer": 12.26,
+    "serial": 0.8,
+    "joypad": 1.43
+   }
+  },
+  "no_interrupts_pct": 11.29,
+  "stat_median_per_second_among_users": 72.9
+ },
+ "memory": {
+  "read_share_pct": {
+   "rom0": 71.75,
+   "romx": 13.7,
+   "vram": 0.05,
+   "sram": 0.04,
+   "wram": 7.76,
+   "echo": 0.01,
+   "oam": 0.01,
+   "io": 3.59,
+   "hram": 3.07,
+   "ie": 0.02
+  },
+  "write_share_pct": {
+   "rom0": 1.08,
+   "romx": 0.2,
+   "vram": 7.86,
+   "sram": 0.55,
+   "wram": 65.31,
+   "echo": 0.06,
+   "oam": 0.25,
+   "io": 13.1,
+   "hram": 11.38,
+   "ie": 0.21
+  },
+  "echo_ram_roms": 21,
+  "direct_oam_writers_pct": 47.81,
+  "sram_writers": 135,
+  "battery_carts": 260,
+  "coverage_median_pct": 4.0,
+  "coverage_median_bytes": 3013
+ },
+ "bench": {
+  "n": 150,
+  "median_speed": 51.6,
+  "p10_speed": 42.1,
+  "min_speed": 36.9,
+  "corr_util_speed": -0.62,
+  "median_speed_util_below_30": 68.2,
+  "median_speed_util_above_95": 46.5,
+  "points": [
+   {
+    "title": "2048gb",
+    "cpu_utilization": 0.343,
+    "speed": 56.76,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Restaurant Rumble",
+    "cpu_utilization": 0.173,
+    "speed": 64.45,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "5 mazes: Master levels",
+    "cpu_utilization": 0.334,
+    "speed": 49.14,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "8 Bitty Games Collection",
+    "cpu_utilization": 1.0,
+    "speed": 51.86,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Akino Hitoshi Demo",
+    "cpu_utilization": 1.0,
+    "speed": 60.54,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Alt Too",
+    "cpu_utilization": 1.0,
+    "speed": 45.45,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Ankoku Housou GB",
+    "cpu_utilization": 1.0,
+    "speed": 50.0,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Ant Hill",
+    "cpu_utilization": 0.773,
+    "speed": 47.1,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Ant Soldiers",
+    "cpu_utilization": 1.0,
+    "speed": 50.46,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Apocalypse (Music Cartridge)",
+    "cpu_utilization": 0.362,
+    "speed": 52.49,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Atchafalaya Arcade",
+    "cpu_utilization": 1.0,
+    "speed": 44.48,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Beberg",
+    "cpu_utilization": 0.854,
+    "speed": 65.86,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Biotic Limit",
+    "cpu_utilization": 0.267,
+    "speed": 57.58,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Bubble Factory",
+    "cpu_utilization": 0.142,
+    "speed": 66.67,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Burly Bear vs. The Mean Foxes",
+    "cpu_utilization": 0.96,
+    "speed": 41.35,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Car Demo",
+    "cpu_utilization": 0.52,
+    "speed": 53.05,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Card Shuffle",
+    "cpu_utilization": 1.0,
+    "speed": 50.17,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Kelp-Dragon",
+    "cpu_utilization": 0.329,
+    "speed": 53.38,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "Christmas Light Simulator",
+    "cpu_utilization": 1.0,
+    "speed": 48.86,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Chunky World",
+    "cpu_utilization": 0.983,
+    "speed": 40.71,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Commando",
+    "cpu_utilization": 1.0,
+    "speed": 52.59,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Cosmic Attack",
+    "cpu_utilization": 1.0,
+    "speed": 45.32,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Demiforce Demo",
+    "cpu_utilization": 1.0,
+    "speed": 59.29,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Demon Blood",
+    "cpu_utilization": 0.434,
+    "speed": 53.62,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Detective Knox In: The Doppelg\u00c3\u00a4nger (Demo)",
+    "cpu_utilization": 0.407,
+    "speed": 62.43,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "d-u-b",
+    "cpu_utilization": 0.086,
+    "speed": 62.11,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Dog Demo",
+    "cpu_utilization": 1.0,
+    "speed": 51.19,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Downhill Ski",
+    "cpu_utilization": 1.0,
+    "speed": 46.12,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Dungeon Escape",
+    "cpu_utilization": 1.0,
+    "speed": 45.7,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Elemental Fighter",
+    "cpu_utilization": 0.986,
+    "speed": 39.79,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Escola T\u00e9cnica Tupy Quiz",
+    "cpu_utilization": 1.0,
+    "speed": 50.85,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Faderfox Jr.",
+    "cpu_utilization": 0.984,
+    "speed": 48.12,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Fatass",
+    "cpu_utilization": 0.104,
+    "speed": 50.25,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Fire",
+    "cpu_utilization": 0.983,
+    "speed": 41.64,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Flaresquip",
+    "cpu_utilization": 0.177,
+    "speed": 80.54,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Flies",
+    "cpu_utilization": 0.95,
+    "speed": 41.49,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Floracy (Demo)",
+    "cpu_utilization": 0.988,
+    "speed": 40.54,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Friendship Never Dies",
+    "cpu_utilization": 0.372,
+    "speed": 51.02,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "Font Demo",
+    "cpu_utilization": 1.0,
+    "speed": 41.7,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Cinnamon & Bean In The Unfriendly Forest",
+    "cpu_utilization": 0.716,
+    "speed": 38.24,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "G-ZERO GB",
+    "cpu_utilization": 0.515,
+    "speed": 55.45,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Garpsters Archaic Rooms of Paranoia",
+    "cpu_utilization": 1.0,
+    "speed": 46.51,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "GB 303",
+    "cpu_utilization": 1.0,
+    "speed": 42.11,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "GB-Quiz For Kids",
+    "cpu_utilization": 1.0,
+    "speed": 54.5,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "GB-Wordyl",
+    "cpu_utilization": 0.158,
+    "speed": 71.51,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "GPS receiver",
+    "cpu_utilization": 1.0,
+    "speed": 50.0,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "gbdev14-snake",
+    "cpu_utilization": 0.005,
+    "speed": 75.95,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Geometrix",
+    "cpu_utilization": 0.509,
+    "speed": 52.13,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Good Luck Mr. Batto!",
+    "cpu_utilization": 0.473,
+    "speed": 59.94,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Guess The Number 3",
+    "cpu_utilization": 0.988,
+    "speed": 50.13,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "My first attempt",
+    "cpu_utilization": 0.087,
+    "speed": 80.11,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "HELLO WORLD",
+    "cpu_utilization": 0.298,
+    "speed": 58.42,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "HighNoon",
+    "cpu_utilization": 0.755,
+    "speed": 53.86,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Ichi Ni San",
+    "cpu_utilization": 1.0,
+    "speed": 60.0,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "ImpossiPong!",
+    "cpu_utilization": 0.026,
+    "speed": 66.96,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "INTERBLOCKED [Game Boy]",
+    "cpu_utilization": 0.059,
+    "speed": 72.9,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Intro Collection",
+    "cpu_utilization": 0.017,
+    "speed": 141.51,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Is That a Demo in Your Pocket?",
+    "cpu_utilization": 0.763,
+    "speed": 45.73,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Island Story",
+    "cpu_utilization": 0.407,
+    "speed": 54.3,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Gekokuj\u014d",
+    "cpu_utilization": 0.552,
+    "speed": 43.6,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "JetSet Willy",
+    "cpu_utilization": 0.107,
+    "speed": 66.96,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Dungeon Master",
+    "cpu_utilization": 0.067,
+    "speed": 72.03,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Arrow Rain",
+    "cpu_utilization": 0.041,
+    "speed": 76.14,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Kasumi Scroller",
+    "cpu_utilization": 1.0,
+    "speed": 45.84,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Kenny And The Evil Blob",
+    "cpu_utilization": 1.0,
+    "speed": 46.15,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "kupman",
+    "cpu_utilization": 0.62,
+    "speed": 52.72,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Lab3D",
+    "cpu_utilization": 1.0,
+    "speed": 52.59,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Last Crown Warriors",
+    "cpu_utilization": 0.586,
+    "speed": 44.91,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "DRAGONSLAYER",
+    "cpu_utilization": 0.386,
+    "speed": 50.21,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "Save Maurice!",
+    "cpu_utilization": 0.073,
+    "speed": 69.44,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Lightforce Intro 1 (The Emperor's New Groove +4)",
+    "cpu_utilization": 0.0,
+    "speed": 154.64,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "DDDDDEEMO(N)",
+    "cpu_utilization": 0.949,
+    "speed": 46.19,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "LSDJ",
+    "cpu_utilization": 1.0,
+    "speed": 44.41,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "madpews battlegrounds",
+    "cpu_utilization": 0.044,
+    "speed": 74.26,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Mario Walk",
+    "cpu_utilization": 1.0,
+    "speed": 56.44,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Maze Runner - Atari-Style Version",
+    "cpu_utilization": 0.944,
+    "speed": 55.66,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Megamania",
+    "cpu_utilization": 1.0,
+    "speed": 45.49,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Menu #3 (Nascar Racers +5)",
+    "cpu_utilization": 1.0,
+    "speed": 46.15,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Menu #4 (Elevator Action DX +5)",
+    "cpu_utilization": 1.0,
+    "speed": 46.99,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Micro Friendly",
+    "cpu_utilization": 0.312,
+    "speed": 54.45,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "Slayer the Hawk",
+    "cpu_utilization": 0.928,
+    "speed": 37.74,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Mousetrap",
+    "cpu_utilization": 0.999,
+    "speed": 51.55,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Abyss - GBCompo2025",
+    "cpu_utilization": 0.461,
+    "speed": 48.62,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "Muddy GB",
+    "cpu_utilization": 1.0,
+    "speed": 36.88,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Murdera",
+    "cpu_utilization": 1.0,
+    "speed": 40.43,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Music Tech V1 Free Version",
+    "cpu_utilization": 1.0,
+    "speed": 43.48,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Mygame",
+    "cpu_utilization": 0.724,
+    "speed": 52.54,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Nam Attack",
+    "cpu_utilization": 0.669,
+    "speed": 48.19,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Nanoloop",
+    "cpu_utilization": 1.0,
+    "speed": 39.27,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "nanovoice",
+    "cpu_utilization": 1.0,
+    "speed": 40.43,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "7heaven",
+    "cpu_utilization": 0.677,
+    "speed": 45.18,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Ningami",
+    "cpu_utilization": 0.06,
+    "speed": 87.72,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Numeris OCT",
+    "cpu_utilization": 1.0,
+    "speed": 50.29,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Packri Monster",
+    "cpu_utilization": 0.035,
+    "speed": 72.2,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Paddle Mission",
+    "cpu_utilization": 1.0,
+    "speed": 51.72,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Phreakboy (Enhanced DTMF Dialer)",
+    "cpu_utilization": 1.0,
+    "speed": 44.61,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Ping Pong Diplomacy (Version 1.0)",
+    "cpu_utilization": 0.452,
+    "speed": 58.65,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Plasma Storm",
+    "cpu_utilization": 1.0,
+    "speed": 76.14,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Polka Sheep",
+    "cpu_utilization": 0.692,
+    "speed": 39.6,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Pre-Teen Wasteland",
+    "cpu_utilization": 0.447,
+    "speed": 60.48,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Puzz",
+    "cpu_utilization": 1.0,
+    "speed": 51.86,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Puzzle",
+    "cpu_utilization": 1.0,
+    "speed": 47.21,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Raster Scroll Sample",
+    "cpu_utilization": 1.0,
+    "speed": 44.02,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Red Dreams",
+    "cpu_utilization": 0.0,
+    "speed": 150.0,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Princess and Wizard: Town of Labu",
+    "cpu_utilization": 0.502,
+    "speed": 46.44,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "Renaissance Filler",
+    "cpu_utilization": 0.725,
+    "speed": 44.44,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Roboto",
+    "cpu_utilization": 0.469,
+    "speed": 53.29,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Rocket Man",
+    "cpu_utilization": 0.292,
+    "speed": 62.05,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Rope & Bombs",
+    "cpu_utilization": 0.176,
+    "speed": 60.18,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "SAND - Survive A Neverending Desert",
+    "cpu_utilization": 1.0,
+    "speed": 46.91,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Sheep Kaboom",
+    "cpu_utilization": 0.836,
+    "speed": 48.66,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Ship",
+    "cpu_utilization": 1.0,
+    "speed": 44.12,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "shmup",
+    "cpu_utilization": 0.104,
+    "speed": 66.89,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Shoot the X (spr4col)",
+    "cpu_utilization": 1.0,
+    "speed": 53.14,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Skoardy",
+    "cpu_utilization": 1.0,
+    "speed": 62.83,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Sludgeon 2",
+    "cpu_utilization": 0.918,
+    "speed": 44.31,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Smooth Colour Fading Demo",
+    "cpu_utilization": 0.951,
+    "speed": 64.03,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Snek!",
+    "cpu_utilization": 0.041,
+    "speed": 73.17,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Somos Amigos",
+    "cpu_utilization": 0.365,
+    "speed": 51.9,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "Soul Void",
+    "cpu_utilization": 0.296,
+    "speed": 70.75,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Space Invaders-style Programming Demo",
+    "cpu_utilization": 1.0,
+    "speed": 54.01,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Square fall",
+    "cpu_utilization": 0.884,
+    "speed": 48.0,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Star Heritage (Final)",
+    "cpu_utilization": 0.658,
+    "speed": 44.81,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Starfield",
+    "cpu_utilization": 1.0,
+    "speed": 40.0,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Stoic Software's Tribute to the United States",
+    "cpu_utilization": 0.133,
+    "speed": 66.89,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Super Ninja",
+    "cpu_utilization": 0.65,
+    "speed": 47.24,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Super Connard",
+    "cpu_utilization": 1.0,
+    "speed": 51.33,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "sushi",
+    "cpu_utilization": 0.308,
+    "speed": 63.36,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "SWorld 2",
+    "cpu_utilization": 0.182,
+    "speed": 65.86,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Game of Life Kuzushi",
+    "cpu_utilization": 0.248,
+    "speed": 58.37,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Tendonin",
+    "cpu_utilization": 0.79,
+    "speed": 43.99,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "The Faerie Princess (Version 1.1.0)",
+    "cpu_utilization": 0.049,
+    "speed": 86.33,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "The Fetch Quest",
+    "cpu_utilization": 0.458,
+    "speed": 44.84,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "The Princess & The Pauper",
+    "cpu_utilization": 0.455,
+    "speed": 53.38,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Crate Pusher",
+    "cpu_utilization": 0.078,
+    "speed": 72.55,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "They Are Everywhere (Version 0.1.0)",
+    "cpu_utilization": 1.0,
+    "speed": 44.02,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Thin Ice Rescue",
+    "cpu_utilization": 0.105,
+    "speed": 64.79,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Tic Tac Earth",
+    "cpu_utilization": 0.293,
+    "speed": 59.88,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "GB Tic-Tac-Toe",
+    "cpu_utilization": 1.0,
+    "speed": 44.41,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Turbo RC Racing",
+    "cpu_utilization": 0.71,
+    "speed": 48.35,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Tutty (Demo Version)",
+    "cpu_utilization": 0.054,
+    "speed": 53.52,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "BunkerBoy",
+    "cpu_utilization": 0.958,
+    "speed": 43.2,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Velcroid, Maikel Ortega's",
+    "cpu_utilization": 0.528,
+    "speed": 56.93,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Wall Defence",
+    "cpu_utilization": 0.994,
+    "speed": 46.66,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "What Friends Are For",
+    "cpu_utilization": 0.316,
+    "speed": 53.91,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "Work Master OS",
+    "cpu_utilization": 1.0,
+    "speed": 42.77,
+    "toolchain": "other / unknown"
+   },
+   {
+    "title": "Yochi & Miel: The Crenalator Trials",
+    "cpu_utilization": 0.57,
+    "speed": 43.99,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "You are my New friend",
+    "cpu_utilization": 0.342,
+    "speed": 53.86,
+    "toolchain": "GB Studio 3+"
+   },
+   {
+    "title": "Piropa",
+    "cpu_utilization": 0.431,
+    "speed": 45.98,
+    "toolchain": "GBDK-2020 (C)"
+   },
+   {
+    "title": "Zilogized",
+    "cpu_utilization": 0.101,
+    "speed": 61.73,
+    "toolchain": "GBDK-2020 (C)"
+   }
+  ]
+ }
+}

@@ -67,6 +67,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0;
   background: var(--bg);
@@ -152,7 +153,7 @@ table { border-collapse: collapse; font-size: 0.86rem; min-width: 100%; }
 th, td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--rule); white-space: nowrap; }
 th { font-weight: 600; color: var(--ink-2); font-size: 0.8rem; }
 td { font-variant-numeric: tabular-nums; }
-table.compare td:nth-child(n+2), table.compare th:nth-child(n+2) { text-align: right; padding-left: 16px; }
+th.right, td.right { text-align: right; padding-left: 16px; }
 
 .callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; display: grid; gap: 8px; max-width: 66ch; }
 .findings { display: grid; gap: 14px; counter-reset: f; padding: 0; margin: 0; list-style: none; max-width: 70ch; }

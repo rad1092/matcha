@@ -62,6 +62,17 @@ def parse_year(raw) -> str:
     return m.group(1) if m else ""
 
 
+def tool_tag(tags: list) -> str:
+    """The tool an entry's authors tagged it with, if any: the ground truth the
+    byte signatures are checked against (docs/analysis.md, "Method")."""
+    tags = {t.lower() for t in tags}
+    if tags & {"gb-studio", "gbstudio", "gb studio"}:
+        return "GB Studio"
+    if tags & {"gbdk", "gbdk-2020"}:
+        return "GBDK"
+    return ""
+
+
 def default_rom(entry: dict, folder: Path):
     files = [f for f in entry.get("files", []) if f.get("filename", "").lower().endswith((".gb", ".gbc"))]
     if not files:
@@ -78,7 +89,7 @@ def main(db_root: str) -> None:
         "slug", "title", "developer", "platform", "typetag", "year", "license", "event_tags",
         "rom_path", "rom_bytes", "header_title", "cgb_flag", "cgb_mode", "sgb", "cart_type",
         "cart_type_name", "mapper", "mapper_supported", "rom_size", "ram_size", "battery",
-        "header_checksum_ok", "logo_ok", "toolchain", "dmg_runnable",
+        "header_checksum_ok", "logo_ok", "toolchain", "tool_tag", "dmg_runnable",
     ])
     for game_json in sorted(root.glob("entries/*/game.json")):
         entry = json.loads(game_json.read_text())
@@ -130,6 +141,7 @@ def main(db_root: str) -> None:
             int(checksum == data[0x14D]),
             int(hashlib.sha256(data[0x104:0x134]).hexdigest() == LOGO_SHA256),
             toolchain,
+            tool_tag(entry.get("tags", [])),
             int(cgb != 0xC0 and cart in SUPPORTED),
         ])
 

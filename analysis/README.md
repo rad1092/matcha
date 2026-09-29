@@ -12,7 +12,10 @@ seconds by matcha and by SameBoy with the same scripted input.
 | 4. Build the SameBoy reference runner (needs RGBDS) | `analysis/reference/build.sh <sameboy> [<rgbds>/]` | `target/reference/` |
 | 5. Reference runs (~25 min each) | `python3 analysis/reference/run.py database zero`<br>`python3 analysis/reference/run.py database random` | `reference.jsonl`, `reference_random.jsonl` |
 | 6. Speed sample (idle machine) | `python3 analysis/bench.py database` | `bench.csv` |
-| 7. Report | `python3 analysis/report.py` | `summary.json`, `roms.csv`, `docs/img/*.svg` |
+| 7. Why programs sit in STOP (replays each with `matcha trace`) | `python3 analysis/stop_key1.py database` | `stop_key1.json` |
+| 8. Outcomes under earlier matcha versions (profiles from `run_profiles.sh` at each commit) | `python3 analysis/history.py 22c3fcc=old0.json 9e9b8be=old1.json 2f864c7=analysis/data/profiles.json` | `history.csv` |
+| 9. Numbers and charts | `python3 analysis/report.py` | `summary.json`, `roms.csv`, `docs/img/*.svg` |
+| 10. Report | `python3 analysis/publish.py` | `docs/analysis.md`, `dist/analysis.html` |
 
 `opcode_names.mjs` regenerates `data/opcodes.json` (mnemonics) from the
 current `web/matcha.wasm`.
@@ -37,7 +40,9 @@ pressed.
 `cart_type_name`, `mapper`, `mapper_supported`, `rom_size`, `ram_size`,
 `battery`, `header_checksum_ok`, `logo_ok` (the DMG boot ROM's logo check),
 `toolchain` (GB Studio 3+ / GBDK-2020 / other — byte signatures, see
-`build_manifest.py`), `dmg_runnable` (not CGB-only and a supported mapper).
+`build_manifest.py`), `tool_tag` (the tool the authors tagged, if any — the
+ground truth for the signatures), `dmg_runnable` (not CGB-only and a
+supported mapper).
 
 `profiles.json` — one record per runnable ROM from `matcha profile`:
 cycle counts by CPU state (`busy`, `halted`, `stopped`, `locked`,
@@ -51,6 +56,14 @@ frame), `static_screens` (FNV-1a hashes of pictures held for 30+ frames).
 `reference*.jsonl` — the same screen metrics from SameBoy, plus `locked`
 (SameBoy logged an illegal opcode) and `boot_ms` (time its boot ROM took).
 
+`history.csv` — each ROM's outcome under matcha as of commits `22c3fcc`
+(before the comparison), `9e9b8be` (boot logo, STOP) and `2f864c7` (OAM DMA
+bus conflicts, the current core).
+
+`stop_key1.json` — programs that spend over half the minute in STOP, and how
+many wrote KEY1 within the 12 instructions before stopping.
+
 Outcome classes (`report.py`): **crashed** (illegal opcode), **blank**
-(never a non-uniform picture), **static** (one picture the whole minute),
-**running** (the picture changed).
+(at most two frames that are not one uniform colour — the boot logo can
+linger for a frame), **static** (one picture the whole minute), **running**
+(the picture changed).

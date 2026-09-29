@@ -9,6 +9,8 @@ Inputs (analysis/data/):
   profiles.json           run_profiles.sh: matcha, 60 s of monkey input per ROM
   reference.jsonl         reference/run.py zero: SameBoy, same input, RAM zeroed
   reference_random.jsonl  reference/run.py random: SameBoy, noisy power-on RAM
+  history.csv             history.py: outcomes under earlier matcha versions
+  stop_key1.json          stop_key1.py: do the programs stuck in STOP write KEY1 first?
   bench.csv               bench.py: emulation speed without profiling
   opcodes.json            opcode_names.mjs: mnemonics
 
@@ -18,6 +20,7 @@ Outputs:
   docs/img/*.svg              the report's charts
 """
 
+import datetime
 import json
 from pathlib import Path
 
@@ -83,10 +86,16 @@ def generic_mnemonic(text: str) -> str:
     return text.replace("$00", "n8")
 
 
+# A program that never draws can still show the boot logo for a frame before it turns the LCD
+# off; how many such frames appear depends on the boot ROM's hand-over point, which differs
+# between SameBoy's boot ROM and Nintendo's. Up to two non-uniform frames still count as blank.
+BLANK_MAX_FRAMES = 2
+
+
 def outcome(locked, nonblank, distinct):
     if locked:
         return "crashed"
-    if nonblank == 0:
+    if nonblank <= BLANK_MAX_FRAMES:
         return "blank"
     if distinct <= 1:
         return "static"
@@ -124,14 +133,40 @@ def jaccard(a, b):
 
 
 def pct(n, d):
-    return round(100.0 * n / d, 1) if d else None
+    return round(100.0 * n / d, 2) if d else None
+
+
+def fingerprint_check(corpus):
+    """Byte-signature toolchains against what the authors tagged, and against dates."""
+    fp = corpus.toolchain.isin(TOOLCHAINS[:2])
+    tagged = {"GB Studio": TOOLCHAINS[0], "GBDK": TOOLCHAINS[1]}
+    dated = corpus.dropna(subset=["year"])
+    modern = dated[dated.year >= 2019]
+    return {
+        "tagged": {tag: {"entries": int((corpus.tool_tag == tag).sum()),
+                         "fingerprinted_as_tagged": int(((corpus.tool_tag == tag) & (corpus.toolchain == tc)).sum())}
+                   for tag, tc in tagged.items()},
+        "fingerprinted_before_2019": int(fp[corpus.year < 2019].sum()),
+        "dated_before_2019": int((dated.year < 2019).sum()),
+        "fingerprinted_share_2019_on_pct": pct(modern.toolchain.isin(TOOLCHAINS[:2]).sum(), len(modern)),
+    }
 
 
 def corpus_section(corpus):
     n = len(corpus)
     years = corpus.year.dropna()
     era = pd.cut(years, [0, 2005, 2018, 3000], labels=["1995-2005", "2006-2018", "2019-"])
+    first = corpus[(corpus.year >= 1997) & (corpus.year <= 2002)]
+    second = corpus[corpus.year >= 2019]
     return {
+        "fingerprints": fingerprint_check(corpus),
+        "waves": {
+            "1997-2002": {"n": len(first), "color_pct": pct(first.cgb_mode.isin(["CGB enhanced", "CGB only"]).sum(),
+                                                           len(first)),
+                          "demo_pct": pct((first.typetag == "demo").sum(), len(first))},
+            "2019-": {"n": len(second), "competition_pct": pct((second.event_tags != "").sum(), len(second)),
+                      "game_pct": pct((second.typetag == "game").sum(), len(second))},
+        },
         "entries_with_rom": n,
         "hardware": corpus.cgb_mode.value_counts().to_dict(),
         "cgb_only_pct": pct((corpus.cgb_mode == "CGB only").sum(), n),
@@ -175,6 +210,11 @@ def compat_section(df):
     stop_bound = df.stopped_cycles / df.total_cycles > 0.5
     out["stuck_in_stop"] = int(stop_bound.sum())
     out["stuck_in_stop_cgb_flag"] = int((stop_bound & (df.cgb_mode == "CGB enhanced")).sum())
+    key1 = DATA / "stop_key1.json"
+    if key1.exists():
+        check = json.loads(key1.read_text())
+        assert check["stuck_in_stop"] == out["stuck_in_stop"], "stop_key1.json is stale: rerun stop_key1.py"
+        out["stuck_in_stop_wrote_key1"] = check["wrote_key1_before_stop"]
     return out
 
 
@@ -208,6 +248,25 @@ def agreement_section(df):
     return out
 
 
+# matcha versions in history.csv (history.py), oldest first, and what each one changed.
+VERSIONS = {
+    "22c3fcc": "before the comparison",
+    "9e9b8be": "+ boot logo in VRAM, DMG STOP",
+    "2f864c7": "+ OAM DMA bus conflicts",
+}
+
+
+def history_section(df):
+    path = DATA / "history.csv"
+    if "z_outcome" not in df or not path.exists():
+        return None
+    hist = pd.read_csv(path).merge(df[["rom_path", "m_outcome", "z_outcome"]], on="rom_path", validate="one_to_one")
+    assert len(hist) == len(df), "history.csv must cover every profiled ROM"
+    commits = [c for c in hist.columns if c in VERSIONS]
+    assert (hist[commits[-1]] == hist.m_outcome).all(), "the newest history column must match profiles.json"
+    return {"agreement": [[f"`{c}` {VERSIONS[c]}", int((hist[c] == hist.z_outcome).sum())] for c in commits]}
+
+
 def ram_section(df):
     if "r_outcome" not in df:
         return None
@@ -238,16 +297,16 @@ def cpu_section(df):
     hist = {tc: np.histogram(ok[ok.toolchain == tc].util, bins=hist_edges)[0].tolist() for tc in TOOLCHAINS}
     return {
         "n": len(ok),
-        "median_util": round(float(ok.util.median()), 3),
-        "mean_util": round(float(ok.util.mean()), 3),
+        "median_util": round(float(ok.util.median()), 4),
+        "mean_util": round(float(ok.util.mean()), 4),
         "never_halts_pct": pct(ok.never_halts.sum(), len(ok)),
         "busy_over_95_pct": pct((ok.util > 0.95).sum(), len(ok)),
-        "by_toolchain": {tc: {"n": int(r.n), "median_util": round(float(r.median_util), 3),
-                              "never_halts_pct": round(100 * float(r.never_halts), 1)}
+        "by_toolchain": {tc: {"n": int(r.n), "median_util": round(float(r.median_util), 4),
+                              "never_halts_pct": round(100 * float(r.never_halts), 2)}
                          for tc, r in by_tc.iterrows()},
-        "era": {"1995-2005": {"n": len(old), "median_util": round(float(old.util.median()), 3),
+        "era": {"1995-2005": {"n": len(old), "median_util": round(float(old.util.median()), 4),
                               "never_halts_pct": pct(old.never_halts.sum(), len(old))},
-                "2019-": {"n": len(new), "median_util": round(float(new.util.median()), 3),
+                "2019-": {"n": len(new), "median_util": round(float(new.util.median()), 4),
                           "never_halts_pct": pct(new.never_halts.sum(), len(new))}},
         "hist_edges": hist_edges.round(2).tolist(),
         "hist": hist,
@@ -271,10 +330,12 @@ def opcode_section(df, names):
     cb_mix = cb_share[cb.sum(axis=1) > 0].mean(axis=0)
     cb_top = [{"opcode": f"cb {op:02x}", "text": names["cb"][op], "share_of_cb": round(float(cb_mix[op]) * 100, 2)}
               for op in np.argsort(-cb_mix)[:8]]
-    by_tc = {}
+    by_tc, sdcc_rank = {}, {}
     for tc in TOOLCHAINS:
         s = share[(ran.toolchain == tc).values].mean(axis=0)
-        by_tc[tc] = [{"text": label(op), "share": round(float(s[op]) * 100, 2)} for op in np.argsort(-s)[:5]]
+        ranked = list(np.argsort(-s))
+        by_tc[tc] = [{"text": label(op), "share": round(float(s[op]) * 100, 2)} for op in ranked[:5]]
+        sdcc_rank[tc] = ranked.index(0xF8) + 1  # ld hl, sp+e8: how SDCC-compiled C reaches locals
     return {
         "roms": len(ran),
         "instructions_total": int(ran.instructions.sum()),
@@ -285,6 +346,7 @@ def opcode_section(df, names):
         "cb_top": cb_top,
         "never_executed": never,
         "top_by_toolchain": by_tc,
+        "ld_hl_sp_e8_rank": sdcc_rank,
     }
 
 
@@ -377,20 +439,21 @@ def charts(summary):
     fig.savefig(IMG / "corpus-years.svg")
     plt.close(fig)
 
-    # 2. CPU utilisation histograms, one panel per toolchain.
+    # 2. CPU utilisation histograms, one panel per toolchain. Shares, not counts: the toolchains
+    # differ eightfold in size, and one y scale keeps the panels comparable.
     cpu = summary["cpu"]
     edges = np.array(cpu["hist_edges"]) * 100
-    fig, axes = plt.subplots(1, 3, figsize=(9, 2.8), sharey=False)
+    fig, axes = plt.subplots(1, 3, figsize=(9, 2.8), sharey=True)
     for ax, tc in zip(axes, TOOLCHAINS):
-        counts = np.array(cpu["hist"][tc])
-        ax.bar(edges[:-1] + 2.5, counts, width=4, color=SERIES[0])
         info = cpu["by_toolchain"].get(tc, {})
+        shares = np.array(cpu["hist"][tc]) * 100 / max(info.get("n", 0), 1)
+        ax.bar(edges[:-1] + 2.5, shares, width=4, color=SERIES[0])
         ax.set_title(f"{tc}\nn = {info.get('n', 0)} · median {info.get('median_util', 0) * 100:.0f}% busy",
                      fontsize=9.5, fontweight="normal", color=INK2, loc="left")
         ax.set_xlim(0, 100)
         ax.set_xlabel("CPU busy (% of time)")
         ax.grid(axis="x", visible=False)
-    axes[0].set_ylabel("ROMs")
+    axes[0].set_ylabel("share of programs (%)")
     fig.suptitle("How hard homebrew works the CPU", x=0.01, ha="left", fontweight="bold", color=INK)
     fig.tight_layout()
     fig.savefig(IMG / "cpu-utilization.svg")
@@ -401,7 +464,7 @@ def charts(summary):
     cum = np.array(op["cumulative"])
     fig, ax = plt.subplots(figsize=(9, 3.2))
     ax.plot(np.arange(1, 257), cum, color=SERIES[0], linewidth=2)
-    for q in ("50", "90", "99"):
+    for q in ("50", "90"):
         k = op["opcodes_for_share"][q]
         ax.plot([k], [cum[k - 1]], "o", color=SERIES[0], markersize=6, markeredgecolor=SURFACE, markeredgewidth=2)
         ax.annotate(f"{k} opcodes → {q}%", (k, cum[k - 1]), xytext=(8, -14), textcoords="offset points",
@@ -427,7 +490,7 @@ def charts(summary):
     vals = [it["uses_pct"][k] for k in keys]
     ax.barh([names[k] for k in keys], vals, height=0.5, color=SERIES[0])
     for y, v in enumerate(vals):
-        ax.text(v + 1, y, f"{v:.0f}%", va="center", color=INK2, fontsize=9)
+        ax.text(v + 1, y, f"{v:.1f}%" if v < 10 else f"{v:.0f}%", va="center", color=INK2, fontsize=9)
     ax.set_xlim(0, 105)
     ax.set_xlabel("share of ROMs that took the interrupt at least once")
     ax.grid(axis="y", visible=False)
@@ -457,10 +520,11 @@ def charts(summary):
 def main():
     names = json.loads((DATA / "opcodes.json").read_text())
     corpus, df = load()
-    summary = {"corpus": corpus_section(corpus)}
+    summary = {"date": datetime.date.today().isoformat(), "corpus": corpus_section(corpus)}
     summary["corpus"]["per_year"] = year_chart_data(corpus)
     summary["compatibility"] = compat_section(df)
     summary["agreement"] = agreement_section(df)
+    summary["history"] = history_section(df)
     summary["ram"] = ram_section(df)
     summary["cpu"] = cpu_section(df)
     summary["opcodes"] = opcode_section(df, names)

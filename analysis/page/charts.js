@@ -137,13 +137,13 @@ function axisY(g, { x0, x1, scale, ticks, format }) {
 /** Stacked columns: categories along x, series stacked (2px surface gap). */
 function stackedColumns(container, { categories, series, yLabel, labelEvery = 5 }) {
   mount(container, (W) => {
-    const H = 260, m = { t: 12, r: 8, b: 28, l: 44 };
+    const H = 272, m = { t: 26, r: 8, b: 28, l: 44 };
     const svg = svgEl("svg", { width: W, height: H, role: "img" }, container);
     const totals = categories.map((_, i) => series.reduce((a, s) => a + s.values[i], 0));
     const ticks = niceTicks(Math.max(...totals));
     const y = (v) => m.t + (H - m.t - m.b) * (1 - v / ticks[ticks.length - 1]);
     axisY(svg, { x0: m.l, x1: W - m.r, scale: y, ticks, format: fmt.int });
-    text(svg, 4, m.t + 2, yLabel, { class: "axis-label" });
+    text(svg, 4, 11, yLabel, { class: "axis-label" });
     const band = (W - m.l - m.r) / categories.length;
     const bw = Math.min(24, band * 0.72);
     categories.forEach((c, i) => {
@@ -168,20 +168,23 @@ function stackedColumns(container, { categories, series, yLabel, labelEvery = 5 
   });
 }
 
-/** One histogram (share of items per bin); x in percent 0..100. */
-function histogram(container, { counts, edges, color, xLabel, maxY }) {
+/** One histogram: bar height = share of items (%) per bin, x in percent 0..100. */
+function histogram(container, { shares, counts, edges, color, xLabel, maxY }) {
   mount(container, (W) => {
-    const H = 170, m = { t: 10, r: 8, b: 34, l: 34 };
+    const H = 170, m = { t: 10, r: 8, b: 34, l: 38 };
     const svg = svgEl("svg", { width: W, height: H, role: "img" }, container);
-    const ticks = niceTicks(maxY ?? Math.max(...counts), 3);
+    const ticks = niceTicks(maxY ?? Math.max(...shares), 3);
     const y = (v) => m.t + (H - m.t - m.b) * (1 - v / ticks[ticks.length - 1]);
-    axisY(svg, { x0: m.l, x1: W - m.r, scale: y, ticks, format: fmt.int });
-    const bw = (W - m.l - m.r) / counts.length;
-    counts.forEach((n, i) => {
+    axisY(svg, { x0: m.l, x1: W - m.r, scale: y, ticks, format: (v) => `${v}%` });
+    const bw = (W - m.l - m.r) / shares.length;
+    shares.forEach((v, i) => {
       const x = m.l + bw * i + 1;
-      svgEl("path", { d: barPath(x, y(n), bw - 2, y(0) - y(n)), style: `fill:${color}` }, svg);
+      svgEl("path", { d: barPath(x, y(v), bw - 2, y(0) - y(v)), style: `fill:${color}` }, svg);
       const hit = svgEl("rect", { x: m.l + bw * i, y: m.t, width: bw, height: H - m.t - m.b, fill: "transparent" }, svg);
-      hover(hit, `${edges[i]}–${edges[i + 1]}% busy`, [{ value: fmt.int(n), label: n === 1 ? "ROM" : "ROMs" }]);
+      hover(hit, `${edges[i]}–${edges[i + 1]}% busy`, [
+        { value: fmt.pct(v, 1), label: "of these programs" },
+        { value: fmt.int(counts[i]), label: counts[i] === 1 ? "program" : "programs" },
+      ]);
     });
     for (const v of [0, 50, 100]) {
       text(svg, m.l + (W - m.l - m.r) * (v / 100), H - 18, `${v}%`, { class: "tick", "text-anchor": v === 0 ? "start" : v === 100 ? "end" : "middle" });
@@ -254,7 +257,7 @@ function hbars(container, { items, color, max = 100, format = fmt.pct }) {
 /** Scatter with up to three series and a nearest-point tooltip. */
 function scatter(container, { points, series, xLabel, yLabel }) {
   mount(container, (W) => {
-    const H = 280, m = { t: 12, r: 12, b: 40, l: 44 };
+    const H = 292, m = { t: 26, r: 12, b: 40, l: 44 };
     const svg = svgEl("svg", { width: W, height: H, role: "img" }, container);
     const ymax = niceTicks(Math.max(...points.map((p) => p.y)));
     const x = (v) => m.l + (W - m.l - m.r) * (v / 100);
@@ -262,7 +265,7 @@ function scatter(container, { points, series, xLabel, yLabel }) {
     axisY(svg, { x0: m.l, x1: W - m.r, scale: y, ticks: ymax, format: (v) => `${v}×` });
     for (const v of [0, 25, 50, 75, 100]) text(svg, x(v), H - 22, `${v}%`, { class: "tick", "text-anchor": "middle" });
     text(svg, m.l + (W - m.l - m.r) / 2, H - 4, xLabel, { class: "axis-label", "text-anchor": "middle" });
-    text(svg, 4, m.t + 2, yLabel, { class: "axis-label" });
+    text(svg, 4, 11, yLabel, { class: "axis-label" });
     const color = Object.fromEntries(series.map((s) => [s.name, s.color]));
     for (const p of points) svgEl("circle", { cx: x(p.x), cy: y(p.y), r: 4, class: "ring", style: `fill:${color[p.s]}` }, svg);
     const hit = svgEl("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }, svg);

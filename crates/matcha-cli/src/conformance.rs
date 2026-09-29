@@ -76,9 +76,7 @@ fn mooneye_runs_on_dmg(stem: &str) -> bool {
     let Some((_, suffix)) = stem.rsplit_once('-') else { return true };
     match suffix {
         "dmgABC" | "dmgABCmgb" | "GS" | "dmg" => true,
-        s if s.contains("dmg0") || s == "mgb" || s == "S" || s == "sgb" || s == "sgb2" || s == "C" || s == "A" => {
-            false
-        }
+        s if s.contains("dmg0") || s == "mgb" || s == "S" || s == "sgb" || s == "sgb2" || s == "C" || s == "A" => false,
         s if s.chars().all(|c| c.is_ascii_uppercase()) => s.contains('G'),
         _ => true,
     }
@@ -108,7 +106,13 @@ pub fn discover(root: &Path) -> Vec<Case> {
             });
         }
     }
-    for sub in ["cpu_instrs/individual", "mem_timing/individual", "mem_timing-2/rom_singles", "dmg_sound/rom_singles", "oam_bug/rom_singles"] {
+    for sub in [
+        "cpu_instrs/individual",
+        "mem_timing/individual",
+        "mem_timing-2/rom_singles",
+        "dmg_sound/rom_singles",
+        "oam_bug/rom_singles",
+    ] {
         for path in gb_files(&b.join(sub)) {
             cases.push(Case {
                 suite: "blargg",
@@ -334,6 +338,37 @@ pub fn scoreboard_markdown(outcomes: &[Outcome]) -> String {
         md += "\n</details>\n";
     }
     md
+}
+
+/// Differences between a run and an earlier scoreboard (`scoreboard_json`).
+#[derive(Debug)]
+pub struct BaselineDiff<'a> {
+    /// Passed in the baseline, not passing now.
+    pub regressed: Vec<&'a Outcome>,
+    /// Passing now, not passing (or absent) in the baseline.
+    pub fixed: Vec<&'a Outcome>,
+}
+
+/// Compares outcomes with a baseline scoreboard. ROMs that are in the
+/// baseline but not in this run (e.g. filtered out) are ignored.
+pub fn compare<'a>(outcomes: &'a [Outcome], baseline: &serde_json::Value) -> Result<BaselineDiff<'a>, String> {
+    let rows = baseline["results"].as_array().ok_or("not a matcha scoreboard (no \"results\" array)")?;
+    let mut passed = std::collections::HashSet::new();
+    for row in rows {
+        let (Some(suite), Some(rom), Some(status)) =
+            (row["suite"].as_str(), row["rom"].as_str(), row["status"].as_str())
+        else {
+            return Err("scoreboard row without suite/rom/status".into());
+        };
+        if status == "pass" {
+            passed.insert((suite, rom));
+        }
+    }
+    let was_passing = |o: &Outcome| passed.contains(&(o.case.suite, o.case.name.as_str()));
+    Ok(BaselineDiff {
+        regressed: outcomes.iter().filter(|o| o.verdict != Verdict::Pass && was_passing(o)).collect(),
+        fixed: outcomes.iter().filter(|o| o.verdict == Verdict::Pass && !was_passing(o)).collect(),
+    })
 }
 
 pub fn scoreboard_json(outcomes: &[Outcome]) -> serde_json::Value {

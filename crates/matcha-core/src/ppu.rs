@@ -686,11 +686,7 @@ impl Ppu {
     /// VRAM offset of a BG/window tile's pixel data.
     #[inline]
     fn bg_tile_addr(&self, tile: u8) -> usize {
-        if self.lcdc & 0x10 != 0 {
-            usize::from(tile) * 16
-        } else {
-            (0x1000 + i32::from(tile as i8) * 16) as usize
-        }
+        if self.lcdc & 0x10 != 0 { usize::from(tile) * 16 } else { (0x1000 + i32::from(tile as i8) * 16) as usize }
     }
 
     /// Decodes consecutive BG/window pixels of one tile-map row into colour
@@ -876,18 +872,8 @@ impl Ppu {
         r.u8s(&mut self.oam)?;
         let mut b = [0u8; 17];
         r.u8s(&mut b)?;
-        [
-            self.lcdc,
-            self.stat_select,
-            self.scy,
-            self.scx,
-            self.lyc,
-            self.bgp,
-            self.obp0,
-            self.obp1,
-            self.wy,
-            self.wx,
-        ] = [b[0], b[1] & 0x78, b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9]];
+        [self.lcdc, self.stat_select, self.scy, self.scx, self.lyc, self.bgp, self.obp0, self.obp1, self.wy, self.wx] =
+            [b[0], b[1] & 0x78, b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9]];
         self.stat_mode = Mode::from_u8(b[10]).ok_or(StateError::Corrupt("ppu mode"))?;
         self.irq_mode = match b[11] {
             0xFF => None,

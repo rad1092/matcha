@@ -16,11 +16,14 @@ USAGE:
   matcha run <rom> [--seconds N | --frames N] [--hold BUTTONS] [--screenshot out.png]
                    [--scale N] [--palette grey|matcha|dmg] [--serial] [--sav file.sav]
   matcha test <test-roms-dir> [--suite NAME] [--filter TEXT] [--threads N]
-                   [--markdown out.md] [--json out.json]
+                   [--markdown out.md] [--json out.json] [--baseline old.json]
   matcha profile <rom>... [--seconds N] [--input none|monkey] [--json out.json]
   matcha disasm <rom> [--addr HEX] [--count N]
 
 BUTTONS is a comma list: a,b,start,select,up,down,left,right
+
+`test` exits non-zero if any ROM fails; with --baseline (a previous --json
+scoreboard) it exits non-zero only if a ROM that passed there fails now.
 ";
 
 /// Minimal flag parser: positional args plus `--name value` / `--switch`.
@@ -70,11 +73,9 @@ fn parse_hex(s: &str) -> Result<u16, String> {
 }
 
 pub fn parse_buttons(list: &str) -> Result<Buttons, String> {
-    list.split(',')
-        .filter(|s| !s.trim().is_empty())
-        .try_fold(Buttons::NONE, |acc, name| {
-            Buttons::from_name(name).map(|b| acc | b).ok_or_else(|| format!("unknown button '{name}'"))
-        })
+    list.split(',').filter(|s| !s.trim().is_empty()).try_fold(Buttons::NONE, |acc, name| {
+        Buttons::from_name(name).map(|b| acc | b).ok_or_else(|| format!("unknown button '{name}'"))
+    })
 }
 
 fn palette(name: Option<&str>) -> Result<&'static [u32; 4], String> {
@@ -104,7 +105,13 @@ fn cmd_info(args: &Args) -> Result<(), String> {
     println!("ram size     {} KiB", h.ram_size / 1024);
     println!(
         "cgb          {}",
-        if h.cgb_only() { "CGB only" } else if h.cgb_enhanced() { "CGB enhanced" } else { "DMG" }
+        if h.cgb_only() {
+            "CGB only"
+        } else if h.cgb_enhanced() {
+            "CGB enhanced"
+        } else {
+            "DMG"
+        }
     );
     println!("sgb          {}", if h.sgb_flag == 0x03 { "yes" } else { "no" });
     println!("version      {}", h.version);
@@ -190,6 +197,19 @@ fn cmd_test(args: &Args) -> Result<bool, String> {
         let json = serde_json::to_string_pretty(&conformance::scoreboard_json(&outcomes)).unwrap();
         std::fs::write(out, json).map_err(|e| format!("{out}: {e}"))?;
     }
+    if let Some(path) = args.get("baseline") {
+        let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+        let baseline: serde_json::Value = serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))?;
+        let diff = conformance::compare(&outcomes, &baseline).map_err(|e| format!("{path}: {e}"))?;
+        for o in &diff.fixed {
+            println!("newly passing: {} {}", o.case.suite, o.case.name);
+        }
+        for o in &diff.regressed {
+            println!("REGRESSION:    {} {}", o.case.suite, o.case.name);
+        }
+        println!("baseline {path}: {} regressions, {} newly passing", diff.regressed.len(), diff.fixed.len());
+        return Ok(diff.regressed.is_empty());
+    }
     Ok(outcomes.iter().all(|o| o.verdict == conformance::Verdict::Pass))
 }
 
@@ -217,7 +237,9 @@ fn main() -> ExitCode {
         "info" => cmd_info(&args).map(|()| true),
         "run" => cmd_run(&args).map(|()| true),
         "test" => cmd_test(&args),
-        "profile" => profile::cmd_profile(&args.positional, args.get("json"), args.get("input"), args.number("seconds", 30.0f64)),
+        "profile" => {
+            profile::cmd_profile(&args.positional, args.get("json"), args.get("input"), args.number("seconds", 30.0f64))
+        }
         "disasm" => cmd_disasm(&args).map(|()| true),
         "help" | "--help" | "-h" => {
             print!("{USAGE}");

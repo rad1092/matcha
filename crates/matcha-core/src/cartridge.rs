@@ -484,9 +484,7 @@ impl Cartridge {
     #[inline]
     fn rtc_selected(&self) -> Option<u8> {
         match (&self.rtc, self.kind) {
-            (Some(_), MapperKind::Mbc3) if self.ram_enabled && (0x08..=0x0C).contains(&self.bank2) => {
-                Some(self.bank2)
-            }
+            (Some(_), MapperKind::Mbc3) if self.ram_enabled && (0x08..=0x0C).contains(&self.bank2) => Some(self.bank2),
             _ => None,
         }
     }

@@ -127,11 +127,7 @@ impl Pulse {
 
     #[inline]
     fn output(&self) -> u8 {
-        if self.enabled && DUTY[usize::from(self.duty)] >> (7 - self.duty_step) & 1 != 0 {
-            self.env.volume
-        } else {
-            0
-        }
+        if self.enabled && DUTY[usize::from(self.duty)] >> (7 - self.duty_step) & 1 != 0 { self.env.volume } else { 0 }
     }
 
     fn sweep_calc(&mut self) -> u16 {
@@ -309,9 +305,12 @@ impl Apu {
     /// State after the DMG boot ROM ("ba-ding" has just played on channel 1).
     pub fn new() -> Self {
         let mut apu = Self::power_on();
-        for (i, v) in [0x80u8, 0xBF, 0xF3, 0xFF, 0xBF, 0xFF, 0x3F, 0x00, 0xFF, 0xBF, 0x7F, 0xFF, 0x9F, 0xFF, 0xBF, 0xFF, 0xFF, 0x00, 0x00, 0xBF, 0x77, 0xF3]
-            .into_iter()
-            .enumerate()
+        for (i, v) in [
+            0x80u8, 0xBF, 0xF3, 0xFF, 0xBF, 0xFF, 0x3F, 0x00, 0xFF, 0xBF, 0x7F, 0xFF, 0x9F, 0xFF, 0xBF, 0xFF, 0xFF,
+            0x00, 0x00, 0xBF, 0x77, 0xF3,
+        ]
+        .into_iter()
+        .enumerate()
         {
             let addr = 0xFF10 + i as u16;
             if addr != 0xFF14 && addr != 0xFF19 && addr != 0xFF1E && addr != 0xFF23 {
@@ -702,7 +701,8 @@ impl Apu {
 
     fn power_off(&mut self) {
         // Registers clear; DMG keeps length counters and wave RAM.
-        let lengths = [self.ch1.length.counter, self.ch2.length.counter, self.ch3.length.counter, self.ch4.length.counter];
+        let lengths =
+            [self.ch1.length.counter, self.ch2.length.counter, self.ch3.length.counter, self.ch4.length.counter];
         let ram = self.ch3.ram;
         self.ch1 = Pulse::default();
         self.ch2 = Pulse::default();

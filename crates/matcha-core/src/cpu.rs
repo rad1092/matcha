@@ -469,18 +469,13 @@ impl Cpu {
             0x04 | 0x0C | 0x14 | 0x1C | 0x24 | 0x2C | 0x34 | 0x3C => {
                 let v = self.read_r8(bus, op >> 3);
                 let r = v.wrapping_add(1);
-                self.regs.f = (self.regs.f & C)
-                    | if r == 0 { Z } else { 0 }
-                    | if v & 0x0F == 0x0F { H } else { 0 };
+                self.regs.f = (self.regs.f & C) | if r == 0 { Z } else { 0 } | if v & 0x0F == 0x0F { H } else { 0 };
                 self.write_r8(bus, op >> 3, r);
             }
             0x05 | 0x0D | 0x15 | 0x1D | 0x25 | 0x2D | 0x35 | 0x3D => {
                 let v = self.read_r8(bus, op >> 3);
                 let r = v.wrapping_sub(1);
-                self.regs.f = (self.regs.f & C)
-                    | N
-                    | if r == 0 { Z } else { 0 }
-                    | if v & 0x0F == 0 { H } else { 0 };
+                self.regs.f = (self.regs.f & C) | N | if r == 0 { Z } else { 0 } | if v & 0x0F == 0 { H } else { 0 };
                 self.write_r8(bus, op >> 3, r);
             }
             0x27 => self.daa(),
@@ -737,8 +732,7 @@ impl Cpu {
         let sp = self.regs.sp;
         let low = sp & 0xFF;
         let e16 = u16::from(e);
-        self.regs.f = if (low & 0x0F) + (e16 & 0x0F) > 0x0F { H } else { 0 }
-            | if low + e16 > 0xFF { C } else { 0 };
+        self.regs.f = if (low & 0x0F) + (e16 & 0x0F) > 0x0F { H } else { 0 } | if low + e16 > 0xFF { C } else { 0 };
         sp.wrapping_add_signed(i16::from(e as i8))
     }
 

@@ -211,9 +211,7 @@ impl SystemBus {
     /// A CPU read (with PPU/DMA access restrictions), no clocking.
     fn read_mem(&self, addr: u16) -> u8 {
         match addr {
-            0x0000..=0x00FF if self.boot_rom_mapped => {
-                self.boot_rom.as_ref().map_or(0xFF, |b| b[usize::from(addr)])
-            }
+            0x0000..=0x00FF if self.boot_rom_mapped => self.boot_rom.as_ref().map_or(0xFF, |b| b[usize::from(addr)]),
             0x0000..=0x7FFF => self.cart.read_rom(addr),
             0x8000..=0x9FFF => {
                 if self.ppu.vram_readable() {
@@ -232,7 +230,11 @@ impl SystemBus {
                 }
             }
             0xFEA0..=0xFEFF => {
-                if self.ppu.oam_readable() && !self.dma.active { 0x00 } else { 0xFF }
+                if self.ppu.oam_readable() && !self.dma.active {
+                    0x00
+                } else {
+                    0xFF
+                }
             }
             0xFF00..=0xFF7F => self.read_io(addr),
             0xFF80..=0xFFFE => self.hram[usize::from(addr - 0xFF80)],
@@ -278,7 +280,8 @@ impl SystemBus {
     fn write_io(&mut self, addr: u16, value: u8) {
         match addr {
             0xFF00 => {
-                if self.joypad.write(value) {
+                let fired = self.joypad.write(value);
+                if fired {
                     self.if_ |= irq::JOYPAD;
                 }
             }
@@ -300,11 +303,8 @@ impl SystemBus {
                 self.dma.start_delay = 2;
             }
             0xFF40..=0xFF4B => self.if_ |= self.ppu.write_register(addr, value),
-            0xFF50 => {
-                if value != 0 {
-                    self.boot_rom_mapped = false;
-                }
-            }
+            // Any non-zero write unmaps the boot ROM until reset.
+            0xFF50 if value != 0 => self.boot_rom_mapped = false,
             _ => {}
         }
     }
@@ -416,14 +416,8 @@ impl SystemBus {
         if d[2] > 160 || d[4] > 2 {
             return Err(StateError::Corrupt("dma"));
         }
-        self.dma = Dma {
-            reg: d[0],
-            source: d[1],
-            index: d[2],
-            active: d[3] != 0,
-            start_delay: d[4],
-            pending_source: d[5],
-        };
+        self.dma =
+            Dma { reg: d[0], source: d[1], index: d[2], active: d[3] != 0, start_delay: d[4], pending_source: d[5] };
         self.boot_rom_mapped = r.bool()? && self.boot_rom.is_some();
         self.cycles = r.u64()?;
         Ok(())

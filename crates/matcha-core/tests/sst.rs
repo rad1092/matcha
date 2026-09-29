@@ -54,9 +54,9 @@ impl CpuBus for FlatBus {
 const SKIPPED: &[&str] = &["10", "76"];
 
 fn data_dir() -> PathBuf {
-    std::env::var_os("MATCHA_SST_DIR").map(PathBuf::from).unwrap_or_else(|| {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../testdata/sst/v1")
-    })
+    std::env::var_os("MATCHA_SST_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../../testdata/sst/v1"))
 }
 
 fn u8_of(v: &Value, key: &str) -> u8 {

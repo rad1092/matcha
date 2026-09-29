@@ -28,36 +28,39 @@ pub enum InputMode {
     Monkey,
 }
 
-/// Button state for frame `frame` under `mode`.
-fn input_for(mode: InputMode, frame: u64, rng: &mut XorShift) -> Buttons {
+/// Button state for frame `frame` under `mode`, or `None` to keep the
+/// previous buttons.
+fn input_for(mode: InputMode, frame: u64, rng: &mut XorShift) -> Option<Buttons> {
     match mode {
-        InputMode::None => Buttons::NONE,
+        InputMode::None => Some(Buttons::NONE),
         InputMode::Monkey => {
-            // Tap Start/A every ~2s for the first 10s to get past title screens,
-            // then hold a random combination for 8-frame stretches.
+            // First 10 s: tap Start, then A, every 2 s to get past title
+            // screens and dialogue.
             if frame < 600 {
-                return match frame % 120 {
+                return Some(match frame % 120 {
                     60..=65 => Buttons::START,
                     90..=95 => Buttons::A,
                     _ => Buttons::NONE,
-                };
+                });
             }
-            if frame % 8 == 0 {
-                let r = rng.next();
-                // Avoid Select+Start+A+B soft-reset combos and never press opposite directions.
-                let mut b = Buttons((r & 0x3F) as u8);
-                if b.contains(Buttons::LEFT | Buttons::RIGHT) {
-                    b.0 &= !Buttons::LEFT.0;
-                }
-                if b.contains(Buttons::UP | Buttons::DOWN) {
-                    b.0 &= !Buttons::UP.0;
-                }
-                if r & 0x100 != 0 {
-                    b = b | Buttons::START;
-                }
-                return b;
+            // Then: a new random chord every 8 frames. At most one direction,
+            // A/B at random, Start rarely (it pauses most games), never Select.
+            if frame % 8 != 0 {
+                return None;
             }
-            Buttons(u8::MAX) // sentinel: keep previous
+            let r = rng.next();
+            let dirs = [Buttons::NONE, Buttons::RIGHT, Buttons::LEFT, Buttons::UP, Buttons::DOWN];
+            let mut b = dirs[(r % 5) as usize];
+            if r & 0x100 != 0 {
+                b = b | Buttons::A;
+            }
+            if r & 0x200 != 0 {
+                b = b | Buttons::B;
+            }
+            if r >> 16 & 0x1F == 0 {
+                b = b | Buttons::START;
+            }
+            Some(b)
         }
     }
 }
@@ -91,10 +94,11 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode) -> Value {
     let mut distinct_frames = std::collections::HashSet::new();
     let mut nonblank_frames = 0u64;
     while gb.frame_count() < frames {
-        let b = input_for(mode, gb.frame_count(), &mut rng);
-        if b != Buttons(u8::MAX) && b != held {
-            held = b;
-            gb.set_buttons(held);
+        if let Some(b) = input_for(mode, gb.frame_count(), &mut rng) {
+            if b != held {
+                held = b;
+                gb.set_buttons(held);
+            }
         }
         if let RunEvent::Breakpoint { .. } = gb.run_frame() {
             unreachable!("no breakpoints are set");

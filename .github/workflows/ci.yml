@@ -1,0 +1,58 @@
+# Every push runs the whole definition of done (docs/adr/0008-verification.md):
+# formatting, lints, unit tests, all 498k SingleStepTests CPU cases, the
+# conformance suites (failing only on regressions against the committed
+# scoreboard), the WebAssembly build, and the MCP server end-to-end test.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  core:
+    name: core, CPU cases, conformance
+    runs-on: ubuntu-latest
+    env:
+      MATCHA_REQUIRE_TESTDATA: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: actions/cache@v6
+        with:
+          path: testdata
+          key: testdata-${{ hashFiles('scripts/fetch-testdata.sh') }}
+      - run: scripts/fetch-testdata.sh
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --release --workspace
+      - name: conformance (fails on regressions only)
+        run: >
+          cargo run --release -p matcha-cli --
+          test testdata/roms --baseline docs/conformance.json
+          --json conformance.json --markdown conformance.md
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: conformance
+          path: conformance.*
+
+  wasm:
+    name: wasm, web bundle, MCP server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: scripts/build-wasm.sh
+      - run: node mcp/test.mjs
+      - run: node scripts/build-web.mjs
+      - run: scripts/build-plugin.sh

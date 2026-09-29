@@ -16,6 +16,14 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 /// Frames per emulated second (rounded up).
 const FPS: u32 = 60;
 
+/// ROMs left out of the scoreboard because they cannot pass on hardware
+/// either, with the reason (listed under the scoreboard).
+pub const EXCLUDED: &[(&str, &str)] = &[(
+    "blargg/oam_bug/rom_singles/7-timing_effect.gb",
+    "its cartridge-RAM log of 19 OAM dumps outgrows the 8 KiB RAM and overwrites the test's own code in WRAM \
+     (SameBoy crashes the same way); the same test passes inside `oam_bug.gb`",
+)];
+
 #[derive(Clone, Debug)]
 pub enum Judge {
     /// Blargg-style: run up to `seconds`; RAM signature / serial / screenshot.
@@ -184,6 +192,7 @@ pub fn discover(root: &Path) -> Vec<Case> {
             cases.push(Case { suite: "mealybug", name: rel(root, &path), judge: Judge::Screenshot(reference), path });
         }
     }
+    cases.retain(|c| !EXCLUDED.iter().any(|(name, _)| c.name == *name));
     cases
 }
 
@@ -408,6 +417,10 @@ pub fn scoreboard_markdown(outcomes: &[Outcome]) -> String {
     let total = outcomes.len();
     let pass = outcomes.iter().filter(|o| o.verdict == Verdict::Pass).count();
     md += &format!("| **all** | **{pass}** | **{total}** | |\n");
+    md += "\nLeft out because they cannot pass on hardware either:\n\n";
+    for (name, why) in EXCLUDED {
+        md += &format!("- `{name}`: {why}\n");
+    }
     let failures: Vec<_> = outcomes.iter().filter(|o| o.verdict != Verdict::Pass).collect();
     if !failures.is_empty() {
         md += "\n<details><summary>Not passing</summary>\n\n| ROM | Result |\n|---|---|\n";

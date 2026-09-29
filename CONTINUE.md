@@ -9,27 +9,25 @@ how it fits together is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 Done and verified:
 
 - **Core** (`crates/matcha-core`): SM83 CPU, PPU with measured line timing,
-  APU, timer, serial, joypad, OAM DMA with bus conflicts, MBC1/1M/2/3+RTC/5,
-  versioned save states with atomic, validated loading, debugger hooks,
-  profiler. Scoreboard: [`docs/CONFORMANCE.md`](docs/CONFORMANCE.md).
+  APU, timer, serial, joypad, OAM DMA with bus conflicts, the DMG OAM
+  corruption bug, MBC1/1M/2/3+RTC/5, versioned save states with atomic,
+  validated loading, debugger hooks, profiler. Scoreboard: [`docs/CONFORMANCE.md`](docs/CONFORMANCE.md).
 - **Hosts**: web player (`web/`, bundled into `dist/matcha.html`), MCP server
   and Claude plugin (`mcp/`, `plugin/`, packaged as `dist/matcha.plugin`),
   CLI (`crates/matcha-cli`: run, test, profile, trace, disasm, info).
 - **Docs**: architecture, eight ADRs, roadmap, this file.
 - **Corpus study** (`analysis/`, report in [`docs/analysis.md`](docs/analysis.md)):
   868 homebrew programs through matcha and SameBoy; 866 same outcome.
-- **CI** (`.github/workflows/ci.yml`): fmt, clippy, unit tests + 498k CPU
-  cases, conformance against the committed scoreboard, wasm build, MCP e2e,
-  plugin build. It has not run yet: the repository has not been pushed
-  (`Cargo.toml` names `github.com/rad1092/matcha` as its home).
+- **CI** (`.github/workflows/ci.yml`, on [GitHub](https://github.com/rad1092/matcha/actions)):
+  fmt, clippy, unit tests + 498k CPU cases, conformance against the
+  committed scoreboard, wasm build, MCP e2e, plugin build.
 
 Not done (in order — details, verification and first steps in
 [`ROADMAP.md`](ROADMAP.md)):
 
 1. Game Boy Color mode — the biggest compatibility gap (29% of the corpus).
 2. Pixel FIFO renderer — Mealybug 1/24, Gambatte's mid-mode-3 tests.
-3. OAM corruption bug — the 6 failing Blargg ROMs.
-4. Optional noisy power-on RAM.
+3. Optional noisy power-on RAM.
 
 ## Set up a machine
 

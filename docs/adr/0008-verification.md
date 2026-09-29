@@ -63,4 +63,5 @@ emulator is assumed right.
 2. [x] Scoreboard JSON/Markdown; page numbers generated from it.
 3. [x] CI workflow (`.github/workflows/ci.yml`).
 4. [x] Corpus-wide comparison with SameBoy (`analysis/reference/`).
-5. [ ] OAM corruption bug (Blargg `oam_bug`), pixel FIFO (Mealybug).
+5. [x] OAM corruption bug (Blargg `oam_bug`).
+6. [ ] Pixel FIFO (Mealybug).

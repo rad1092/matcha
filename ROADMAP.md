@@ -47,20 +47,7 @@ stay green; `matcha run` stays above 30× real time.
 **First step.** Port the Mealybug `m3_bgp_change` case first: it only needs
 BGP sampled per pixel.
 
-## 3. OAM corruption bug
-
-**Why.** The last Blargg failures (`oam_bug`, 6 ROMs). Rarely matters to
-games, but it is the remaining DMG CPU/PPU interaction.
-
-**What.** On DMG, 16-bit increments/decrements (`inc rr`, `dec rr`,
-`ld a,[hl+]`, `push`, `pop`, …) whose value points into FE00–FEFF during
-mode 2 corrupt the OAM row the PPU is reading. Add an IDU hook to `CpuBus`
-(`fn idu(&mut self, value: u16)`) and apply Pan Docs' corruption patterns in
-the PPU.
-
-**Verify.** Blargg `oam_bug` 1–8; SingleStepTests unaffected.
-
-## 4. Power-on RAM contents
+## 3. Power-on RAM contents
 
 **Why.** matcha starts WRAM, HRAM and OAM at zero, SameBoy with noise.
 The corpus comparison measured how much this matters (see "Uninitialised
@@ -71,7 +58,7 @@ memory" in the analysis); a few programs read memory before writing it.
 
 **First step.** `GameBoy::with_power_on_ram(PowerOnRam::Zero | Noise(seed))`.
 
-## 5. Quality and reach
+## 4. Quality and reach
 
 - **Band-limited audio** (ADR-0005 option B) if the box filter's aliasing at
   high square-wave pitches becomes noticeable.

@@ -25,7 +25,7 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
 
 | Property | Target | Status |
 |---|---|---|
-| Accuracy | Pass the CPU, timing, sound and PPU suites real games depend on; agree with a reference emulator on real software | SST 498,000/498,000; Mooneye 94/94; dmg-acid2 1/1; Blargg 38/44; Gambatte 1,353/1,783; Mealybug 1/24 ([scoreboard](CONFORMANCE.md)); same outcome as SameBoy on 866 of 868 homebrew programs ([analysis](analysis.md)) |
+| Accuracy | Pass the CPU, timing, sound and PPU suites real games depend on; agree with a reference emulator on real software | SST 498,000/498,000; Mooneye 94/94; dmg-acid2 1/1; Blargg 43/43; Gambatte 1,353/1,783; Mealybug 1/24 ([scoreboard](CONFORMANCE.md)); same outcome as SameBoy on 866 of 868 homebrew programs ([analysis](analysis.md)) |
 | Speed | Full speed with audio in a browser on a phone-class CPU | Median 52× real time across 150 homebrew programs, slowest 37×; 40–47× with 48 kHz audio (native, one core of the 2-vCPU build container) |
 | Determinism | Same ROM + inputs + state ⇒ identical frames and audio, bit for bit | Unit-tested (two machines, save/replay) |
 | Portability | One core for browser, Node and native; no OS services | `no_std` + `alloc`, zero dependencies |
@@ -76,9 +76,9 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
 
 | Module | Responsibility | Notes |
 |---|---|---|
-| `cpu.rs` | SM83 interpreter over the `CpuBus` trait | One bus access per M-cycle, EI delay, HALT bug, IE-push dispatch quirk, DMG STOP, illegal-opcode lock |
+| `cpu.rs` | SM83 interpreter over the `CpuBus` trait | One bus access per M-cycle, EI delay, HALT bug, IE-push dispatch quirk, DMG STOP, illegal-opcode lock; internal cycles that put a 16-bit register on the address bus say so (`idle_at`) |
 | `bus.rs` | Memory map, interrupts, OAM DMA, clocking of all devices | Implements `CpuBus`; the only place devices are ticked; DMA bus conflicts (the CPU sees the DMA's byte on the bus it occupies) |
-| `ppu.rs` | LCD timing, STAT/LY interrupts, access blocking, rendering | Event-scheduled line timing (ADR-0001, ADR-0002) |
+| `ppu.rs` | LCD timing, STAT/LY interrupts, access blocking, rendering | Event-scheduled line timing (ADR-0001, ADR-0002); the DMG OAM corruption bug, keyed to the OAM row being scanned |
 | `apu.rs` | Four channels, frame sequencer, mixer, resampler | Cached mix + box filter + DMG high-pass (ADR-0005) |
 | `timer.rs` | 16-bit system counter, falling-edge TIMA, DIV-APU and serial clocks | TIMA reload state machine |
 | `cartridge.rs` | Header parsing, MBC1/1M/2/3/5, RTC, battery RAM | RTC runs on emulated time only |
@@ -255,9 +255,7 @@ In priority order (details in [`ROADMAP.md`](../ROADMAP.md)):
    palettes and HDMA fit the existing bus/PPU split.
 2. **Pixel FIFO renderer** for mid-scanline effects (Mealybug), behind the
    same line-timing model so existing tests keep passing.
-3. **OAM corruption bug** (the remaining Blargg failures) via hooks on the
-   CPU's 16-bit increment/decrement unit.
-4. **Band-limited audio** if audio quality becomes a priority.
-5. **SharedArrayBuffer audio ring** where a host can provide cross-origin
+3. **Band-limited audio** if audio quality becomes a priority.
+4. **SharedArrayBuffer audio ring** where a host can provide cross-origin
    isolation.
-6. **Link cable** between two cores (the serial port already clocks bits).
+5. **Link cable** between two cores (the serial port already clocks bits).

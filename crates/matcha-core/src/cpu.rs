@@ -14,6 +14,15 @@ pub trait CpuBus {
     fn write(&mut self, addr: u16, value: u8);
     /// An internal CPU cycle with no memory access. Consumes one M-cycle.
     fn idle(&mut self);
+    /// An internal cycle in which the 16-bit increment/decrement unit drives
+    /// `addr` onto the address bus without a read or write (INC rr, DEC rr,
+    /// PUSH, CALL, RST, LD SP,HL, JR and interrupt dispatch; Gekkio's
+    /// "Game Boy: Complete Technical Reference"). A DMG's OAM still reacts to
+    /// it — the OAM corruption bug. Consumes one M-cycle.
+    fn idle_at(&mut self, addr: u16) {
+        let _ = addr;
+        self.idle();
+    }
     /// Interrupts that are both requested and enabled (`IE & IF & 0x1F`).
     fn pending_interrupts(&self) -> u8;
     /// Clears the given bit in `IF` (interrupt acknowledged).
@@ -246,7 +255,7 @@ impl Cpu {
     fn dispatch_interrupt<B: CpuBus>(&mut self, bus: &mut B) -> u16 {
         self.ime = false;
         bus.idle();
-        bus.idle();
+        bus.idle_at(self.regs.sp);
         let [hi, lo] = self.regs.pc.to_be_bytes();
         self.regs.sp = self.regs.sp.wrapping_sub(1);
         bus.write(self.regs.sp, hi);
@@ -440,7 +449,7 @@ impl Cpu {
             }
             0xF9 => {
                 self.regs.sp = self.regs.hl();
-                bus.idle();
+                bus.idle_at(self.regs.sp);
             }
             0xF8 => {
                 let e = self.fetch(bus);
@@ -455,7 +464,7 @@ impl Cpu {
                     0xE5 => self.regs.hl(),
                     _ => self.regs.af(),
                 };
-                bus.idle();
+                bus.idle_at(self.regs.sp);
                 self.push(bus, v);
             }
             0xC1 | 0xD1 | 0xE1 | 0xF1 => {
@@ -499,14 +508,14 @@ impl Cpu {
 
             // --- 16-bit arithmetic -------------------------------------------
             0x03 | 0x13 | 0x23 | 0x33 => {
-                let v = self.read_r16(op >> 4).wrapping_add(1);
-                self.write_r16(op >> 4, v);
-                bus.idle();
+                let v = self.read_r16(op >> 4);
+                self.write_r16(op >> 4, v.wrapping_add(1));
+                bus.idle_at(v);
             }
             0x0B | 0x1B | 0x2B | 0x3B => {
-                let v = self.read_r16(op >> 4).wrapping_sub(1);
-                self.write_r16(op >> 4, v);
-                bus.idle();
+                let v = self.read_r16(op >> 4);
+                self.write_r16(op >> 4, v.wrapping_sub(1));
+                bus.idle_at(v);
             }
             0x09 | 0x19 | 0x29 | 0x39 => {
                 let hl = self.regs.hl();
@@ -563,26 +572,26 @@ impl Cpu {
             0xE9 => self.regs.pc = self.regs.hl(),
             0x18 => {
                 let e = self.fetch(bus) as i8;
-                bus.idle();
+                bus.idle_at(self.regs.pc);
                 self.regs.pc = self.regs.pc.wrapping_add_signed(i16::from(e));
             }
             0x20 | 0x28 | 0x30 | 0x38 => {
                 let e = self.fetch(bus) as i8;
                 if self.condition(op >> 3) {
-                    bus.idle();
+                    bus.idle_at(self.regs.pc);
                     self.regs.pc = self.regs.pc.wrapping_add_signed(i16::from(e));
                 }
             }
             0xCD => {
                 let addr = self.fetch16(bus);
-                bus.idle();
+                bus.idle_at(self.regs.sp);
                 self.push(bus, self.regs.pc);
                 self.regs.pc = addr;
             }
             0xC4 | 0xCC | 0xD4 | 0xDC => {
                 let addr = self.fetch16(bus);
                 if self.condition(op >> 3) {
-                    bus.idle();
+                    bus.idle_at(self.regs.sp);
                     self.push(bus, self.regs.pc);
                     self.regs.pc = addr;
                 }
@@ -604,7 +613,7 @@ impl Cpu {
                 }
             }
             0xC7 | 0xCF | 0xD7 | 0xDF | 0xE7 | 0xEF | 0xF7 | 0xFF => {
-                bus.idle();
+                bus.idle_at(self.regs.sp);
                 self.push(bus, self.regs.pc);
                 self.regs.pc = u16::from(op & 0x38);
             }

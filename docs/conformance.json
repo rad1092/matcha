@@ -44,10 +44,10 @@
       "suite": "blargg"
     },
     {
-      "detail": "status 0x02: oam_bug 01:ok 02:02 03:ok 04:03 05:02 06:ok 07:01 08:02 Run failed tests individually for more details. Failed #2",
-      "frames": 800,
+      "detail": "",
+      "frames": 1130,
       "rom": "blargg/oam_bug/oam_bug.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "blargg"
     },
     {
@@ -261,10 +261,10 @@
       "suite": "blargg"
     },
     {
-      "detail": "status 0x02: 2-causes LD DE,$FE00 : INC DE Failed #2",
-      "frames": 80,
+      "detail": "",
+      "frames": 140,
       "rom": "blargg/oam_bug/rom_singles/2-causes.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "blargg"
     },
     {
@@ -275,17 +275,17 @@
       "suite": "blargg"
     },
     {
-      "detail": "status 0x03: 4-scanline_timing INC DE at first corruption Failed #3",
+      "detail": "",
       "frames": 80,
       "rom": "blargg/oam_bug/rom_singles/4-scanline_timing.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "blargg"
     },
     {
-      "detail": "status 0x02: 5-timing_bug Should corrupt at beginning of first scanline Failed #2",
+      "detail": "",
       "frames": 80,
       "rom": "blargg/oam_bug/rom_singles/5-timing_bug.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "blargg"
     },
     {
@@ -296,17 +296,10 @@
       "suite": "blargg"
     },
     {
-      "detail": "status 0x01: 7-timing_effect 00000000 Failed",
-      "frames": 410,
-      "rom": "blargg/oam_bug/rom_singles/7-timing_effect.gb",
-      "status": "fail",
-      "suite": "blargg"
-    },
-    {
-      "detail": "status 0x02: 8-instr_effect 00000000 INC/DEC rp pattern is wrong Failed #2",
-      "frames": 80,
+      "detail": "",
+      "frames": 380,
       "rom": "blargg/oam_bug/rom_singles/8-instr_effect.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "blargg"
     },
     {

@@ -281,6 +281,149 @@ impl Ppu {
         !self.oam_write_block
     }
 
+    // --- OAM corruption bug (DMG) ---------------------------------------------------
+    //
+    // During mode 2 the PPU reads OAM one 8-byte row per M-cycle over a 16-bit
+    // bus. A CPU access to FE00–FEFF in that window — a read, a write, or just
+    // the increment/decrement unit putting such an address on the bus — drives
+    // the same lines and garbles the row being read. Pan Docs, "OAM Corruption
+    // Bug"; patterns and timing from SameBoy's DMG model (`GB_trigger_oam_bug`,
+    // `GB_trigger_oam_bug_read`, `read_high_memory`); checked by Blargg's
+    // `oam_bug` tests. Every pattern is bitwise, so the 16-bit words are
+    // processed a byte at a time.
+
+    /// Byte offset of the row the object search is reading, as a CPU access at
+    /// the current dot sees it: row 0 from the start of a visible line, row 1
+    /// from dot 6, one row further per M-cycle, running past the end of OAM
+    /// (0xA0) at dot 82; none from mode 3 on, in VBlank, on the first line
+    /// after the LCD is switched on, or with the LCD off.
+    fn oam_scan_row(&self) -> Option<usize> {
+        if !self.lcd_on() || self.first_line || self.line >= 144 || self.dot >= 84 {
+            return None;
+        }
+        Some(if self.dot < 6 { 0 } else { usize::from(self.dot - 2) / 4 * 8 })
+    }
+
+    /// A write to FE00–FEFF while OAM is locked, or the increment/decrement
+    /// unit driving such an address: the row takes a blend of its first word
+    /// with the preceding row's first and third words, and the rest of the
+    /// preceding row.
+    pub fn oam_bug_write(&mut self) {
+        let Some(row) = self.oam_scan_row().filter(|r| (8..0xA0).contains(r)) else {
+            return;
+        };
+        let o = &mut self.oam;
+        for k in 0..2 {
+            let (a, b, c) = (o[row + k], o[row - 8 + k], o[row - 4 + k]);
+            o[row + k] = ((a ^ c) & (b ^ c)) ^ c;
+        }
+        o.copy_within(row - 6..row, row + 2);
+    }
+
+    /// A read of `addr` (FE00–FEFF) while OAM is locked. `dma`: an OAM DMA
+    /// transfer is running, which answers reads in the lock gaps itself.
+    pub fn oam_bug_read(&mut self, addr: u16, dma: bool) {
+        let Some(row) = self.oam_scan_row() else {
+            return;
+        };
+        if self.oam_write_block {
+            if (8..0xA0).contains(&row) {
+                self.oam_bug_read_row(row);
+            }
+        } else if self.oam_read_block && !dma && addr < 0xFEA0 {
+            // Reads lock a dot before writes at the start of mode 2 and stay
+            // locked after writes reopen at its end; a read in either gap
+            // disturbs row 0 or the last row, depending on the address.
+            match row {
+                0 => self.oam_bug_read_first_row(addr),
+                0xA0 => self.oam_bug_read_last_row(addr),
+                _ => {}
+            }
+        }
+    }
+
+    /// The read corruption proper. What it does depends on the row's position
+    /// within each group of four rows (DMG-B values; some cases differ
+    /// between individual consoles).
+    fn oam_bug_read_row(&mut self, row: usize) {
+        let o = &mut self.oam;
+        match row & 0x18 {
+            0x10 => {
+                // Rows 2, 6, 10, 14, 18: the preceding row's first word is
+                // blended with its neighbours and copied two rows back.
+                for k in 0..2 {
+                    let (a, b, c, d) = (o[row - 16 + k], o[row - 8 + k], o[row + k], o[row - 4 + k]);
+                    o[row - 8 + k] = (b & (a | c | d)) | (a & c & d);
+                }
+                o.copy_within(row - 8..row, row - 16);
+            }
+            0x00 => {
+                // Rows 4, 8, 12, 16: as above, reaching four rows back.
+                for k in 0..2 {
+                    let (a, b, c, d, e) =
+                        (o[row + k], o[row - 4 + k], o[row - 8 + k], o[row - 16 + k], o[row - 32 + k]);
+                    o[row - 8 + k] = match row {
+                        0x20 => (c & (a | b | d | e)) | (a & b & d & e),
+                        0x40 => {
+                            let (f, g) = (o[row - 6 + k], o[row - 14 + k]);
+                            (c & (e | d | (!f & g) | b | a)) | (b & d & e)
+                        }
+                        0x60 => (c & (a | b | d | e)) | (b & d & e),
+                        _ => c | (a & b & d & e),
+                    };
+                }
+                o.copy_within(row - 8..row, row - 16);
+                o.copy_within(row - 8..row, row - 32);
+            }
+            _ => {
+                // Odd rows: Pan Docs' plain read corruption, also applied to
+                // the preceding row's first word.
+                for k in 0..2 {
+                    let v = o[row - 8 + k] | (o[row + k] & o[row - 4 + k]);
+                    o[row - 8 + k] = v;
+                    o[row + k] = v;
+                }
+            }
+        }
+        o.copy_within(row - 8..row, row);
+        if row == 0x80 {
+            o.copy_within(0x80..0x88, 0);
+        }
+    }
+
+    /// A read at the dot between the read and write locks at the start of
+    /// mode 2: the addressed row is copied into row 0, the first word of both
+    /// glitched.
+    fn oam_bug_read_first_row(&mut self, addr: u16) {
+        let (row, word) = (usize::from(addr & 0xF8), usize::from(addr & 0xFE));
+        let o = &mut self.oam;
+        for k in 0..2 {
+            let v = o[row + k] | (o[k] & o[word + k]);
+            o[row + k] = v;
+            o[k] = v;
+        }
+        o.copy_within(row + 2..row + 8, 2);
+    }
+
+    /// A read after writes reopen at the end of mode 2: the word at the
+    /// address's position in the last row is glitched, and the last row is
+    /// copied over the addressed row.
+    fn oam_bug_read_last_row(&mut self, addr: u16) {
+        let target = usize::from(addr & 6) | 0x98;
+        let row = usize::from(addr & 0xF8);
+        let o = &mut self.oam;
+        for k in 0..2 {
+            let (a, b) = (o[0x9C + k], o[target + k]);
+            let c = if addr & 6 == 2 { o[usize::from(addr & 0xFE) + k] } else { o[row + k] };
+            o[target + k] = match addr & 6 {
+                0 | 2 => (a & b) | (a & c) | (b & c),
+                4 => b,
+                _ => b | (a & c),
+            };
+        }
+        o.copy_within(0x98..0xA0, row);
+    }
+
     pub fn read_register(&self, addr: u16) -> u8 {
         match addr {
             0xFF40 => self.lcdc,

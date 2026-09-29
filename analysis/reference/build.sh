@@ -10,7 +10,7 @@ repo="$(cd "$(dirname "$0")/../.." && pwd)"
 sb="$(cd "${1:?usage: build.sh <sameboy-checkout> [rgbds-dir/]}" && pwd)"
 rgbds="${2:-}"
 
-make -C "$sb" -j2 lib "$sb/build/bin/BootROMs/dmg_boot.bin" CONF=release RGBDS="$rgbds"
+make -C "$sb" -j2 lib build/bin/BootROMs/dmg_boot.bin CONF=release RGBDS="$rgbds"
 mkdir -p "$repo/target/reference"
 cc -O2 -std=gnu11 -I"$sb" -o "$repo/target/reference/sameboy_profile" \
   "$repo/analysis/reference/sameboy_profile.c" "$sb/build/lib/libsameboy.a" -lm

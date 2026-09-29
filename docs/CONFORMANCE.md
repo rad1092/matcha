@@ -1,22 +1,20 @@
 | Suite | Passed | Total | |
 |---|---:|---:|---|
-| blargg | 38 | 44 | CPU, timing, sound and OAM-bug tests by Shay Green |
+| blargg | 43 | 43 | CPU, timing, sound and OAM-bug tests by Shay Green |
 | mooneye | 94 | 94 | Mooneye Test Suite: acceptance + emulator-only (DMG-applicable) |
 | dmg-acid2 | 1 | 1 | PPU rendering torture test |
 | gambatte | 1353 | 1783 | Gambatte hardware-verified tests: DMG hex-result and screenshot cases |
 | mealybug | 1 | 24 | Mealybug Tearoom: mid-scanline PPU effects (needs a pixel FIFO) |
-| **all** | **1487** | **1946** | |
+| **all** | **1492** | **1945** | |
+
+Left out because they cannot pass on hardware either:
+
+- `blargg/oam_bug/rom_singles/7-timing_effect.gb`: its cartridge-RAM log of 19 OAM dumps outgrows the 8 KiB RAM and overwrites the test's own code in WRAM (SameBoy crashes the same way); the same test passes inside `oam_bug.gb`
 
 <details><summary>Not passing</summary>
 
 | ROM | Result |
 |---|---|
-| `blargg/oam_bug/oam_bug.gb` | fail: status 0x02: oam_bug 01:ok 02:02 03:ok 04:03 05:02 06:ok 07:01 08:02 Run failed tests individually for more details. Failed #2 |
-| `blargg/oam_bug/rom_singles/2-causes.gb` | fail: status 0x02: 2-causes LD DE,$FE00 : INC DE Failed #2 |
-| `blargg/oam_bug/rom_singles/4-scanline_timing.gb` | fail: status 0x03: 4-scanline_timing INC DE at first corruption Failed #3 |
-| `blargg/oam_bug/rom_singles/5-timing_bug.gb` | fail: status 0x02: 5-timing_bug Should corrupt at beginning of first scanline Failed #2 |
-| `blargg/oam_bug/rom_singles/7-timing_effect.gb` | fail: status 0x01: 7-timing_effect 00000000 Failed |
-| `blargg/oam_bug/rom_singles/8-instr_effect.gb` | fail: status 0x02: 8-instr_effect 00000000 INC/DEC rp pattern is wrong Failed #2 |
 | `gambatte/bgtiledata/bgtiledata_spx08_1.gbc` | fail: 18312 pixels differ from reference |
 | `gambatte/bgtiledata/bgtiledata_spx08_2.gbc` | fail: 16248 pixels differ from reference |
 | `gambatte/bgtiledata/bgtiledata_spx08_3.gbc` | fail: 16008 pixels differ from reference |

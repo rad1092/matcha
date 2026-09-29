@@ -486,6 +486,9 @@ impl SystemBus {
 impl CpuBus for SystemBus {
     #[inline]
     fn read(&mut self, addr: u16) -> u8 {
+        if addr & 0xFF00 == 0xFE00 {
+            self.ppu.oam_bug_read(addr, self.dma.active);
+        }
         let v = match self.dma_conflict(addr) {
             Some(dma_addr) => self.dma_source_read(dma_addr),
             None => self.read_mem(addr),
@@ -502,6 +505,9 @@ impl CpuBus for SystemBus {
         if self.profile.is_some() || self.write_watch.is_some() {
             self.note_write(addr, value);
         }
+        if addr & 0xFF00 == 0xFE00 && !self.ppu.oam_writable() {
+            self.ppu.oam_bug_write();
+        }
         match self.dma_conflict(addr) {
             // The write lands on the DMA's address instead (on ROM that is a
             // mapper register) ...
@@ -516,6 +522,14 @@ impl CpuBus for SystemBus {
 
     #[inline]
     fn idle(&mut self) {
+        self.tick();
+    }
+
+    #[inline]
+    fn idle_at(&mut self, addr: u16) {
+        if addr & 0xFF00 == 0xFE00 {
+            self.ppu.oam_bug_write();
+        }
         self.tick();
     }
 

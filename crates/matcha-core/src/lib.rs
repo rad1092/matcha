@@ -764,6 +764,10 @@ mod tests {
                 if n % 7 == 0 {
                     machine.bus.ppu.write_register(0xFF47, (n as u8).wrapping_mul(31));
                     machine.bus.ppu.write_register(0xFF42, n as u8);
+                    machine.bus.ppu.write_register(0xFF43, (n as u8).wrapping_mul(13));
+                    // Change both map selection and signed/unsigned tile data
+                    // while a saved machine can have an address on the bus.
+                    machine.bus.ppu.write_register(0xFF40, 0x87 | ((n as u8) & 0x78));
                 }
                 machine.step();
             }

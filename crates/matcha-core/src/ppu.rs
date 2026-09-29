@@ -95,6 +95,10 @@ struct PixelPipeline {
     /// Tile address, tile read, low address/read, high address/read, push.
     phase: u8,
     address: u16,
+    /// Address phases performed on the last two dots: none, map, low, high.
+    /// CPU-visible scroll/control writes can precede the ordinary bus phase.
+    fetch_latch: [u8; 2],
+    fetch_latch_x: [i32; 2],
     tile: u8,
     low: u8,
     high: u8,
@@ -114,6 +118,11 @@ struct PixelPipeline {
     object_address: u16,
     object_low: u8,
     object_waiting: bool,
+    /// OBJ VRAM read on the last dot: none, low plane, high plane.
+    object_read: u8,
+    /// Before the last high-plane overlay, for a same-dot LCDC.2 collision.
+    object_prior: [u8; 8],
+    object_prior_attr: [u8; 8],
 }
 
 impl Default for PixelPipeline {
@@ -127,6 +136,8 @@ impl Default for PixelPipeline {
             obj_attr: [0; 8],
             phase: 0,
             address: 0,
+            fetch_latch: [0; 2],
+            fetch_latch_x: [0; 2],
             tile: 0,
             low: 0,
             high: 0,
@@ -145,6 +156,9 @@ impl Default for PixelPipeline {
             object_address: 0,
             object_low: 0,
             object_waiting: false,
+            object_read: 0,
+            object_prior: [0; 8],
+            object_prior_attr: [0; 8],
         }
     }
 }
@@ -183,6 +197,13 @@ impl PixelPipeline {
             w.u8(pixel.color);
             w.u8(pixel.palette);
         }
+        w.u8s(&self.fetch_latch);
+        for x in self.fetch_latch_x {
+            w.i32(x);
+        }
+        w.u8(self.object_read);
+        w.u8s(&self.object_prior);
+        w.u8s(&self.object_prior_attr);
     }
 
     fn load(&mut self, r: &mut StateReader) -> Result<(), StateError> {
@@ -232,6 +253,28 @@ impl PixelPipeline {
             {
                 return Err(StateError::Corrupt("ppu palette latch"));
             }
+        }
+        r.u8s(&mut self.fetch_latch)?;
+        for x in &mut self.fetch_latch_x {
+            *x = r.i32()?;
+        }
+        if self.fetch_latch.iter().any(|&kind| kind > 3)
+            || self.fetch_latch_x.iter().any(|&x| !(-16..=WIDTH as i32).contains(&x))
+            || self.fetch_latch[0] != 0 && self.phase != self.fetch_latch[0] * 2 - 1
+        {
+            return Err(StateError::Corrupt("ppu fetch address latch"));
+        }
+        self.object_read = r.u8()?;
+        r.u8s(&mut self.object_prior)?;
+        r.u8s(&mut self.object_prior_attr)?;
+        if self.object_read > 2
+            || self.object_read != 0 && self.next_object == 0
+            || self.object_read == 1 && self.object_stall != 2
+            || self.object_read == 2 && self.object_stall != 0
+            || self.object_prior.iter().any(|&color| color > 3)
+            || self.object_prior_attr.iter().any(|&attr| attr & !0x90 != 0)
+        {
+            return Err(StateError::Corrupt("ppu object read latch"));
         }
         if self.bg_head >= 8
             || self.bg_len > 8
@@ -677,6 +720,12 @@ impl Ppu {
                     _ => {}
                 }
                 if self.lcd_on() {
+                    if was_on {
+                        self.refresh_fetch_address();
+                        if (old_lcdc ^ value) & 4 != 0 {
+                            self.refresh_object_read();
+                        }
+                    }
                     self.wy_check_delay = 4;
                 }
             }
@@ -694,8 +743,14 @@ impl Ppu {
                 self.stat_select = if boundary && self.stat_select & 0x28 == 0x08 { 0x58 } else { 0x78 };
                 return self.update_stat();
             }
-            0xFF42 => self.scy = value,
-            0xFF43 => self.scx = value,
+            0xFF42 => {
+                self.scy = value;
+                self.refresh_fetch_address();
+            }
+            0xFF43 => {
+                self.scx = value;
+                self.refresh_scroll_x();
+            }
             0xFF44 => {} // read-only
             0xFF45 => {
                 self.lyc = value;
@@ -764,6 +819,8 @@ impl Ppu {
         self.wy_check_delay = 0;
         self.stat_write = 0xFF;
         self.window_restart = None;
+        self.pixels.fetch_latch = [0; 2];
+        self.pixels.object_read = 0;
         self.framebuffer.fill(0);
         self.pixels.output = [OutputPixel::default(); 2];
     }
@@ -863,10 +920,17 @@ impl Ppu {
             // Fast path: nothing happens during these four dots.
             self.dot += 4;
             self.pixels.output = [OutputPixel::default(); 2];
+            self.pixels.fetch_latch = [0; 2];
+            self.pixels.object_read = 0;
             self.window_restart = None;
             return irq;
         }
         for i in 0..4 {
+            self.pixels.object_read = 0;
+            self.pixels.fetch_latch[1] = self.pixels.fetch_latch[0];
+            self.pixels.fetch_latch_x[1] = self.pixels.fetch_latch_x[0];
+            self.pixels.fetch_latch[0] = 0;
+            self.pixels.fetch_latch_x[0] = 0;
             self.window_restart = None;
             self.pixels.output[1] = self.pixels.output[0];
             self.pixels.output[0] = OutputPixel::default();
@@ -1202,24 +1266,69 @@ impl Ppu {
         if self.pixels.window { self.pixels.window_y } else { self.line.wrapping_add(self.scy) }
     }
 
+    fn map_address(&self, fetch_x: i32) -> u16 {
+        let map = if self.lcdc & if self.pixels.window { 0x40 } else { 0x08 } != 0 { 0x1C00 } else { 0x1800 };
+        let x = if self.pixels.window {
+            self.pixels.window_tile
+        } else if fetch_x < -8 {
+            self.scx >> 3
+        } else {
+            ((i32::from(self.scx) + fetch_x + 8) / 8) as u8 & 31
+        };
+        map + u16::from(self.fetch_y() / 8) * 32 + u16::from(x)
+    }
+
+    fn tile_data_address(&self, high: bool) -> u16 {
+        (self.bg_tile_addr(self.pixels.tile) + usize::from(self.fetch_y() & 7) * 2 + usize::from(high)) as u16
+    }
+
+    /// SCY and LCDC reach the fetcher's address latches one dot before the
+    /// ordinary CPU write phase. Correct only the address formed on that
+    /// dot: earlier addresses and completed VRAM reads remain latched.
+    /// SameBoy Core/sm83_cpu.c: READ_NEW (SCY), DMG_LCDC (full value).
+    fn refresh_fetch_address(&mut self) {
+        match self.pixels.fetch_latch[0] {
+            1 => {
+                if self.lcdc & 0x20 == 0 {
+                    self.pixels.window = false;
+                }
+                self.pixels.address = self.map_address(self.pixels.fetch_latch_x[0]);
+            }
+            2 => self.pixels.address = self.tile_data_address(false),
+            3 => self.pixels.address = self.tile_data_address(true),
+            _ => {}
+        }
+    }
+
+    /// SCX reaches the BG map address bus two dots before an ordinary CPU
+    /// write (SameBoy GB_CONFLICT_SCX_DMG_AND_CGB_DOUBLE). A map address from
+    /// the preceding dot has already completed its VRAM read, so refresh
+    /// that tile byte too. Pixel data from older fetches stays in the FIFO.
+    fn refresh_scroll_x(&mut self) {
+        if self.pixels.window {
+            return;
+        }
+        if self.pixels.fetch_latch[1] == 1 && self.pixels.phase == 2 {
+            self.pixels.address = self.map_address(self.pixels.fetch_latch_x[1]);
+            self.pixels.tile = self.vram[usize::from(self.pixels.address)];
+        } else if self.pixels.fetch_latch[0] == 1 {
+            self.pixels.address = self.map_address(self.pixels.fetch_latch_x[0]);
+        }
+    }
+
     /// One dot of the fetcher. On DMG, SCY and LCDC.4 are sampled separately
     /// for each bitplane, so a mid-fetch write can mix two rows/tile sets.
     /// See Mealybug's "The Comprehensive Game Boy PPU Documentation".
     fn fetch_dot(&mut self) {
+        self.pixels.fetch_latch[0] = 0;
         match self.pixels.phase {
             0 => {
                 if self.lcdc & 0x20 == 0 {
                     self.pixels.window = false;
                 }
-                let map = if self.lcdc & if self.pixels.window { 0x40 } else { 0x08 } != 0 { 0x1C00 } else { 0x1800 };
-                let x = if self.pixels.window {
-                    self.pixels.window_tile
-                } else if self.pixels.x < -8 {
-                    self.scx >> 3
-                } else {
-                    ((i32::from(self.scx) + self.pixels.x + 8) / 8) as u8 & 31
-                };
-                self.pixels.address = map + u16::from(self.fetch_y() / 8) * 32 + u16::from(x);
+                self.pixels.address = self.map_address(self.pixels.x);
+                self.pixels.fetch_latch[0] = 1;
+                self.pixels.fetch_latch_x[0] = self.pixels.x;
                 self.pixels.phase = 1;
             }
             1 => {
@@ -1227,9 +1336,9 @@ impl Ppu {
                 self.pixels.phase = 2;
             }
             2 | 4 => {
-                self.pixels.address = (self.bg_tile_addr(self.pixels.tile)
-                    + usize::from(self.fetch_y() & 7) * 2
-                    + usize::from(self.pixels.phase == 4)) as u16;
+                self.pixels.address = self.tile_data_address(self.pixels.phase == 4);
+                self.pixels.fetch_latch[0] = if self.pixels.phase == 4 { 3 } else { 2 };
+                self.pixels.fetch_latch_x[0] = self.pixels.x;
                 self.pixels.phase += 1;
             }
             3 => {
@@ -1304,19 +1413,54 @@ impl Ppu {
             }
             self.pixels.object_waiting = true;
             self.pixels.object_stall = 6;
-            let height = self.obj_height();
-            let mut row = self.line.wrapping_add(16).wrapping_sub(o.y) & (height - 1);
-            if o.attr & 0x40 != 0 {
-                row ^= height - 1;
-            }
-            let tile = if height == 16 { o.tile & 0xFE } else { o.tile };
-            self.pixels.object_address = u16::from(tile) * 16 + u16::from(row) * 2;
+            self.pixels.object_address = self.object_tile_address(o);
             return true;
         }
         false
     }
 
+    fn object_tile_address(&self, o: LineObject) -> u16 {
+        let height = self.obj_height();
+        let mut row = self.line.wrapping_add(16).wrapping_sub(o.y) & (height - 1);
+        if o.attr & 0x40 != 0 {
+            row ^= height - 1;
+        }
+        let tile = if height == 16 { o.tile & 0xFE } else { o.tile };
+        u16::from(tile) * 16 + u16::from(row) * 2
+    }
+
+    /// The same -1-dot LCDC bus phase also reaches an OBJ read performed
+    /// on the last dot. No LCD pixel was emitted during that fetch stall;
+    /// restore its prior OBJ queue before repeating a high-plane overlay.
+    fn refresh_object_read(&mut self) {
+        if self.pixels.object_read == 0 {
+            return;
+        }
+        let o = self.pixels.objects[usize::from(self.pixels.next_object - 1)];
+        self.pixels.object_address = self.object_tile_address(o);
+        if self.pixels.object_read == 1 {
+            self.pixels.object_low = self.vram[usize::from(self.pixels.object_address)];
+        } else {
+            self.pixels.obj = self.pixels.object_prior;
+            self.pixels.obj_attr = self.pixels.object_prior_attr;
+            let high = self.vram[usize::from(self.pixels.object_address) + 1];
+            self.overlay_object(o, high);
+        }
+    }
+
+    fn overlay_object(&mut self, o: LineObject, high: u8) {
+        for i in 0..8 {
+            let bit = if o.attr & 0x20 == 0 { 7 - i } else { i };
+            let color = ((self.pixels.object_low >> bit) & 1) | (((high >> bit) & 1) << 1);
+            if self.pixels.obj[i] == 0 && color != 0 {
+                self.pixels.obj[i] = color;
+                self.pixels.obj_attr[i] = o.attr & 0x90;
+            }
+        }
+    }
+
     fn object_dot(&mut self) {
+        self.pixels.object_read = 0;
         if self.lcdc & 2 == 0 {
             // DMG cancels an in-flight object fetch when OBJ enable clears;
             // already spent dots remain, but no new OBJ pixels are queued.
@@ -1338,19 +1482,21 @@ impl Ppu {
             self.fetch_dot();
         }
         if remaining == 3 {
+            // LCDC.2 is sampled again for each bitplane, including after a
+            // BG-fetch wait. SameBoy display.c: get_object_line_address().
+            let o = self.pixels.objects[usize::from(self.pixels.next_object - 1)];
+            self.pixels.object_address = self.object_tile_address(o);
             self.pixels.object_low = self.vram[usize::from(self.pixels.object_address)];
+            self.pixels.object_read = 1;
         }
         if remaining == 1 {
             let o = self.pixels.objects[usize::from(self.pixels.next_object - 1)];
+            self.pixels.object_address = self.object_tile_address(o);
             let high = self.vram[usize::from(self.pixels.object_address) + 1];
-            for i in 0..8 {
-                let bit = if o.attr & 0x20 == 0 { 7 - i } else { i };
-                let color = ((self.pixels.object_low >> bit) & 1) | (((high >> bit) & 1) << 1);
-                if self.pixels.obj[i] == 0 && color != 0 {
-                    self.pixels.obj[i] = color;
-                    self.pixels.obj_attr[i] = o.attr & 0x90;
-                }
-            }
+            self.pixels.object_prior = self.pixels.obj;
+            self.pixels.object_prior_attr = self.pixels.obj_attr;
+            self.overlay_object(o, high);
+            self.pixels.object_read = 2;
         }
         self.pixels.object_stall -= 1;
     }
@@ -1668,6 +1814,144 @@ mod tests {
     }
 
     #[test]
+    fn scy_write_on_a_bitplane_address_dot_changes_that_read() {
+        let mut p = drawing_ppu();
+        p.pixels.bg_len = 0;
+        p.pixels.x = 0;
+        p.vram[0] = 0xFF;
+        p.vram[1] = 0;
+        p.vram[2] = 0;
+        p.vram[3] = 0xFF;
+        for _ in 0..3 {
+            p.fetch_dot(); // The low-bitplane address has just been sampled.
+        }
+        p.write_register(0xFF42, 1);
+        for _ in 0..3 {
+            p.fetch_dot();
+        }
+        assert_eq!(p.pixels.bg, [2; 8]);
+    }
+
+    #[test]
+    fn lcdc_write_can_select_a_new_map_and_mix_tile_data_banks() {
+        let mut p = drawing_ppu();
+        p.pixels.bg_len = 0;
+        p.pixels.x = 0;
+        p.vram[0x1C01] = 1;
+        p.vram[0x1010] = 0xFF; // Signed-address tile 1, low plane.
+        p.vram[0x0011] = 0xFF; // Unsigned-address tile 1, high plane.
+        p.fetch_dot();
+        p.write_register(0xFF40, 0x99); // Map select arrives on the address dot.
+        p.fetch_dot();
+        p.fetch_dot();
+        p.write_register(0xFF40, 0x89); // Low plane uses signed addressing.
+        p.fetch_dot();
+        p.write_register(0xFF40, 0x99); // Completed low read remains latched.
+        p.fetch_dot();
+        p.fetch_dot();
+        assert_eq!(p.pixels.bg, [3; 8]);
+    }
+
+    #[test]
+    fn an_odd_fetch_phase_held_during_an_object_stall_does_not_resample() {
+        let mut p = drawing_ppu();
+        p.lcdc |= 2;
+        p.start_drawing(84);
+        p.dot = 100;
+        p.pixels.startup = 0;
+        p.pixels.x = 0;
+        p.pixels.phase = 2;
+        p.pixels.tile = 0;
+        p.fetch_dot(); // Address 0 is latched; phase 3 waits through OBJ fetch.
+        p.pixels.objects[0] = LineObject { y: 16, x: 8, tile: 1, attr: 0, index: 0 };
+        p.pixels.object_count = 1;
+        p.pixels.next_object = 1;
+        p.pixels.object_stall = 4;
+        p.tick();
+        p.write_register(0xFF42, 1);
+        p.fetch_dot();
+        assert_eq!(p.pixels.low, 0xFF); // Row 0 was already on the address bus.
+    }
+
+    #[test]
+    fn scx_write_updates_a_map_read_within_its_two_dot_bus_window() {
+        let mut p = drawing_ppu();
+        p.pixels.bg_len = 0;
+        p.pixels.x = 0;
+        p.vram[0x1801] = 0;
+        p.vram[0x1802] = 1;
+        p.fetch_dot(); // Map address at the first dot.
+        p.pixels.fetch_latch[1] = p.pixels.fetch_latch[0];
+        p.pixels.fetch_latch_x[1] = p.pixels.fetch_latch_x[0];
+        p.fetch_dot(); // Tile byte returned on the following dot.
+        p.write_register(0xFF43, 8);
+        for _ in 0..4 {
+            p.fetch_dot();
+        }
+        assert_eq!(p.pixels.bg, [2; 8]);
+    }
+
+    #[test]
+    fn object_size_is_sampled_after_waiting_and_for_each_bitplane() {
+        let mut p = drawing_ppu();
+        p.lcdc |= 2;
+        p.pixels.x = 0;
+        p.pixels.objects[0] = LineObject { y: 16, x: 8, tile: 1, attr: 0, index: 0 };
+        p.pixels.object_count = 1;
+        assert!(p.begin_object()); // Started as an 8x8 sprite using tile 1.
+        p.pixels.object_waiting = false;
+        p.pixels.object_stall = 3;
+        p.write_register(0xFF40, 0x97);
+        p.object_dot(); // 8x16 selects even tile 0 for the low plane.
+        p.object_dot();
+        p.write_register(0xFF40, 0x93);
+        p.object_dot(); // 8x8 selects tile 1 again for the high plane.
+        assert_eq!(p.pixels.obj, [3; 8]);
+    }
+
+    #[test]
+    fn object_low_read_collision_expires_on_the_following_dot() {
+        let mut p = drawing_ppu();
+        p.lcdc |= 2;
+        p.pixels.objects[0] = LineObject { y: 16, x: 8, tile: 1, attr: 0, index: 0 };
+        p.pixels.object_count = 1;
+        p.pixels.next_object = 1;
+        p.pixels.object_stall = 3;
+        p.object_dot();
+        assert_eq!(p.pixels.object_low, 0);
+        p.write_register(0xFF40, 0x97);
+        assert_eq!(p.pixels.object_low, 0xFF);
+        p.object_dot(); // The low read is now one dot older.
+        p.write_register(0xFF40, 0x93);
+        assert_eq!(p.pixels.object_low, 0xFF);
+    }
+
+    #[test]
+    fn object_high_read_collision_restores_priority_and_survives_save() {
+        let mut p = drawing_ppu();
+        p.lcdc |= 2;
+        p.start_drawing(84);
+        p.dot = 100;
+        p.pixels.objects[0] = LineObject { y: 16, x: 8, tile: 1, attr: 0, index: 0 };
+        p.pixels.object_count = 1;
+        p.pixels.next_object = 1;
+        p.pixels.object_stall = 1;
+        p.pixels.obj[0] = 1;
+        p.pixels.obj_attr[0] = 0x80;
+        p.object_dot();
+        assert_eq!(p.pixels.obj, [1, 2, 2, 2, 2, 2, 2, 2]);
+        let mut w = StateWriter::new();
+        p.save(&mut w);
+        let mut resumed = Ppu::new();
+        resumed.load(&mut StateReader::new(&w.finish())).unwrap();
+        for machine in [&mut p, &mut resumed] {
+            machine.write_register(0xFF40, 0x97); // The new high plane is transparent.
+            assert_eq!(machine.pixels.obj, [1, 0, 0, 0, 0, 0, 0, 0]);
+            assert_eq!(machine.pixels.obj_attr, [0x80, 0, 0, 0, 0, 0, 0, 0]);
+        }
+    }
+
+    #[test]
     fn window_restarts_fetcher_and_uses_its_own_tile_row() {
         let mut p = drawing_ppu();
         p.lcdc |= 0x60;
@@ -1825,6 +2109,37 @@ mod tests {
             let mut bytes = original.clone();
             bytes[offset] = bad;
             assert!(PixelPipeline::default().load(&mut StateReader::new(&bytes)).is_err(), "offset {offset}");
+        }
+    }
+
+    #[test]
+    fn pipeline_rejects_corrupt_fetch_history() {
+        for (history, x, phase) in [([0, 4], 0, 0), ([1, 0], 0, 2), ([0, 1], i32::MIN, 2)] {
+            let p = PixelPipeline { fetch_latch: history, fetch_latch_x: [x; 2], phase, ..PixelPipeline::default() };
+            let mut w = StateWriter::new();
+            p.save(&mut w);
+            assert!(PixelPipeline::default().load(&mut StateReader::new(&w.finish())).is_err());
+        }
+    }
+
+    #[test]
+    fn pipeline_rejects_corrupt_object_read_history() {
+        for bad in 0..5 {
+            let mut p = PixelPipeline::default();
+            match bad {
+                0 => p.object_read = 3,
+                1 => p.object_read = 2, // No active object to reread.
+                2 => {
+                    p.object_read = 1;
+                    p.next_object = 1;
+                    p.object_count = 1; // Inconsistent remaining fetch dots.
+                }
+                3 => p.object_prior[0] = 4,
+                _ => p.object_prior_attr[0] = 1,
+            }
+            let mut w = StateWriter::new();
+            p.save(&mut w);
+            assert!(PixelPipeline::default().load(&mut StateReader::new(&w.finish())).is_err());
         }
     }
 }

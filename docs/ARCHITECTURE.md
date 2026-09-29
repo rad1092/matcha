@@ -25,12 +25,12 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
 
 | Property | Target | Status |
 |---|---|---|
-| Accuracy | Pass the CPU, timing, sound and PPU suites real games depend on; agree with a reference emulator on real software | SST 498,000/498,000; Mooneye 94/94; dmg-acid2 1/1; Blargg 43/43; Gambatte 1,567/1,783; Mealybug 8/24 ([scoreboard](CONFORMANCE.md)); pre-FIFO corpus comparison: same outcome as SameBoy on 866 of 868 homebrew programs ([analysis](analysis.md)) |
-| Speed | Full speed with audio in a browser on a phone-class CPU | FIFO: 46–56× native across the four bundled games, 40–48× with 48 kHz audio on Apple silicon; desktop browser smoke-tested. Phone performance and the 150-ROM benchmark have not been remeasured. |
+| Accuracy | Pass the CPU, timing, sound and PPU suites real games depend on; agree with a reference emulator on real software | SST 498,000/498,000; Mooneye 94/94; dmg-acid2 1/1; Blargg 43/43; Gambatte 1,595/1,783; Mealybug 9/24 ([scoreboard](CONFORMANCE.md)); pre-FIFO corpus comparison: same outcome as SameBoy on 866 of 868 homebrew programs ([analysis](analysis.md)) |
+| Speed | Full speed with audio in a browser on a phone-class CPU | FIFO: 45–53× native across the four bundled games, 41–48× with 48 kHz audio on Apple silicon; desktop browser smoke-tested. Phone performance and the 150-ROM benchmark have not been remeasured. |
 | Determinism | Same ROM + inputs + state ⇒ identical frames and audio, bit for bit | Unit-tested (two machines, save/replay) |
 | Portability | One core for browser, Node and native; no OS services | `no_std` + `alloc`, zero dependencies |
 | Safety | Any byte sequence is a valid ROM or state input: no panics, no UB | `#![forbid(unsafe_code)]` in the core; bounds-checked state reader; atomic state load |
-| Footprint | Small enough to embed in one HTML file | `matcha.wasm` ≈ 164 KiB, no imports |
+| Footprint | Small enough to embed in one HTML file | `matcha.wasm` ≈ 166 KiB, no imports |
 | Install | Plugin works with nothing but Node | MCP server has no npm dependencies |
 
 ### Constraints
@@ -178,14 +178,14 @@ Claude ──tools/call press {buttons:["a"]}──▶ server.mjs
 
 | Data | Format | Lives in | Size |
 |---|---|---|---|
-| Save state | `MTCHST` + version + ROM id + components (ADR-0006) | memory, `localStorage` quick-save slot, MCP named slots | ≈ 39 KiB + cartridge RAM (39,944–48,136 B for the bundled ROMs) |
+| Save state | `MTCHST` + version + ROM id + components (ADR-0006) | memory, `localStorage` quick-save slot, MCP named slots | ≈ 39 KiB + cartridge RAM |
 | Rewind history | ring of save states | browser memory | 400 × ≈ 40–48 KiB ≈ 16–19 MB |
 | Battery RAM | raw cartridge RAM (+ RTC for MBC3) | `localStorage` (web), `.sav` file (CLI) | 0–128 KiB |
 | Conformance results | JSON + Markdown | `docs/` | — |
 | Corpus manifest and profiles | CSV + JSON | `analysis/data/` | — |
 
-The current snapshot format is version 2, including in-flight pixel queues
-and interrupt phase latches. Version-1 quick saves are rejected; battery
+The current snapshot format is version 3, including in-flight pixel queues,
+interrupt phases and recent fetch-address latches. Older quick saves are rejected; battery
 RAM uses its separate, unchanged format.
 
 Loading a state is atomic: the current state is saved first and restored if
@@ -199,10 +199,10 @@ silicon Mac (Rust 1.98.1), `--frames 3600 --input monkey`, one game at a time:
 
 | Bundled game | Video only (× real time) | With 48 kHz audio |
 |---|---:|---:|
-| 2048 | 50.7 | 45.8 |
-| Libbet | 55.5 | 48.0 |
-| Shock Lobster | 47.8 | 45.5 |
-| Tobu Tobu Girl | 46.0 | 40.0 |
+| 2048 | 51.8 | 47.6 |
+| Libbet | 53.4 | 45.3 |
+| Shock Lobster | 44.8 | 42.1 |
+| Tobu Tobu Girl | 45.2 | 41.0 |
 
 All four remain above the roadmap's 30× native target. A same-machine
 pre-FIFO run measured 115–154× without audio: the extra per-dot work has a

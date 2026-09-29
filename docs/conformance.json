@@ -968,115 +968,115 @@
       "suite": "dmg-acid2"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx08_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx08_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx08_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx08_4.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx09_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx09_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx09_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx09_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0A_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0A_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0A_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0A_4.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0B_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0B_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0B_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "1152 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0B_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -1108,31 +1108,31 @@
       "suite": "gambatte"
     },
     {
-      "detail": "128 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx09_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "128 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx09_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "128 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx09_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "128 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx09_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -9494,17 +9494,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "8 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_during_m3_spx1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "8 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_during_m3_spx2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -9529,10 +9529,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "1008 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scx3/scy_during_m3_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -9543,10 +9543,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "1008 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scx3/scy_during_m3_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -9557,10 +9557,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "1008 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scx3/scy_during_m3_6.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -9571,10 +9571,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "1008 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -9585,10 +9585,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "1008 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -9599,17 +9599,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "1008 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_6.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "896 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx08_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -9620,35 +9620,35 @@
       "suite": "gambatte"
     },
     {
-      "detail": "896 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx08_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "912 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx09_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "240 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx09_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "912 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx09_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "912 pixels differ from reference",
+      "detail": "16 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx0A_1.gbc",
       "status": "fail",
@@ -9662,17 +9662,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "912 pixels differ from reference",
+      "detail": "16 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx0A_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "1008 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx0B_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -9683,10 +9683,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "1008 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx0B_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -13330,10 +13330,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "960 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/on_screen/wx17_weoff_wxA5_weon.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -13477,7 +13477,7 @@
       "suite": "mealybug"
     },
     {
-      "detail": "384 pixels differ from reference",
+      "detail": "192 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_bg_map_change.gb",
       "status": "fail",
@@ -13498,28 +13498,28 @@
       "suite": "mealybug"
     },
     {
-      "detail": "170 pixels differ from reference",
+      "detail": "15 pixels differ from reference",
       "frames": 12,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_obj_size_change.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "190 pixels differ from reference",
+      "detail": "30 pixels differ from reference",
       "frames": 12,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_obj_size_change_scx.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "1084 pixels differ from reference",
+      "detail": "192 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_tile_sel_change.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "1090 pixels differ from reference",
+      "detail": "178 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_tile_sel_win_change.gb",
       "status": "fail",
@@ -13533,14 +13533,14 @@
       "suite": "mealybug"
     },
     {
-      "detail": "358 pixels differ from reference",
+      "detail": "334 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_win_en_change_multiple_wx.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "182 pixels differ from reference",
+      "detail": "122 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_win_map_change.gb",
       "status": "fail",
@@ -13554,10 +13554,10 @@
       "suite": "mealybug"
     },
     {
-      "detail": "65 pixels differ from reference",
+      "detail": "",
       "frames": 12,
       "rom": "mealybug-tearoom-tests/ppu/m3_scx_high_5_bits.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "mealybug"
     },
     {
@@ -13568,7 +13568,7 @@
       "suite": "mealybug"
     },
     {
-      "detail": "5284 pixels differ from reference",
+      "detail": "627 pixels differ from reference",
       "frames": 12,
       "rom": "mealybug-tearoom-tests/ppu/m3_scy_change.gb",
       "status": "fail",

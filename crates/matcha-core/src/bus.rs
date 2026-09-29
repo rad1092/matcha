@@ -4,11 +4,12 @@
 //! Every CPU access performs the access and then advances the whole machine
 //! by one M-cycle ("access, then tick" — ADR-0001).
 
+use crate::Model;
 use crate::apu::Apu;
 use crate::cartridge::Cartridge;
 use crate::cpu::CpuBus;
 use crate::joypad::{Buttons, Joypad};
-use crate::ppu::Ppu;
+use crate::ppu::{Mode, Ppu};
 use crate::profile::{Profile, Region};
 use crate::serial::Serial;
 use crate::state::{StateError, StateReader, StateWriter};
@@ -47,6 +48,18 @@ enum Collision {
     Redirect(u16, u8),
     /// Lost; ANDs into the byte the DMA writes to OAM (RAM source).
     MaskOam(u8),
+}
+
+/// CGB VRAM DMA, in 16-byte blocks. Each byte takes two base-clock dots,
+/// independently of CPU speed (Pan Docs, "CGB Registers / Transfer timings").
+#[derive(Clone, Debug, Default)]
+struct VramDma {
+    source: u16,
+    destination: u16,
+    blocks: u8,
+    active: bool,
+    hblank: bool,
+    block_pending: bool,
 }
 
 /// A memory watchpoint hit, reported after the step that caused it.
@@ -95,13 +108,25 @@ impl AddrSet {
 }
 
 pub struct SystemBus {
+    model: Model,
     pub(crate) cart: Cartridge,
     pub(crate) ppu: Ppu,
     pub(crate) apu: Apu,
     pub(crate) timer: Timer,
     pub(crate) joypad: Joypad,
     pub(crate) serial: Serial,
-    wram: Box<[u8; 0x2000]>,
+    wram: Box<[u8; 0x8000]>,
+    wram_bank: u8,
+    double_speed: bool,
+    speed_armed: bool,
+    base_clock_ticks: u64,
+    /// Base dots accumulated toward the APU's four-dot tick.
+    apu_phase: u8,
+    vram_dma: VramDma,
+    infrared: u8,
+    undocumented: [u8; 4],
+    /// Derived from the CPU at every step; never survives a CPU transition.
+    cpu_halted: bool,
     hram: [u8; 0x7F],
     ie: u8,
     if_: u8,
@@ -136,28 +161,42 @@ impl core::fmt::Debug for SystemBus {
 
 impl SystemBus {
     pub fn new(cart: Cartridge, boot_rom: Option<Box<[u8; 0x100]>>) -> Self {
+        Self::new_with_model(cart, boot_rom, Model::Dmg)
+    }
+
+    pub fn new_with_model(cart: Cartridge, boot_rom: Option<Box<[u8; 0x100]>>, model: Model) -> Self {
         let booting = boot_rom.is_some();
         let ppu = if booting {
-            Ppu::power_on()
+            Ppu::power_on_with_model(model)
         } else {
-            let mut ppu = Ppu::new();
+            let mut ppu = Ppu::new_with_model(model);
             ppu.load_boot_logo(&cart.rom()[0x104..0x134]);
             ppu
         };
         Self {
+            model,
             cart,
             ppu,
-            apu: if booting { Apu::power_on() } else { Apu::new() },
-            timer: if booting { Timer::power_on() } else { Timer::new() },
+            apu: if booting { Apu::power_on_with_model(model) } else { Apu::new_with_model(model) },
+            timer: if booting { Timer::power_on_with_model(model) } else { Timer::new_with_model(model) },
             joypad: Joypad::new(),
-            serial: Serial::new(),
-            wram: Box::new([0; 0x2000]),
+            serial: Serial::new_with_model(model),
+            wram: Box::new([0; 0x8000]),
+            wram_bank: if model == Model::Cgb { 0 } else { 1 },
+            double_speed: false,
+            speed_armed: false,
+            base_clock_ticks: 0,
+            apu_phase: 0,
+            vram_dma: VramDma::default(),
+            infrared: 0,
+            undocumented: [0; 4],
+            cpu_halted: false,
             hram: [0; 0x7F],
             ie: 0,
             if_: if booting { 0 } else { 0x01 },
             if_deferred: 0,
             if_reasserted_late: 0,
-            dma: Dma { reg: 0xFF, ..Dma::default() },
+            dma: Dma { reg: if model == Model::Cgb { 0 } else { 0xFF }, ..Dma::default() },
             boot_rom_mapped: booting,
             boot_rom,
             cycles: 0,
@@ -182,7 +221,8 @@ impl SystemBus {
             z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
             ((z ^ (z >> 31)) >> 56) as u8
         };
-        for (i, b) in self.wram.iter_mut().enumerate() {
+        let wram_len = if self.model == Model::Cgb { 0x8000 } else { 0x2000 };
+        for (i, b) in self.wram[..wram_len].iter_mut().enumerate() {
             let r = next();
             *b = if i & 0x100 != 0 { r & next() } else { r | next() };
         }
@@ -207,11 +247,25 @@ impl SystemBus {
 
     #[inline]
     fn tick_with_if_write(&mut self, cpu_if_write: bool) {
+        self.tick_peripherals(cpu_if_write, true);
+        self.run_vram_dma();
+    }
+
+    fn tick_peripherals(&mut self, cpu_if_write: bool, system_clock_running: bool) {
         self.cycles += 1;
+        let dots = if self.double_speed { 2 } else { 4 };
+        self.base_clock_ticks += u64::from(dots);
         self.if_deferred = 0;
         self.if_reasserted_late = 0;
-        let t = self.timer.tick();
+        let t = if system_clock_running {
+            self.timer.tick_with_speed(self.double_speed)
+        } else {
+            crate::timer::TimerEvents::default()
+        };
         if t.interrupt {
+            // A running CPU sees this edge immediately; DMG HALT already
+            // sampled halfway through the cycle, before the reload edge.
+            self.if_deferred |= irq::TIMER & !self.if_;
             self.if_ |= irq::TIMER;
             // DIV advances in complete M-cycles; overflow reload and serial
             // edges land at the final dot, after the ISR acknowledge point.
@@ -220,20 +274,79 @@ impl SystemBus {
         if t.div_apu {
             self.apu.frame_sequencer();
         }
-        if t.serial_clock && self.serial.clock() {
+        let serial_edge = if self.serial.fast_clock() { t.serial_fast_clock } else { t.serial_clock };
+        if serial_edge && self.serial.clock() {
+            self.if_deferred |= irq::SERIAL & !self.if_;
             self.if_ |= irq::SERIAL;
             self.if_reasserted_late |= irq::SERIAL;
         }
-        let p = self.ppu.tick();
+        let previous_mode = self.ppu.mode();
+        let p = self.ppu.tick_dots(dots);
         self.if_reasserted_late |= p.late;
         self.if_deferred |= p.late & !self.if_;
         // IF is driven by the CPU one dot later than ordinary I/O writes
         // (SameBoy's GB_CONFLICT_WRITE_CPU). A PPU edge on that first dot
         // loses to the write; subsequent edges can set the written bit again.
         self.if_ |= if cpu_if_write { p.after_first } else { p.now | p.late };
-        self.apu.tick();
-        self.tick_dma();
-        self.cart.tick_rtc(4);
+        self.apu_phase += dots;
+        if self.apu_phase >= 4 {
+            self.apu_phase -= 4;
+            self.apu.tick();
+        }
+        if system_clock_running {
+            self.tick_dma();
+        }
+        self.cart.tick_rtc(u32::from(dots));
+        if self.vram_dma.active
+            && self.vram_dma.hblank
+            && system_clock_running
+            && !self.cpu_halted
+            && previous_mode != Mode::HBlank
+            && self.ppu.mode() == Mode::HBlank
+            && self.ppu.position().0 < 144
+        {
+            self.vram_dma.block_pending = true;
+        }
+    }
+
+    /// Hold the CPU while other clocks run. A block always takes 32 LCD
+    /// dots: eight normal M-cycles or sixteen double-speed M-cycles.
+    fn run_vram_dma(&mut self) {
+        if self.cpu_halted && self.vram_dma.hblank {
+            return;
+        }
+        if self.vram_dma.active && (!self.vram_dma.hblank || self.vram_dma.block_pending) {
+            // SameBoy GB_hdma_run has a leading transfer phase (and a
+            // trailing half-cycle at normal speed), totaling one CPU M-cycle.
+            self.tick_peripherals(false, true);
+        }
+        while self.vram_dma.active && (!self.vram_dma.hblank || self.vram_dma.block_pending) {
+            self.vram_dma.block_pending = false;
+            let bytes_per_cycle = if self.double_speed { 1 } else { 2 };
+            for _ in 0..16 / bytes_per_cycle {
+                for _ in 0..bytes_per_cycle {
+                    let source = self.vram_dma.source;
+                    let value = match source {
+                        0x0000..=0x7FFF => self.cart.read_rom(source),
+                        0xA000..=0xBFFF => self.cart.read_ram(source),
+                        0xC000..=0xDFFF => self.wram[self.wram_offset(source)],
+                        _ => 0xFF, // VRAM and the upper address bus are not DMA sources.
+                    };
+                    self.ppu.write_vram(0x8000 | (self.vram_dma.destination & 0x1FFF), value);
+                    self.vram_dma.source = source.wrapping_add(1);
+                    self.vram_dma.destination = self.vram_dma.destination.wrapping_add(1);
+                }
+                self.tick_peripherals(false, true);
+            }
+            self.vram_dma.blocks -= 1;
+            if self.vram_dma.blocks == 0 || self.vram_dma.destination == 0 {
+                self.vram_dma.active = false;
+                self.vram_dma.hblank = false;
+            }
+            if self.vram_dma.hblank {
+                break;
+            }
+        }
     }
 
     #[inline]
@@ -282,6 +395,19 @@ impl SystemBus {
             return None;
         }
         let vram_bus = |a: u16| (0x8000..0xA000).contains(&a);
+        if self.model == Model::Cgb {
+            // Unlike DMG, WRAM and the cartridge have independent buses.
+            let bus = |a: u16| {
+                if vram_bus(a) {
+                    1
+                } else if a >= 0xC000 {
+                    2
+                } else {
+                    0
+                }
+            };
+            return (bus(addr) == bus(base)).then_some(current);
+        }
         (vram_bus(addr) == vram_bus(base)).then_some(current)
     }
 
@@ -289,9 +415,9 @@ impl SystemBus {
     fn dma_source_read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x7FFF => self.cart.read_rom(addr),
-            0x8000..=0x9FFF => self.ppu.vram[usize::from(addr - 0x8000)],
+            0x8000..=0x9FFF => self.ppu.read_vram(addr),
             0xA000..=0xBFFF => self.cart.read_ram(addr),
-            _ => self.wram[usize::from(addr & 0x1FFF)],
+            _ => self.wram[self.wram_offset(addr)],
         }
     }
 
@@ -299,7 +425,54 @@ impl SystemBus {
         self.dma.active
     }
 
+    fn write_vram_dma(&mut self, addr: u16, value: u8) {
+        let d = &mut self.vram_dma;
+        match addr {
+            0xFF51 => d.source = (d.source & 0x00F0) | u16::from(value) << 8,
+            0xFF52 => d.source = (d.source & 0xFF00) | u16::from(value & 0xF0),
+            // Only 13 address bits reach VRAM, but the internal counter is
+            // 16-bit: it wraps the VRAM address range before a full overflow ends
+            // the transfer (Gambatte dma_dst_wrap/dma_src_wrap).
+            0xFF53 => d.destination = (d.destination & 0x00F0) | u16::from(value) << 8,
+            0xFF54 => d.destination = (d.destination & 0xFF00) | u16::from(value & 0xF0),
+            _ if d.active && d.hblank && value & 0x80 == 0 => {
+                // The length latch is written even on cancellation. Verified
+                // by SameSuite dma/hdma_lcd_off and hdma_mode0 (0 -> 0x80).
+                d.blocks = (value & 0x7F) + 1;
+                d.active = false;
+                d.hblank = false;
+                d.block_pending = false;
+            }
+            _ => {
+                d.blocks = (value & 0x7F) + 1;
+                d.hblank = value & 0x80 != 0;
+                d.active = true;
+                // An initial HBlank block may start immediately, including
+                // LCD-off mode 0. Subsequent blocks require a new HBlank.
+                d.block_pending = d.hblank && self.ppu.mode() == Mode::HBlank && !self.cpu_halted;
+            }
+        }
+    }
+
+    pub fn model(&self) -> Model {
+        self.model
+    }
+
+    pub fn double_speed(&self) -> bool {
+        self.double_speed
+    }
+
+    /// Elapsed 4 MHz clock dots, including DMA and speed-switch CPU stalls.
+    pub fn base_clock_ticks(&self) -> u64 {
+        self.base_clock_ticks
+    }
+
     // --- memory map ------------------------------------------------------------
+
+    fn wram_offset(&self, addr: u16) -> usize {
+        let offset = usize::from(addr & 0x0FFF);
+        if addr & 0x1000 == 0 { offset } else { usize::from(self.wram_bank.max(1)) * 0x1000 + offset }
+    }
 
     /// A CPU read (with PPU/DMA access restrictions), no clocking.
     fn read_mem(&self, addr: u16) -> u8 {
@@ -308,13 +481,13 @@ impl SystemBus {
             0x0000..=0x7FFF => self.cart.read_rom(addr),
             0x8000..=0x9FFF => {
                 if self.ppu.vram_readable() {
-                    self.ppu.vram[usize::from(addr - 0x8000)]
+                    self.ppu.read_vram(addr)
                 } else {
                     0xFF
                 }
             }
             0xA000..=0xBFFF => self.cart.read_ram(addr),
-            0xC000..=0xFDFF => self.wram[usize::from(addr & 0x1FFF)],
+            0xC000..=0xFDFF => self.wram[self.wram_offset(addr)],
             0xFE00..=0xFE9F => {
                 if self.ppu.oam_readable() && !self.dma.active {
                     self.ppu.oam[usize::from(addr - 0xFE00)]
@@ -344,6 +517,20 @@ impl SystemBus {
             0xFF10..=0xFF3F => self.apu.read(addr),
             0xFF46 => self.dma.reg,
             0xFF40..=0xFF4B => self.ppu.read_register(addr),
+            0xFF4D if self.model == Model::Cgb => 0x7E | u8::from(self.double_speed) << 7 | u8::from(self.speed_armed),
+            0xFF4F | 0xFF68..=0xFF6C if self.model == Model::Cgb => self.ppu.read_register(addr),
+            0xFF55 if self.model == Model::Cgb => {
+                u8::from(!self.vram_dma.active) << 7 | self.vram_dma.blocks.wrapping_sub(1) & 0x7F
+            }
+            0xFF56 if self.model == Model::Cgb => 0x3E | self.infrared,
+            0xFF70 if self.model == Model::Cgb => 0xF8 | self.wram_bank,
+            0xFF72..=0xFF74 if self.model == Model::Cgb => self.undocumented[usize::from(addr - 0xFF72)],
+            0xFF75 if self.model == Model::Cgb => 0x8F | self.undocumented[3],
+            0xFF76 | 0xFF77 if self.model == Model::Cgb => {
+                let ch = self.apu.channel_levels();
+                let index = usize::from(addr - 0xFF76) * 2;
+                ch[index].1 | ch[index + 1].1 << 4
+            }
             _ => 0xFF,
         }
     }
@@ -353,11 +540,14 @@ impl SystemBus {
             0x0000..=0x7FFF => self.cart.write_rom(addr, value),
             0x8000..=0x9FFF => {
                 if self.ppu.vram_writable() {
-                    self.ppu.vram[usize::from(addr - 0x8000)] = value;
+                    self.ppu.write_vram(addr, value);
                 }
             }
             0xA000..=0xBFFF => self.cart.write_ram(addr, value),
-            0xC000..=0xFDFF => self.wram[usize::from(addr & 0x1FFF)] = value,
+            0xC000..=0xFDFF => {
+                let offset = self.wram_offset(addr);
+                self.wram[offset] = value;
+            }
             0xFE00..=0xFE9F => {
                 if self.ppu.oam_writable() && !self.dma.active {
                     self.ppu.oam[usize::from(addr - 0xFE00)] = value;
@@ -380,11 +570,12 @@ impl SystemBus {
             }
             0xFF01 | 0xFF02 => self.serial.write(addr, value),
             0xFF04..=0xFF07 => {
-                let ev = self.timer.write(addr, value);
+                let ev = self.timer.write_with_speed(addr, value, self.double_speed);
                 if ev.div_apu {
                     self.apu.frame_sequencer();
                 }
-                if ev.serial_clock && self.serial.clock() {
+                let serial_edge = if self.serial.fast_clock() { ev.serial_fast_clock } else { ev.serial_clock };
+                if serial_edge && self.serial.clock() {
                     self.if_ |= irq::SERIAL;
                 }
             }
@@ -396,6 +587,13 @@ impl SystemBus {
                 self.dma.start_delay = 2;
             }
             0xFF40..=0xFF4B => self.if_ |= self.ppu.write_register(addr, value),
+            0xFF4D if self.model == Model::Cgb => self.speed_armed = value & 1 != 0,
+            0xFF4F | 0xFF68..=0xFF6C if self.model == Model::Cgb => self.if_ |= self.ppu.write_register(addr, value),
+            0xFF51..=0xFF55 if self.model == Model::Cgb => self.write_vram_dma(addr, value),
+            0xFF56 if self.model == Model::Cgb => self.infrared = value & 0xC1,
+            0xFF70 if self.model == Model::Cgb => self.wram_bank = value & 7,
+            0xFF72..=0xFF74 if self.model == Model::Cgb => self.undocumented[usize::from(addr - 0xFF72)] = value,
+            0xFF75 if self.model == Model::Cgb => self.undocumented[3] = value & 0x70,
             // Any non-zero write unmaps the boot ROM until reset.
             0xFF50 if value != 0 => self.boot_rom_mapped = false,
             _ => {}
@@ -405,7 +603,7 @@ impl SystemBus {
     /// Side-effect-free read for debuggers: ignores PPU/DMA access locks.
     pub fn peek(&self, addr: u16) -> u8 {
         match addr {
-            0x8000..=0x9FFF => self.ppu.vram[usize::from(addr - 0x8000)],
+            0x8000..=0x9FFF => self.ppu.read_vram(addr),
             0xFE00..=0xFE9F => self.ppu.oam[usize::from(addr - 0xFE00)],
             _ => self.read_mem(addr),
         }
@@ -415,7 +613,7 @@ impl SystemBus {
     /// mapper and registers (so writing 0x2000 switches banks, as expected).
     pub fn poke(&mut self, addr: u16, value: u8) {
         match addr {
-            0x8000..=0x9FFF => self.ppu.vram[usize::from(addr - 0x8000)] = value,
+            0x8000..=0x9FFF => self.ppu.write_vram(addr, value),
             0xFE00..=0xFE9F => self.ppu.oam[usize::from(addr - 0xFE00)] = value,
             _ => self.write_mem(addr, value),
         }
@@ -433,8 +631,8 @@ impl SystemBus {
         (self.ie, self.if_)
     }
 
-    pub fn wram(&self) -> &[u8; 0x2000] {
-        &self.wram
+    pub fn wram(&self) -> &[u8] {
+        &self.wram[..if self.model == Model::Cgb { 0x8000 } else { 0x2000 }]
     }
 
     pub fn hram(&self) -> &[u8; 0x7F] {
@@ -477,6 +675,7 @@ impl SystemBus {
     }
 
     pub(crate) fn save(&self, w: &mut StateWriter) {
+        w.bool(self.model == Model::Cgb);
         self.cart.save(w);
         self.ppu.save(w);
         self.apu.save(w);
@@ -490,9 +689,26 @@ impl SystemBus {
         w.u8s(&[d.reg, d.source, d.index, u8::from(d.active), d.start_delay, d.pending_source]);
         w.bool(self.boot_rom_mapped);
         w.u64(self.cycles);
+        w.u8(self.wram_bank);
+        w.bool(self.double_speed);
+        w.bool(self.speed_armed);
+        w.u64(self.base_clock_ticks);
+        w.u8(self.apu_phase);
+        w.u8(self.infrared);
+        w.u8s(&self.undocumented);
+        let v = &self.vram_dma;
+        w.u16(v.source);
+        w.u16(v.destination);
+        w.u8(v.blocks);
+        w.bool(v.active);
+        w.bool(v.hblank);
+        w.bool(v.block_pending);
     }
 
     pub(crate) fn load(&mut self, r: &mut StateReader) -> Result<(), StateError> {
+        if r.bool()? != (self.model == Model::Cgb) {
+            return Err(StateError::Corrupt("bus model"));
+        }
         self.cart.load(r)?;
         self.ppu.load(r)?;
         self.apu.load(r)?;
@@ -525,6 +741,39 @@ impl SystemBus {
             // counters that close to wrapping would overflow later.
             return Err(StateError::Corrupt("cycle counter"));
         }
+        self.wram_bank = r.u8()?;
+        self.double_speed = r.bool()?;
+        self.speed_armed = r.bool()?;
+        self.base_clock_ticks = r.u64()?;
+        self.apu_phase = r.u8()?;
+        self.infrared = r.u8()?;
+        r.u8s(&mut self.undocumented)?;
+        self.vram_dma = VramDma {
+            source: r.u16()?,
+            destination: r.u16()?,
+            blocks: r.u8()?,
+            active: r.bool()?,
+            hblank: r.bool()?,
+            block_pending: r.bool()?,
+        };
+        let v = &self.vram_dma;
+        if self.wram_bank > 7
+            || self.apu_phase > 2
+            || self.apu_phase & 1 != 0
+            || self.base_clock_ticks >= 1 << 62
+            || self.infrared & !0xC1 != 0
+            || self.undocumented[3] & !0x70 != 0
+            || v.destination & 15 != 0
+            || v.source & 15 != 0
+            || v.blocks > 128
+            || v.active && v.blocks == 0
+            || v.hblank && !v.active
+            || v.block_pending && (!v.active || !v.hblank)
+            || self.model == Model::Dmg && (self.wram_bank != 1 || self.double_speed || self.speed_armed || v.active)
+        {
+            return Err(StateError::Corrupt("CGB bus state"));
+        }
+        self.cpu_halted = false;
         Ok(())
     }
 }
@@ -532,7 +781,7 @@ impl SystemBus {
 impl CpuBus for SystemBus {
     #[inline]
     fn read(&mut self, addr: u16) -> u8 {
-        if addr & 0xFF00 == 0xFE00 {
+        if self.model == Model::Dmg && addr & 0xFF00 == 0xFE00 {
             self.ppu.oam_bug_read(addr, self.dma.active);
         }
         let v = match self.dma_conflict(addr) {
@@ -551,13 +800,14 @@ impl CpuBus for SystemBus {
         if self.profile.is_some() || self.write_watch.is_some() {
             self.note_write(addr, value);
         }
-        if addr & 0xFF00 == 0xFE00 && !self.ppu.oam_writable() {
+        if self.model == Model::Dmg && addr & 0xFF00 == 0xFE00 && !self.ppu.oam_writable() {
             self.ppu.oam_bug_write();
         }
         let conflict = self.dma_conflict(addr);
         match conflict {
             // The write lands on the DMA's address instead (on ROM that is a
             // mapper register) ...
+            Some(_) if self.model == Model::Cgb => {}
             Some(dma_addr) if dma_addr < 0xA000 => self.dma.collided = Some(Collision::Redirect(dma_addr, value)),
             // ... or, from cartridge RAM/WRAM, is lost and ANDs into the OAM
             // byte the DMA writes.
@@ -574,7 +824,7 @@ impl CpuBus for SystemBus {
 
     #[inline]
     fn idle_at(&mut self, addr: u16) {
-        if addr & 0xFF00 == 0xFE00 {
+        if self.model == Model::Dmg && addr & 0xFF00 == 0xFE00 {
             self.ppu.oam_bug_write();
         }
         self.tick();
@@ -593,6 +843,10 @@ impl CpuBus for SystemBus {
         self.pending_interrupts() & !self.if_deferred
     }
 
+    fn halt_samples_at_start(&self) -> bool {
+        self.model == Model::Cgb
+    }
+
     #[inline]
     fn acknowledge_interrupt(&mut self, mask: u8) {
         self.if_ = (self.if_ & !mask) | (mask & self.if_reasserted_late);
@@ -606,11 +860,52 @@ impl CpuBus for SystemBus {
         true
     }
 
+    fn speed_switch(&mut self) -> bool {
+        if self.model != Model::Cgb || !self.speed_armed || self.joypad.any_line_low() {
+            return false;
+        }
+        let interrupt_pending = self.pending_interrupts() != 0;
+        // Pan Docs KEY1: DIV is held reset during the 2050 M-cycle pause.
+        // Video/audio/RTC keep their base-clock rates, independently of CPU.
+        let ev = self.timer.write_with_speed(0xFF04, 0, self.double_speed);
+        if ev.div_apu {
+            self.apu.frame_sequencer();
+        }
+        self.double_speed = !self.double_speed;
+        self.speed_armed = false;
+        if !interrupt_pending {
+            for _ in 0..2050 {
+                self.tick_peripherals(false, false);
+            }
+        }
+        true
+    }
+
+    fn set_halted(&mut self, halted: bool) {
+        // If HALT ended during HBlank, its postponed block may now proceed.
+        if self.cpu_halted
+            && !halted
+            && self.vram_dma.active
+            && self.vram_dma.hblank
+            && self.ppu.mode() == Mode::HBlank
+            && self.ppu.position().0 < 144
+        {
+            self.vram_dma.block_pending = true;
+        }
+        self.cpu_halted = halted;
+    }
+
     fn idle_stopped(&mut self) {
         self.cycles += 1;
-        self.ppu.tick_stopped();
-        self.apu.tick_stopped();
-        self.cart.tick_rtc(4); // the cartridge clock has its own crystal
+        let dots = if self.double_speed { 2 } else { 4 };
+        self.base_clock_ticks += u64::from(dots);
+        self.apu_phase += dots;
+        if self.apu_phase >= 4 {
+            self.apu_phase -= 4;
+            self.ppu.tick_stopped();
+            self.apu.tick_stopped();
+        }
+        self.cart.tick_rtc(u32::from(dots)); // the cartridge clock has its own crystal
     }
 
     /// Batch halted cycles, but hand control back at frame boundaries and
@@ -625,4 +920,291 @@ impl CpuBus for SystemBus {
 pub(crate) fn boot_rom_from(data: &[u8]) -> Option<Box<[u8; 0x100]>> {
     let arr: [u8; 0x100] = data.try_into().ok()?;
     Some(Box::new(arr))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bus(model: Model) -> SystemBus {
+        let cart = Cartridge::new(crate::tests::test_rom(b"CGB BUS")).unwrap();
+        let mut bus = SystemBus::new_with_model(cart, None, model);
+        bus.poke(0xFF40, 0); // DMA and bank tests do not depend on LCD timing.
+        bus
+    }
+
+    fn configure_dma(bus: &mut SystemBus, source: u16, destination: u16, length: u8) {
+        bus.poke(0xFF51, (source >> 8) as u8);
+        bus.poke(0xFF52, source as u8);
+        bus.poke(0xFF53, (destination >> 8) as u8);
+        bus.poke(0xFF54, destination as u8);
+        bus.poke(0xFF55, length);
+    }
+
+    #[test]
+    fn cgb_wram_banks_and_echo_alias_the_selected_bank() {
+        let mut b = bus(Model::Cgb);
+        assert_eq!(b.peek(0xFF70), 0xF8);
+        assert_eq!(b.peek(0xFF02), 0x7F);
+        b.poke(0xC123, 0x42);
+        for bank in 1..=7 {
+            b.poke(0xFF70, bank);
+            b.poke(0xD123, bank);
+            assert_eq!(b.peek(0xF123), bank);
+            assert_eq!(b.peek(0xE123), 0x42);
+        }
+        b.poke(0xFF70, 0);
+        assert_eq!(b.peek(0xFF70), 0xF8);
+        assert_eq!(b.peek(0xD123), 1);
+        b.poke(0xF123, 0xAB);
+        b.poke(0xFF70, 1);
+        assert_eq!(b.peek(0xD123), 0xAB);
+        let mut dmg = bus(Model::Dmg);
+        dmg.poke(0xFF70, 7);
+        dmg.poke(0xD123, 0x55);
+        assert_eq!(dmg.peek(0xFF70), 0xFF);
+        assert_eq!(dmg.peek(0xF123), 0x55);
+    }
+
+    #[test]
+    fn gdma_stalls_cpu_and_targets_the_selected_vram_bank_at_both_speeds() {
+        for double in [false, true] {
+            let mut b = bus(Model::Cgb);
+            b.double_speed = double;
+            for i in 0..32 {
+                b.poke(0xC000 + i, i as u8 + 1);
+            }
+            b.poke(0xFF4F, 1);
+            configure_dma(&mut b, 0xC00F, 0x8A0F, 1); // low nibbles ignored.
+            let start = b.cycles;
+            let dots = b.base_clock_ticks;
+            b.idle();
+            assert_eq!(b.cycles - start, 2 + if double { 32 } else { 16 });
+            assert_eq!(b.base_clock_ticks - dots, 64 + if double { 4 } else { 8 });
+            assert_eq!(b.peek(0xFF55), 0xFF);
+            for i in 0..32 {
+                assert_eq!(b.peek(0x8A00 + i), i as u8 + 1);
+            }
+            b.poke(0xFF4F, 0);
+            assert_eq!(b.peek(0x8A00), 0);
+        }
+    }
+
+    #[test]
+    fn hblank_dma_pauses_in_halt_and_can_be_cancelled() {
+        let mut b = bus(Model::Cgb);
+        for i in 0..32 {
+            b.poke(0xC000 + i, i as u8 + 1);
+        }
+        b.set_halted(true);
+        configure_dma(&mut b, 0xC000, 0x8000, 0x81);
+        for _ in 0..10 {
+            b.idle();
+        }
+        assert_eq!(b.peek(0x8000), 0);
+        assert_eq!(b.peek(0xFF55), 1);
+        b.set_halted(false);
+        b.idle();
+        assert_eq!(b.peek(0x8000), 1);
+        assert_eq!(b.peek(0x8010), 0);
+        assert_eq!(b.peek(0xFF55), 0);
+        b.poke(0xFF55, 0);
+        assert_eq!(b.peek(0xFF55), 0x80);
+        b.poke(0xFF40, 0x91);
+        for _ in 0..250 {
+            b.idle();
+        }
+        assert_eq!(b.peek(0x8010), 0);
+    }
+
+    #[test]
+    fn vram_dma_wraps_the_vram_address_without_ending_the_counter() {
+        let mut b = bus(Model::Cgb);
+        for i in 0..32 {
+            b.poke(0xC000 + i, i as u8 + 1);
+        }
+        configure_dma(&mut b, 0xC000, 0x9FF0, 1);
+        b.idle();
+        assert_eq!(b.peek(0x9FF0), 1);
+        assert_eq!(b.peek(0x8000), 17);
+        assert_eq!(b.peek(0xFF55), 0xFF);
+        assert_eq!(b.vram_dma.destination, 0xA010);
+    }
+
+    #[test]
+    fn hblank_dma_transfers_one_block_per_visible_scanline() {
+        let mut b = bus(Model::Cgb);
+        for i in 0..32 {
+            b.poke(0xC000 + i, i as u8 + 1);
+        }
+        b.poke(0xFF40, 0x91);
+        while b.ppu.mode() != Mode::Drawing {
+            b.idle();
+        }
+        configure_dma(&mut b, 0xC000, 0x8000, 0x81);
+        for _ in 0..150 {
+            b.idle();
+            if b.vram_dma.blocks == 1 {
+                break;
+            }
+        }
+        assert_eq!(b.peek(0x8000), 1);
+        assert_eq!(b.peek(0x8010), 0);
+        assert_eq!(b.ppu.mode(), Mode::HBlank);
+        let first_line = b.ppu.position().0;
+        for _ in 0..150 {
+            b.idle();
+            if !b.vram_dma.active {
+                break;
+            }
+        }
+        assert_eq!(b.peek(0x8010), 17);
+        assert_eq!(b.ppu.position().0, first_line + 1);
+        assert_eq!(b.peek(0xFF55), 0xFF);
+    }
+
+    #[test]
+    fn speed_switch_preserves_real_time_and_holds_div_during_the_pause() {
+        let mut b = bus(Model::Cgb);
+        b.poke(0xFF00, 0x30);
+        b.poke(0xFF4D, 1);
+        let start = b.cycles;
+        assert!(b.speed_switch());
+        assert_eq!(b.cycles - start, 2050);
+        assert_eq!(b.base_clock_ticks, 4100);
+        assert_eq!(b.timer.system_counter(), 0);
+        assert_eq!(b.peek(0xFF4D), 0xFE);
+        b.apu.clear_samples();
+        let start = b.base_clock_ticks;
+        for _ in 0..2048 {
+            b.idle();
+        }
+        assert_eq!(b.base_clock_ticks - start, 4096);
+        assert_eq!(b.timer.system_counter(), 8192);
+        // 4096 base dots produce ~47 stereo samples, independently of CPU speed.
+        assert!((92..=96).contains(&b.apu.samples().len()));
+        b.poke(0xFF4D, 1);
+        assert!(b.speed_switch());
+        assert!(!b.double_speed());
+        assert_eq!(b.peek(0xFF4D), 0x7E);
+    }
+
+    #[test]
+    fn cgb_fast_serial_finishes_after_128_cpu_clocks() {
+        let mut b = bus(Model::Cgb);
+        b.poke(0xFF04, 0);
+        b.poke(0xFF01, 0x5A);
+        b.poke(0xFF02, 0x83);
+        b.poke(0xFF0F, 0);
+        for _ in 0..31 {
+            b.idle();
+        }
+        assert_eq!(b.peek(0xFF0F) & irq::SERIAL, 0);
+        b.idle();
+        assert_ne!(b.peek(0xFF0F) & irq::SERIAL, 0);
+        assert_eq!(b.peek(0xFF01), 0xFF);
+        assert_eq!(b.peek(0xFF02), 0x7F);
+    }
+
+    #[test]
+    fn pending_interrupt_skips_the_speed_switch_pause() {
+        let mut b = bus(Model::Cgb);
+        b.poke(0xFF00, 0x30);
+        b.poke(0xFFFF, irq::TIMER);
+        b.poke(0xFF0F, irq::TIMER);
+        b.poke(0xFF4D, 1);
+        let cycles = b.cycles;
+        assert!(b.speed_switch());
+        assert_eq!(b.cycles, cycles);
+        assert!(b.double_speed());
+        assert_eq!(b.peek(0xFF4D), 0xFE);
+    }
+
+    #[test]
+    fn hdma_cancel_also_writes_the_length_latch() {
+        let mut b = bus(Model::Cgb);
+        configure_dma(&mut b, 0xC000, 0x8000, 0x83);
+        b.idle();
+        assert_eq!(b.peek(0xFF55), 2);
+        b.poke(0xFF55, 0);
+        assert_eq!(b.peek(0xFF55), 0x80);
+    }
+
+    #[test]
+    fn cgb_oam_dma_leaves_the_other_memory_bus_accessible() {
+        let mut b = bus(Model::Cgb);
+        b.poke(0xC000, 0xAA);
+        b.poke(0xFF46, 0xC0);
+        b.idle();
+        b.idle();
+        assert!(b.dma_active());
+        assert_eq!(b.dma_conflict(0x0100), None);
+        assert!(b.dma_conflict(0xC080).is_some());
+        assert_eq!(b.dma_conflict(0x8000), None);
+    }
+
+    #[test]
+    fn timer_reload_interrupt_is_later_than_the_dmg_halt_sample() {
+        let mut b = bus(Model::Dmg);
+        b.poke(0xFF04, 0);
+        b.poke(0xFF05, 0xFF);
+        b.poke(0xFF07, 5);
+        b.poke(0xFF0F, 0);
+        b.poke(0xFFFF, irq::TIMER);
+        for _ in 0..4 {
+            b.idle();
+        }
+        assert_eq!(b.pending_interrupts(), 0);
+        b.idle(); // TIMA reloads at the end of this M-cycle.
+        assert_eq!(b.pending_interrupts(), irq::TIMER);
+        assert_eq!(b.halted_pending_interrupts(), 0);
+        b.idle();
+        assert_eq!(b.halted_pending_interrupts(), irq::TIMER);
+    }
+
+    #[test]
+    fn cgb_bus_state_restores_banks_dma_and_clock_phase() {
+        let mut b = bus(Model::Cgb);
+        b.double_speed = true;
+        b.poke(0xFF70, 7);
+        b.poke(0xD123, 0xA5);
+        b.poke(0xC000, 0x77);
+        b.idle(); // half of an APU tick.
+        b.set_halted(true);
+        configure_dma(&mut b, 0xC000, 0x8000, 0x81);
+        let mut w = StateWriter::new();
+        b.save(&mut w);
+        let bytes = w.finish();
+        let mut resumed = bus(Model::Cgb);
+        resumed.load(&mut StateReader::new(&bytes)).unwrap();
+        assert_eq!(resumed.peek(0xD123), 0xA5);
+        assert_eq!(resumed.base_clock_ticks, 2);
+        assert_eq!(resumed.apu_phase, 2);
+        assert!(resumed.double_speed);
+        for machine in [&mut b, &mut resumed] {
+            machine.set_halted(true);
+            machine.set_halted(false);
+            machine.idle();
+            assert_eq!(machine.peek(0x8000), 0x77);
+            assert_eq!(machine.peek(0xFF55), 0);
+        }
+        assert!(bus(Model::Dmg).load(&mut StateReader::new(&bytes)).is_err());
+    }
+
+    #[test]
+    fn invalid_cgb_bus_states_are_rejected() {
+        for bad in 0..5 {
+            let mut b = bus(Model::Cgb);
+            match bad {
+                0 => b.wram_bank = 8,
+                1 => b.apu_phase = 3,
+                2 => b.vram_dma.active = true, // Zero remaining blocks.
+                3 => b.vram_dma.destination = 1,
+                _ => b.vram_dma.source = 1, // Transfer snapshots are block-aligned.
+            }
+            let mut w = StateWriter::new();
+            b.save(&mut w);
+            assert!(bus(Model::Cgb).load(&mut StateReader::new(&w.finish())).is_err());
+        }
+    }
 }

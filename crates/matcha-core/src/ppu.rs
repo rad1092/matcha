@@ -13,6 +13,7 @@
 //! hold colour indices until the live palettes are applied at the LCD output.
 //! Outside mode 3 the event scheduler retains its M-cycle fast path.
 
+use crate::Model;
 use crate::state::{StateError, StateReader, StateWriter};
 
 pub const WIDTH: usize = 160;
@@ -88,10 +89,14 @@ impl Default for OutputPixel {
 struct PixelPipeline {
     output: [OutputPixel; 2],
     bg: [u8; 8],
+    bg_attr: [u8; 8],
+    tile_attr: u8,
     bg_head: u8,
     bg_len: u8,
     obj: [u8; 8],
     obj_attr: [u8; 8],
+    /// OAM index of each queued CGB pixel; 40 denotes an empty slot.
+    obj_index: [u8; 8],
     /// Tile address, tile read, low address/read, high address/read, push.
     phase: u8,
     address: u16,
@@ -123,6 +128,7 @@ struct PixelPipeline {
     /// Before the last high-plane overlay, for a same-dot LCDC.2 collision.
     object_prior: [u8; 8],
     object_prior_attr: [u8; 8],
+    object_prior_index: [u8; 8],
 }
 
 impl Default for PixelPipeline {
@@ -130,10 +136,13 @@ impl Default for PixelPipeline {
         Self {
             output: [OutputPixel::default(); 2],
             bg: [0; 8],
+            bg_attr: [0; 8],
+            tile_attr: 0,
             bg_head: 0,
             bg_len: 8,
             obj: [0; 8],
             obj_attr: [0; 8],
+            obj_index: [40; 8],
             phase: 0,
             address: 0,
             fetch_latch: [0; 2],
@@ -159,6 +168,7 @@ impl Default for PixelPipeline {
             object_read: 0,
             object_prior: [0; 8],
             object_prior_attr: [0; 8],
+            object_prior_index: [40; 8],
         }
     }
 }
@@ -204,6 +214,10 @@ impl PixelPipeline {
         w.u8(self.object_read);
         w.u8s(&self.object_prior);
         w.u8s(&self.object_prior_attr);
+        w.u8s(&self.bg_attr);
+        w.u8(self.tile_attr);
+        w.u8s(&self.obj_index);
+        w.u8s(&self.object_prior_index);
     }
 
     fn load(&mut self, r: &mut StateReader) -> Result<(), StateError> {
@@ -267,12 +281,19 @@ impl PixelPipeline {
         self.object_read = r.u8()?;
         r.u8s(&mut self.object_prior)?;
         r.u8s(&mut self.object_prior_attr)?;
+        r.u8s(&mut self.bg_attr)?;
+        self.tile_attr = r.u8()?;
+        r.u8s(&mut self.obj_index)?;
+        r.u8s(&mut self.object_prior_index)?;
+        if self.obj_index.iter().chain(self.object_prior_index.iter()).any(|&index| index > 40) {
+            return Err(StateError::Corrupt("ppu object priority index"));
+        }
         if self.object_read > 2
             || self.object_read != 0 && self.next_object == 0
             || self.object_read == 1 && self.object_stall != 2
             || self.object_read == 2 && self.object_stall != 0
             || self.object_prior.iter().any(|&color| color > 3)
-            || self.object_prior_attr.iter().any(|&attr| attr & !0x90 != 0)
+            || self.object_prior_attr.iter().any(|&attr| attr & !0x9F != 0)
         {
             return Err(StateError::Corrupt("ppu object read latch"));
         }
@@ -291,7 +312,7 @@ impl PixelPipeline {
             || !(-16..=WIDTH as i32).contains(&self.x)
             || self.object_waiting && self.object_stall != 6
             || self.bg.iter().chain(self.obj.iter()).any(|&c| c > 3)
-            || self.obj_attr.iter().any(|&a| a & !0x90 != 0)
+            || self.obj_attr.iter().any(|&a| a & !0x9F != 0)
         {
             return Err(StateError::Corrupt("ppu pixel pipeline"));
         }
@@ -321,6 +342,17 @@ pub struct PpuIrq {
 }
 
 pub struct Ppu {
+    model: Model,
+    vram_bank1: [u8; 0x2000],
+    vbk: u8,
+    bg_index: u8,
+    obj_index: u8,
+    bg_palette: [u8; 64],
+    obj_palette: [u8; 64],
+    opri: u8,
+    /// A normal-speed CGB LCDC.4 falling edge shares the next VRAM read.
+    tile_sel_glitch: bool,
+    frame_rgb555: [u16; WIDTH * HEIGHT],
     pub(crate) vram: [u8; 0x2000],
     pub(crate) oam: [u8; 0xA0],
     lcdc: u8,
@@ -405,7 +437,11 @@ impl Ppu {
     /// with LY already reading 0 (STAT = 0x85), timed so that the CPU's
     /// accesses land on the same dot phase as after any LCD enable.
     pub fn new() -> Self {
-        let mut p = Self::power_on();
+        Self::new_with_model(Model::Dmg)
+    }
+
+    pub fn new_with_model(model: Model) -> Self {
+        let mut p = Self::power_on_with_model(model);
         p.lcdc = 0x91;
         p.bgp = 0xFC;
         p.line = 153;
@@ -450,7 +486,21 @@ impl Ppu {
     }
 
     pub fn power_on() -> Self {
+        Self::power_on_with_model(Model::Dmg)
+    }
+
+    pub fn power_on_with_model(model: Model) -> Self {
         Self {
+            model,
+            vram_bank1: [0; 0x2000],
+            vbk: 0,
+            bg_index: 0,
+            obj_index: 0,
+            bg_palette: [0xFF; 64],
+            obj_palette: [0xFF; 64],
+            opri: 0,
+            tile_sel_glitch: false,
+            frame_rgb555: [0x7FFF; WIDTH * HEIGHT],
             vram: [0; 0x2000],
             oam: [0; 0xA0],
             lcdc: 0,
@@ -510,6 +560,11 @@ impl Ppu {
         &self.framebuffer
     }
 
+    /// Native CGB RGB555 output (red in bits 0–4), before display correction.
+    pub fn frame_rgb555(&self) -> &[u16; WIDTH * HEIGHT] {
+        &self.frame_rgb555
+    }
+
     /// A frame completed and nobody has taken it yet.
     pub fn frame_ready_pending(&self) -> bool {
         self.frame_ready
@@ -524,6 +579,21 @@ impl Ppu {
     }
 
     // --- CPU access ------------------------------------------------------------
+
+    /// CPU/DMA VRAM access through VBK; the bus applies its access locks.
+    pub fn read_vram(&self, addr: u16) -> u8 {
+        self.read_vram_bank(addr, self.vbk)
+    }
+
+    pub fn write_vram(&mut self, addr: u16, value: u8) {
+        let bank = if self.model == Model::Cgb && self.vbk != 0 { &mut self.vram_bank1 } else { &mut self.vram };
+        bank[usize::from(addr & 0x1FFF)] = value;
+    }
+
+    fn read_vram_bank(&self, addr: u16, bank: u8) -> u8 {
+        let bank = if self.model == Model::Cgb && bank != 0 { &self.vram_bank1 } else { &self.vram };
+        bank[usize::from(addr & 0x1FFF)]
+    }
 
     pub fn vram_readable(&self) -> bool {
         !self.vram_read_block
@@ -555,7 +625,7 @@ impl Ppu {
     /// (0xA0) at dot 82; none from mode 3 on, in VBlank, on the first line
     /// after the LCD is switched on, or with the LCD off.
     fn oam_scan_row(&self) -> Option<usize> {
-        if !self.lcd_on() || self.first_line || self.line >= 144 || self.dot >= 84 {
+        if self.model == Model::Cgb || !self.lcd_on() || self.first_line || self.line >= 144 || self.dot >= 84 {
             return None;
         }
         Some(if self.dot < 6 { 0 } else { usize::from(self.dot - 2) / 4 * 8 })
@@ -700,6 +770,24 @@ impl Ppu {
             0xFF49 => self.obp1,
             0xFF4A => self.wy,
             0xFF4B => self.wx,
+            0xFF4F if self.model == Model::Cgb => 0xFE | self.vbk,
+            0xFF68 if self.model == Model::Cgb => self.bg_index | 0x40,
+            0xFF6A if self.model == Model::Cgb => self.obj_index | 0x40,
+            0xFF69 if self.model == Model::Cgb => {
+                if self.mode() == Mode::Drawing {
+                    0xFF
+                } else {
+                    self.bg_palette[usize::from(self.bg_index & 63)]
+                }
+            }
+            0xFF6B if self.model == Model::Cgb => {
+                if self.mode() == Mode::Drawing {
+                    0xFF
+                } else {
+                    self.obj_palette[usize::from(self.obj_index & 63)]
+                }
+            }
+            0xFF6C if self.model == Model::Cgb => 0xFE | self.opri,
             _ => 0xFF,
         }
     }
@@ -711,7 +799,10 @@ impl Ppu {
                 let was_on = self.lcd_on();
                 let old_lcdc = self.lcdc;
                 self.lcdc = value;
-                if was_on && self.lcd_on() && old_lcdc & 0x20 != 0 && value & 0x20 == 0 {
+                if self.model == Model::Cgb && was_on && value & 0x80 != 0 {
+                    self.tile_sel_glitch = old_lcdc & !value & 0x10 != 0;
+                }
+                if self.model == Model::Dmg && was_on && self.lcd_on() && old_lcdc & 0x20 != 0 && value & 0x20 == 0 {
                     self.cancel_window_restart();
                 }
                 match (was_on, self.lcd_on()) {
@@ -720,7 +811,7 @@ impl Ppu {
                     _ => {}
                 }
                 if self.lcd_on() {
-                    if was_on {
+                    if was_on && self.model == Model::Dmg {
                         self.refresh_fetch_address();
                         if (old_lcdc ^ value) & 4 != 0 {
                             self.refresh_object_read();
@@ -730,9 +821,9 @@ impl Ppu {
                 }
             }
             0xFF41 => {
-                if !self.lcd_on() {
+                if !self.lcd_on() || self.model == Model::Cgb {
                     self.stat_select = value & 0x78;
-                    return 0;
+                    return self.update_stat();
                 }
                 // DMG drives all STAT enables for one dot before the written
                 // value takes effect. At the HBlank->OAM boundary an already
@@ -773,6 +864,26 @@ impl Ppu {
                 self.wy_check_delay = 4;
             }
             0xFF4B => self.wx = value,
+            0xFF4F if self.model == Model::Cgb => self.vbk = value & 1,
+            0xFF68 if self.model == Model::Cgb => self.bg_index = value & 0xBF,
+            0xFF6A if self.model == Model::Cgb => self.obj_index = value & 0xBF,
+            0xFF69 | 0xFF6B if self.model == Model::Cgb => {
+                let blocked = self.mode() == Mode::Drawing;
+                let (index, palette) = if addr == 0xFF69 {
+                    (&mut self.bg_index, &mut self.bg_palette)
+                } else {
+                    (&mut self.obj_index, &mut self.obj_palette)
+                };
+                if !blocked {
+                    palette[usize::from(*index & 63)] = value;
+                }
+                if *index & 0x80 != 0 {
+                    *index = 0x80 | (index.wrapping_add(1) & 63);
+                }
+            }
+            // In native CGB mode post-boot writes read back, but do not
+            // change the active OAM-index priority (SameBoy memory.c).
+            0xFF6C if self.model == Model::Cgb => self.opri = value & 1,
             _ => {}
         }
         0
@@ -799,6 +910,9 @@ impl Ppu {
     /// the raw samples models that conflict without retiming STAT or fetches.
     /// SameBoy Core/sm83_cpu.c, GB_CONFLICT_DMG_PALETTE.
     fn palette_write(&mut self, palette: u8, old: u8, new: u8) {
+        if self.model == Model::Cgb {
+            return;
+        }
         for (pixel, value) in self.pixels.output.iter().zip([new, old | new]) {
             if pixel.offset != u16::MAX && pixel.palette == palette {
                 self.framebuffer[usize::from(pixel.offset)] = (value >> (pixel.color * 2)) & 3;
@@ -819,9 +933,11 @@ impl Ppu {
         self.wy_check_delay = 0;
         self.stat_write = 0xFF;
         self.window_restart = None;
+        self.tile_sel_glitch = false;
         self.pixels.fetch_latch = [0; 2];
         self.pixels.object_read = 0;
         self.framebuffer.fill(0);
+        self.frame_rgb555.fill(0x7FFF);
         self.pixels.output = [OutputPixel::default(); 2];
     }
 
@@ -896,15 +1012,22 @@ impl Ppu {
         if self.off_dots >= DOTS_PER_FRAME {
             self.off_dots -= DOTS_PER_FRAME;
             self.framebuffer.fill(0);
+            self.frame_rgb555.fill(0x7FFF);
             self.frame_ready = true;
             self.frame_count += 1;
         }
     }
 
     pub fn tick(&mut self) -> PpuIrq {
+        self.tick_dots(4)
+    }
+
+    /// Advance LCD dots independently of CPU speed (2 in CGB double speed).
+    pub fn tick_dots(&mut self, dots: u8) -> PpuIrq {
+        debug_assert!(dots == 2 || dots == 4);
         let mut irq = PpuIrq::default();
         if !self.lcd_on() {
-            self.off_dots += 4;
+            self.off_dots += u32::from(dots);
             if self.off_dots >= DOTS_PER_FRAME {
                 self.off_dots -= DOTS_PER_FRAME;
                 self.frame_ready = true;
@@ -915,17 +1038,18 @@ impl Ppu {
         if self.stat_mode != Mode::Drawing
             && self.wy_check_delay == 0
             && self.stat_write == 0xFF
-            && self.dot + 4 < self.next_event
+            && self.dot + u16::from(dots) < self.next_event
         {
-            // Fast path: nothing happens during these four dots.
-            self.dot += 4;
+            // Fast path: nothing happens during this CPU cycle.
+            self.dot += u16::from(dots);
             self.pixels.output = [OutputPixel::default(); 2];
             self.pixels.fetch_latch = [0; 2];
             self.pixels.object_read = 0;
             self.window_restart = None;
+            self.tile_sel_glitch = false;
             return irq;
         }
-        for i in 0..4 {
+        for i in 0..dots {
             self.pixels.object_read = 0;
             self.pixels.fetch_latch[1] = self.pixels.fetch_latch[0];
             self.pixels.fetch_latch_x[1] = self.pixels.fetch_latch_x[0];
@@ -955,11 +1079,12 @@ impl Ppu {
                     self.mode3_end = self.dot + 1;
                 }
             }
+            self.tile_sel_glitch = false;
             let raised = self.dot_event();
             if i != 0 {
                 irq.after_first |= raised;
             }
-            if i < 2 {
+            if i < dots / 2 {
                 irq.now |= raised;
             } else {
                 irq.late |= raised;
@@ -1141,6 +1266,7 @@ impl Ppu {
         if self.skip_frame {
             self.skip_frame = false;
             self.framebuffer.fill(0);
+            self.frame_rgb555.fill(0x7FFF);
         }
     }
 
@@ -1225,7 +1351,7 @@ impl Ppu {
         if window {
             len += 6;
         }
-        if self.lcdc & 0x02 == 0 || objects.is_empty() {
+        if self.model == Model::Dmg && self.lcdc & 0x02 == 0 || objects.is_empty() {
             return len;
         }
         // Objects are considered left to right, ties broken by OAM index.
@@ -1279,7 +1405,11 @@ impl Ppu {
     }
 
     fn tile_data_address(&self, high: bool) -> u16 {
-        (self.bg_tile_addr(self.pixels.tile) + usize::from(self.fetch_y() & 7) * 2 + usize::from(high)) as u16
+        let mut row = self.fetch_y() & 7;
+        if self.model == Model::Cgb && self.pixels.tile_attr & 0x40 != 0 {
+            row ^= 7;
+        }
+        (self.bg_tile_addr(self.pixels.tile) + usize::from(row) * 2 + usize::from(high)) as u16
     }
 
     /// SCY and LCDC reach the fetcher's address latches one dot before the
@@ -1287,6 +1417,9 @@ impl Ppu {
     /// dot: earlier addresses and completed VRAM reads remain latched.
     /// SameBoy Core/sm83_cpu.c: READ_NEW (SCY), DMG_LCDC (full value).
     fn refresh_fetch_address(&mut self) {
+        if self.model == Model::Cgb {
+            return;
+        }
         match self.pixels.fetch_latch[0] {
             1 => {
                 if self.lcdc & 0x20 == 0 {
@@ -1305,7 +1438,7 @@ impl Ppu {
     /// the preceding dot has already completed its VRAM read, so refresh
     /// that tile byte too. Pixel data from older fetches stays in the FIFO.
     fn refresh_scroll_x(&mut self) {
-        if self.pixels.window {
+        if self.model == Model::Cgb || self.pixels.window {
             return;
         }
         if self.pixels.fetch_latch[1] == 1 && self.pixels.phase == 2 {
@@ -1333,6 +1466,8 @@ impl Ppu {
             }
             1 => {
                 self.pixels.tile = self.vram[usize::from(self.pixels.address)];
+                self.pixels.tile_attr =
+                    if self.model == Model::Cgb { self.vram_bank1[usize::from(self.pixels.address)] } else { 0 };
                 self.pixels.phase = 2;
             }
             2 | 4 => {
@@ -1342,11 +1477,11 @@ impl Ppu {
                 self.pixels.phase += 1;
             }
             3 => {
-                self.pixels.low = self.vram[usize::from(self.pixels.address)];
+                self.pixels.low = self.read_bg_data();
                 self.pixels.phase = 4;
             }
             5 => {
-                self.pixels.high = self.vram[usize::from(self.pixels.address)];
+                self.pixels.high = self.read_bg_data();
                 if self.pixels.window {
                     self.pixels.window_tile = (self.pixels.window_tile + 1) & 31;
                 }
@@ -1357,14 +1492,26 @@ impl Ppu {
         }
     }
 
+    /// CGB (except revision D): when LCDC.4 falls on a bitplane read,
+    /// unsigned tile indices below 128 drive the data bus instead of VRAM.
+    /// Matt Currie's TILE_SEL research and SameBoy data_for_tile_sel_glitch.
+    fn read_bg_data(&self) -> u8 {
+        if self.model == Model::Cgb && self.tile_sel_glitch && self.pixels.tile & 0x80 == 0 {
+            self.pixels.tile
+        } else {
+            self.read_vram_bank(self.pixels.address, self.pixels.tile_attr & 8)
+        }
+    }
+
     fn push_bg(&mut self) {
         if self.pixels.bg_len != 0 {
             return;
         }
         for (i, pixel) in self.pixels.bg.iter_mut().enumerate() {
-            let bit = 7 - i;
+            let bit = if self.pixels.tile_attr & 0x20 != 0 { i } else { 7 - i };
             *pixel = ((self.pixels.low >> bit) & 1) | (((self.pixels.high >> bit) & 1) << 1);
         }
+        self.pixels.bg_attr.fill(self.pixels.tile_attr);
         self.pixels.bg_head = 0;
         self.pixels.bg_len = 8;
         self.pixels.phase = 0;
@@ -1408,7 +1555,7 @@ impl Ppu {
                 break;
             }
             self.pixels.next_object += 1;
-            if self.lcdc & 2 == 0 || i32::from(o.x) < match_x {
+            if self.model == Model::Dmg && self.lcdc & 2 == 0 || i32::from(o.x) < match_x {
                 continue;
             }
             self.pixels.object_waiting = true;
@@ -1439,11 +1586,12 @@ impl Ppu {
         let o = self.pixels.objects[usize::from(self.pixels.next_object - 1)];
         self.pixels.object_address = self.object_tile_address(o);
         if self.pixels.object_read == 1 {
-            self.pixels.object_low = self.vram[usize::from(self.pixels.object_address)];
+            self.pixels.object_low = self.read_vram_bank(self.pixels.object_address, o.attr & 8);
         } else {
             self.pixels.obj = self.pixels.object_prior;
             self.pixels.obj_attr = self.pixels.object_prior_attr;
-            let high = self.vram[usize::from(self.pixels.object_address) + 1];
+            self.pixels.obj_index = self.pixels.object_prior_index;
+            let high = self.read_vram_bank(self.pixels.object_address + 1, o.attr & 8);
             self.overlay_object(o, high);
         }
     }
@@ -1452,16 +1600,18 @@ impl Ppu {
         for i in 0..8 {
             let bit = if o.attr & 0x20 == 0 { 7 - i } else { i };
             let color = ((self.pixels.object_low >> bit) & 1) | (((high >> bit) & 1) << 1);
-            if self.pixels.obj[i] == 0 && color != 0 {
+            if color != 0 && (self.pixels.obj[i] == 0 || self.model == Model::Cgb && o.index < self.pixels.obj_index[i])
+            {
                 self.pixels.obj[i] = color;
-                self.pixels.obj_attr[i] = o.attr & 0x90;
+                self.pixels.obj_attr[i] = o.attr & if self.model == Model::Cgb { 0x9F } else { 0x90 };
+                self.pixels.obj_index[i] = o.index;
             }
         }
     }
 
     fn object_dot(&mut self) {
         self.pixels.object_read = 0;
-        if self.lcdc & 2 == 0 {
+        if self.model == Model::Dmg && self.lcdc & 2 == 0 {
             // DMG cancels an in-flight object fetch when OBJ enable clears;
             // already spent dots remain, but no new OBJ pixels are queued.
             self.pixels.object_stall = 0;
@@ -1486,15 +1636,16 @@ impl Ppu {
             // BG-fetch wait. SameBoy display.c: get_object_line_address().
             let o = self.pixels.objects[usize::from(self.pixels.next_object - 1)];
             self.pixels.object_address = self.object_tile_address(o);
-            self.pixels.object_low = self.vram[usize::from(self.pixels.object_address)];
+            self.pixels.object_low = self.read_vram_bank(self.pixels.object_address, o.attr & 8);
             self.pixels.object_read = 1;
         }
         if remaining == 1 {
             let o = self.pixels.objects[usize::from(self.pixels.next_object - 1)];
             self.pixels.object_address = self.object_tile_address(o);
-            let high = self.vram[usize::from(self.pixels.object_address) + 1];
+            let high = self.read_vram_bank(self.pixels.object_address + 1, o.attr & 8);
             self.pixels.object_prior = self.pixels.obj;
             self.pixels.object_prior_attr = self.pixels.obj_attr;
+            self.pixels.object_prior_index = self.pixels.obj_index;
             self.overlay_object(o, high);
             self.pixels.object_read = 2;
         }
@@ -1524,14 +1675,17 @@ impl Ppu {
             return;
         }
         let bg = self.pixels.bg[usize::from(self.pixels.bg_head)];
+        let bg_attr = self.pixels.bg_attr[usize::from(self.pixels.bg_head)];
         self.pixels.bg_head = (self.pixels.bg_head + 1) & 7;
         self.pixels.bg_len -= 1;
         let obj = self.pixels.obj[0];
         let attr = self.pixels.obj_attr[0];
         self.pixels.obj.copy_within(1..8, 0);
         self.pixels.obj_attr.copy_within(1..8, 0);
+        self.pixels.obj_index.copy_within(1..8, 0);
         self.pixels.obj[7] = 0;
         self.pixels.obj_attr[7] = 0;
+        self.pixels.obj_index[7] = 40;
         if self.pixels.x < -8 {
             if self.pixels.x & 7 == i32::from(self.scx & 7)
                 || self.pixels.window_first && self.pixels.x & 7 == 6 && self.scx & 7 == 7
@@ -1544,19 +1698,31 @@ impl Ppu {
         }
         self.pixels.window_first = false;
         if (0..WIDTH as i32).contains(&self.pixels.x) {
-            let bg = if self.lcdc & 1 != 0 { bg } else { 0 };
-            let mut shade = (self.bgp >> (bg * 2)) & 3;
-            let mut color = bg;
-            let mut source = 0;
-            if self.lcdc & 2 != 0 && obj != 0 && (attr & 0x80 == 0 || bg == 0) {
-                let palette = if attr & 0x10 != 0 { self.obp1 } else { self.obp0 };
-                shade = (palette >> (obj * 2)) & 3;
-                color = obj;
-                source = if attr & 0x10 != 0 { 2 } else { 1 };
-            }
             let offset = usize::from(self.line) * WIDTH + self.pixels.x as usize;
-            self.framebuffer[offset] = shade;
-            self.pixels.output[0] = OutputPixel { offset: offset as u16, color, palette: source };
+            if self.model == Model::Cgb {
+                // Resolve OBJ priority first, then BG/OBJ priority. LCDC.0
+                // disables BG priority in CGB mode, never the BG image.
+                let object_wins =
+                    self.lcdc & 2 != 0 && obj != 0 && (bg == 0 || self.lcdc & 1 == 0 || (bg_attr | attr) & 0x80 == 0);
+                let (palette, number, color) =
+                    if object_wins { (&self.obj_palette, attr & 7, obj) } else { (&self.bg_palette, bg_attr & 7, bg) };
+                let at = usize::from(number) * 8 + usize::from(color) * 2;
+                self.frame_rgb555[offset] = u16::from_le_bytes([palette[at], palette[at + 1]]) & 0x7FFF;
+                self.framebuffer[offset] = color;
+            } else {
+                let bg = if self.lcdc & 1 != 0 { bg } else { 0 };
+                let mut shade = (self.bgp >> (bg * 2)) & 3;
+                let mut color = bg;
+                let mut source = 0;
+                if self.lcdc & 2 != 0 && obj != 0 && (attr & 0x80 == 0 || bg == 0) {
+                    let palette = if attr & 0x10 != 0 { self.obp1 } else { self.obp0 };
+                    shade = (palette >> (obj * 2)) & 3;
+                    color = obj;
+                    source = if attr & 0x10 != 0 { 2 } else { 1 };
+                }
+                self.framebuffer[offset] = shade;
+                self.pixels.output[0] = OutputPixel { offset: offset as u16, color, palette: source };
+            }
         }
         self.pixels.x += 1;
     }
@@ -1654,6 +1820,15 @@ impl Ppu {
             restart.pixels.save(w);
             w.u8(restart.window_line);
         }
+        w.bool(self.model == Model::Cgb);
+        w.u8s(&self.vram_bank1);
+        w.u8s(&[self.vbk, self.bg_index, self.obj_index, self.opri]);
+        w.bool(self.tile_sel_glitch);
+        w.u8s(&self.bg_palette);
+        w.u8s(&self.obj_palette);
+        for &color in &self.frame_rgb555 {
+            w.u16(color);
+        }
     }
 
     pub(crate) fn load(&mut self, r: &mut StateReader) -> Result<(), StateError> {
@@ -1736,6 +1911,26 @@ impl Ppu {
         {
             return Err(StateError::Corrupt("ppu drawing position"));
         }
+        if r.bool()? != (self.model == Model::Cgb) {
+            return Err(StateError::Corrupt("ppu model"));
+        }
+        r.u8s(&mut self.vram_bank1)?;
+        self.vbk = r.u8()?;
+        self.bg_index = r.u8()?;
+        self.obj_index = r.u8()?;
+        self.opri = r.u8()?;
+        self.tile_sel_glitch = r.bool()?;
+        if self.vbk > 1 || self.bg_index & 0x40 != 0 || self.obj_index & 0x40 != 0 || self.opri > 1 {
+            return Err(StateError::Corrupt("ppu color register"));
+        }
+        r.u8s(&mut self.bg_palette)?;
+        r.u8s(&mut self.obj_palette)?;
+        for color in &mut self.frame_rgb555 {
+            *color = r.u16()?;
+            if *color > 0x7FFF {
+                return Err(StateError::Corrupt("ppu color pixel"));
+            }
+        }
         self.frame_ready = false;
         self.next_event = self.compute_next_event();
         Ok(())
@@ -1778,6 +1973,198 @@ mod tests {
             }
         }
         panic!("pixel transfer did not finish");
+    }
+
+    #[test]
+    fn cgb_vram_banking_and_palette_port_locks() {
+        let mut p = Ppu::power_on_with_model(Model::Cgb);
+        p.write_vram(0x8000, 0x11);
+        p.write_register(0xFF4F, 0xFF);
+        p.write_vram(0x8000, 0x22);
+        assert_eq!(p.read_vram(0x8000), 0x22);
+        p.write_register(0xFF4F, 0);
+        assert_eq!(p.read_vram(0x8000), 0x11);
+        assert_eq!(p.read_register(0xFF4F), 0xFE);
+        p.write_register(0xFF68, 0xBF);
+        p.write_register(0xFF69, 0xA5);
+        assert_eq!(p.read_register(0xFF68), 0xC0); // Index wraps 63 -> 0.
+        p.write_register(0xFF68, 63);
+        assert_eq!(p.read_register(0xFF69), 0xA5);
+        assert_eq!(p.read_register(0xFF68), 0x7F); // Reads do not increment.
+        p.lcdc = 0x80;
+        p.stat_mode = Mode::Drawing;
+        p.write_register(0xFF68, 0xBF);
+        p.write_register(0xFF69, 0);
+        assert_eq!(p.read_register(0xFF69), 0xFF);
+        assert_eq!(p.bg_palette[63], 0xA5);
+        assert_eq!(p.read_register(0xFF68), 0xC0); // A blocked write still increments.
+        let mut dmg = Ppu::power_on();
+        dmg.write_register(0xFF4F, 1);
+        dmg.write_vram(0x8000, 0x33);
+        assert_eq!(dmg.vram[0], 0x33);
+        assert_eq!(dmg.read_register(0xFF4F), 0xFF);
+    }
+
+    #[test]
+    fn cgb_background_attributes_select_bank_flips_and_palette() {
+        let mut p = drawing_ppu();
+        p.model = Model::Cgb;
+        p.vram.fill(0);
+        p.vram_bank1[0x1800..].fill(0x6B); // Palette 3, bank 1, X/Y flip.
+        p.vram_bank1[14] = 1; // Bottom row, rightmost pixel becomes top-left.
+        p.bg_palette[24..26].copy_from_slice(&0x7C00u16.to_le_bytes());
+        p.bg_palette[26..28].copy_from_slice(&0x001Fu16.to_le_bytes());
+        finish_line(&mut p);
+        assert_eq!(p.frame_rgb555[0], 0x001F);
+        assert!(p.frame_rgb555[1..8].iter().all(|&c| c == 0x7C00));
+        assert_eq!(p.frame_rgb555[8], 0x001F);
+    }
+
+    #[test]
+    fn cgb_bg_priority_truth_table_and_lcdc_zero_keeps_background() {
+        for master in [false, true] {
+            for bg_priority in [false, true] {
+                for obj_priority in [false, true] {
+                    for bg in [0, 1] {
+                        let mut p = Ppu::power_on_with_model(Model::Cgb);
+                        p.lcdc = 0x82 | u8::from(master);
+                        p.bg_palette.fill(0);
+                        p.obj_palette.fill(0);
+                        p.bg_palette[usize::from(bg) * 2] = 0x1F;
+                        p.obj_palette[2..4].copy_from_slice(&0x03E0u16.to_le_bytes());
+                        p.pixels.x = 0;
+                        p.pixels.bg[0] = bg;
+                        p.pixels.bg_attr[0] = if bg_priority { 0x80 } else { 0 };
+                        p.pixels.obj[0] = 1;
+                        p.pixels.obj_attr[0] = if obj_priority { 0x80 } else { 0 };
+                        p.pop_pixel();
+                        let object_wins = bg == 0 || !master || !(bg_priority || obj_priority);
+                        assert_eq!(p.frame_rgb555[0], if object_wins { 0x03E0 } else { 0x001F });
+                    }
+                }
+            }
+        }
+        let mut p = Ppu::power_on_with_model(Model::Cgb);
+        p.lcdc = 0x80;
+        p.pixels.x = 0;
+        p.pixels.bg[0] = 1;
+        p.bg_palette[2..4].copy_from_slice(&0x03E0u16.to_le_bytes());
+        p.pop_pixel();
+        assert_eq!(p.frame_rgb555[0], 0x03E0);
+    }
+
+    #[test]
+    fn cgb_objects_use_vram_bank_and_oam_index_priority() {
+        let mut p = Ppu::power_on_with_model(Model::Cgb);
+        p.lcdc = 0x93;
+        p.pixels.objects[0] = LineObject { y: 16, x: 8, tile: 0, attr: 0x0B, index: 8 };
+        p.pixels.objects[1] = LineObject { y: 16, x: 9, tile: 1, attr: 0x0C, index: 2 };
+        p.pixels.object_count = 2;
+        p.pixels.next_object = 1;
+        p.pixels.object_stall = 3;
+        p.vram_bank1[0] = 0xFF;
+        p.object_dot();
+        p.object_dot();
+        p.object_dot();
+        assert_eq!(p.pixels.obj, [1; 8]);
+        assert_eq!(p.pixels.obj_attr, [0x0B; 8]);
+        p.pixels.next_object = 2;
+        p.pixels.object_low = 0;
+        p.pixels.object_stall = 1;
+        p.vram_bank1[17] = 0xAA;
+        p.object_dot();
+        assert_eq!(p.pixels.obj, [2, 1, 2, 1, 2, 1, 2, 1]);
+        assert_eq!(p.pixels.obj_index, [2, 8, 2, 8, 2, 8, 2, 8]);
+        assert_eq!(p.pixels.obj_attr, [0x0C, 0x0B, 0x0C, 0x0B, 0x0C, 0x0B, 0x0C, 0x0B]);
+    }
+
+    #[test]
+    fn cgb_lcdc_falling_edge_substitutes_tile_index_for_coincident_read() {
+        for phase in [3, 5] {
+            for tile in [0x55, 0xD5] {
+                let mut p = drawing_ppu();
+                p.model = Model::Cgb;
+                p.start_drawing(84);
+                p.dot = 100;
+                p.pixels.startup = 0;
+                p.pixels.phase = phase;
+                p.pixels.tile = tile;
+                p.pixels.address = u16::from(tile) * 16;
+                p.vram[usize::from(p.pixels.address)] = 0xA5;
+                p.write_register(0xFF40, 0x81);
+                let mut w = StateWriter::new();
+                p.save(&mut w);
+                let mut restored = Ppu::new_with_model(Model::Cgb);
+                restored.load(&mut StateReader::new(&w.finish())).unwrap();
+                for machine in [&mut p, &mut restored] {
+                    machine.tick_dots(2);
+                    let actual = if phase == 3 { machine.pixels.low } else { machine.pixels.high };
+                    assert_eq!(actual, if tile < 128 { tile } else { 0xA5 });
+                    assert!(!machine.tile_sel_glitch);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn cgb_fetches_objects_while_lcdc_hides_them() {
+        let mut p = Ppu::power_on_with_model(Model::Cgb);
+        p.lcdc = 0x91;
+        p.pixels.x = 0;
+        p.pixels.objects[0] = LineObject { y: 16, x: 8, tile: 0, attr: 0, index: 0 };
+        p.pixels.object_count = 1;
+        assert!(p.begin_object());
+        p.pixels.object_waiting = false;
+        p.pixels.object_stall = 3;
+        p.vram[0] = 0xFF;
+        p.object_dot();
+        p.object_dot();
+        p.object_dot();
+        assert_eq!(p.pixels.obj, [1; 8]);
+        p.bg_palette[0..2].copy_from_slice(&0x001Fu16.to_le_bytes());
+        p.obj_palette[2..4].copy_from_slice(&0x03E0u16.to_le_bytes());
+        p.pop_pixel();
+        assert_eq!(p.frame_rgb555[0], 0x001F); // Still hidden at the LCD.
+        p.write_register(0xFF40, 0x93);
+        p.pop_pixel();
+        assert_eq!(p.frame_rgb555[1], 0x03E0); // Queued pixels were preserved.
+    }
+
+    #[test]
+    fn cgb_two_dot_ticks_match_four_dot_ticks_and_save_replay() {
+        let mut full = Ppu::new_with_model(Model::Cgb);
+        full.vram_bank1[0x1800..].fill(0xEB);
+        full.vram_bank1[..16].fill(0x55);
+        full.bg_palette[26..28].copy_from_slice(&0x03E0u16.to_le_bytes());
+        full.vbk = 1;
+        full.bg_index = 0xBF;
+        full.opri = 1;
+        let mut saved = StateWriter::new();
+        full.save(&mut saved);
+        let mut half = Ppu::new_with_model(Model::Cgb);
+        half.load(&mut StateReader::new(&saved.finish())).unwrap();
+        for _ in 0..2_000 {
+            full.tick();
+            half.tick_dots(2);
+            half.tick_dots(2);
+        }
+        let mut a = StateWriter::new();
+        let mut b = StateWriter::new();
+        full.save(&mut a);
+        half.save(&mut b);
+        assert_eq!(a.finish(), b.finish());
+        let mut snapshot = StateWriter::new();
+        half.save(&mut snapshot);
+        let bytes = snapshot.finish();
+        let mut restored = Ppu::new_with_model(Model::Cgb);
+        restored.load(&mut StateReader::new(&bytes)).unwrap();
+        assert!(Ppu::new().load(&mut StateReader::new(&bytes)).is_err());
+        for _ in 0..1_000 {
+            half.tick_dots(2);
+            restored.tick_dots(2);
+        }
+        assert_eq!(half.frame_rgb555, restored.frame_rgb555);
+        assert_eq!(half.position(), restored.position());
     }
 
     #[test]
@@ -2135,7 +2522,7 @@ mod tests {
                     p.object_count = 1; // Inconsistent remaining fetch dots.
                 }
                 3 => p.object_prior[0] = 4,
-                _ => p.object_prior_attr[0] = 1,
+                _ => p.object_prior_attr[0] = 0x20,
             }
             let mut w = StateWriter::new();
             p.save(&mut w);

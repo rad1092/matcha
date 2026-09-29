@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
 import assert from "node:assert/strict";
 import { inflateSync } from "node:zlib";
+import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const rom = process.argv[2] ?? join(here, "..", "web", "roms", "libbet.gb");
@@ -62,6 +64,7 @@ const { tools } = (await request("tools/list", {})).result;
 const names = tools.map((t) => t.name).sort();
 assert.ok(names.includes("load_rom") && names.includes("press") && names.includes("find_value"));
 for (const t of tools) assert.equal(t.inputSchema.type, "object", `${t.name} schema`);
+assert.deepEqual(tools.find((t) => t.name === "load_rom").inputSchema.properties.model.enum, ["auto", "dmg", "cgb"]);
 
 const missing = await call("state");
 assert.equal(missing.isError, true, "state before load_rom is an error result, not a crash");
@@ -71,6 +74,7 @@ assert.equal(notRom.isError, true);
 assert.match(textOf(notRom), /not a ROM matcha can run/);
 const noFile = await call("load_rom", { path: join(here, "no-such.gb") });
 assert.match(textOf(noFile), /cannot read .*ENOENT/);
+assert.equal((await call("load_rom", { path: rom, model: "unknown" })).isError, true);
 
 const loaded = await call("load_rom", { path: rom, frames: 30 });
 assert.ok(!loaded.isError, textOf(loaded));
@@ -100,9 +104,34 @@ assert.equal((await call("reset", { ram: "zero", seed: 7 })).isError, true, "see
 const zeroed = await call("load_rom", { path: rom, frames: 0, ram: "zero" });
 assert.match(textOf(zeroed), /power-on RAM: zeros/);
 
+// Header-driven auto selection, explicit override and RAM resets must all
+// reach the real WASM core. No external ROM or test-data download required.
+const temp = mkdtempSync(join(tmpdir(), "matcha-model-"));
+try {
+  const colorRom = Buffer.from(readFileSync(rom));
+  colorRom[0x143] = 0x80;
+  const colorPath = join(temp, "color.gbc");
+  writeFileSync(colorPath, colorRom);
+  const color = await call("load_rom", { path: colorPath, frames: 0 });
+  assert.ok(!color.isError, textOf(color));
+  assert.match(textOf(color), /CGB/);
+  assert.match(textOf(await call("state")), /model CGB/);
+  await call("reset", { ram: "noise", seed: 7 });
+  assert.match(textOf(await call("state")), /model CGB/);
+  await call("save_state", { slot: "cgb" });
+  const cgbBefore = textOf(await call("state"));
+  await call("step", { count: 10 });
+  await call("load_state", { slot: "cgb" });
+  assert.equal(textOf(await call("state")), cgbBefore);
+  await call("load_rom", { path: colorPath, model: "dmg", frames: 0 });
+  assert.match(textOf(await call("state")), /model DMG/);
+  await call("load_rom", { path: rom, model: "cgb", frames: 0 });
+  assert.match(textOf(await call("state")), /model CGB/);
+} finally { rmSync(temp, { recursive: true, force: true }); }
+
 const unknown = await request("does/not/exist", {});
 assert.equal(unknown.error.code, -32601);
 
 server.stdin.end();
 server.kill();
-console.log(`mcp: ${tools.length} tools, protocol negotiation, images, state round-trip — all ok`);
+console.log(`mcp: ${tools.length} tools, protocol negotiation, images, DMG/CGB selection and state round-trip — all ok`);

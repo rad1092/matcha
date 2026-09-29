@@ -12,11 +12,19 @@ struct Bus {
     request: u8,
     request_at: Option<u64>,
     writes: Vec<(u64, u16, u8)>,
+    sample_at_start: bool,
 }
 
 impl Bus {
     fn new() -> Self {
-        Self { memory: vec![0; 65536], cycles: 0, request: 0, request_at: None, writes: Vec::new() }
+        Self {
+            memory: vec![0; 65536],
+            cycles: 0,
+            request: 0,
+            request_at: None,
+            writes: Vec::new(),
+            sample_at_start: false,
+        }
     }
 
     fn advance(&mut self) {
@@ -46,6 +54,10 @@ impl CpuBus for Bus {
 
     fn pending_interrupts(&self) -> u8 {
         self.request
+    }
+
+    fn halt_samples_at_start(&self) -> bool {
+        self.sample_at_start
     }
 
     fn acknowledge_interrupt(&mut self, mask: u8) {
@@ -84,4 +96,26 @@ fn interrupt_arriving_during_halt_fetch_returns_to_halt() {
     assert_eq!(cpu.regs.pc, 0x0100);
     cpu.step(&mut bus);
     assert!(cpu.is_halted(), "the reexecuted HALT now waits without a pending request");
+}
+
+#[test]
+fn cgb_halt_samples_before_the_idle_cycle() {
+    for cgb in [false, true] {
+        let mut cpu = Cpu::new();
+        let mut bus = Bus::new();
+        bus.sample_at_start = cgb;
+        bus.memory[0] = 0x76;
+        cpu.step(&mut bus); // HALT fetch
+        cpu.step(&mut bus); // initial idle cycle, shared by both models
+        bus.request_at = Some(3);
+        cpu.step(&mut bus); // edge occurs during the idle cycle
+        assert_eq!(cpu.is_halted(), cgb);
+        if cgb {
+            cpu.step(&mut bus);
+            assert!(!cpu.is_halted());
+            assert_eq!(bus.cycles, 4);
+        } else {
+            assert_eq!(bus.cycles, 3);
+        }
+    }
 }

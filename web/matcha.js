@@ -76,11 +76,20 @@ export class MatchaModule {
     return utf8.decode(new Uint8Array(this.memory, ptr, len));
   }
 
-  /** Creates an emulator for a ROM image. Throws with the core's message. */
-  create(rom) {
+  /** Creates a ROM with auto, dmg or cgb hardware (auto reads header bit 7). */
+  create(rom, { model = "auto" } = {}) {
+    if (!["auto", "dmg", "cgb"].includes(model)) throw new Error('model must be "auto", "dmg" or "cgb"');
     const [ptr, len] = this.put(rom);
-    const handle = this.x.matcha_new(ptr, len);
-    this.x.matcha_free(ptr, len);
+    let handle;
+    try {
+      if (this.x.matcha_new_with_model) {
+        handle = this.x.matcha_new_with_model(ptr, len, { dmg: 0, cgb: 1, auto: 2 }[model]);
+      } else {
+        const color = len > 0x143 && (new Uint8Array(this.memory, ptr, len)[0x143] & 0x80) !== 0;
+        if (model === "cgb" || model === "auto" && color) throw new Error("This WASM build has no CGB support; rebuild matcha.wasm.");
+        handle = this.x.matcha_new(ptr, len);
+      }
+    } finally { this.x.matcha_free(ptr, len); }
     if (!handle) throw new Error(this.lastError() || "could not load ROM");
     return new Emulator(this, handle);
   }
@@ -97,6 +106,10 @@ export class Emulator {
     if (this.h) this.x.matcha_destroy(this.h);
     this.h = 0;
   }
+
+  get model() { return this.x.matcha_model?.(this.h) === 1 ? "cgb" : "dmg"; }
+  get doubleSpeed() { return this.x.matcha_double_speed?.(this.h) === 1; }
+  get baseClockTicks() { return this.x.matcha_base_clock_ticks?.(this.h) ?? this.snapshot().cycles * 4; }
 
   /**
    * Power-cycles. With `{ ram: "noise", seed }` (or `{ ram: "zero" }`) RAM
@@ -224,7 +237,8 @@ export class Emulator {
       ime: w[6] === 1, power: POWER[w[7]], ie: w[8], if: w[9],
       cycles: w[10] + w[11] * 2 ** 32, frames: w[12] + w[13] * 2 ** 32, romBank: w[14],
       ppu: { lcdc: w[15], stat: w[16], scy: w[17], scx: w[18], ly: w[19], lyc: w[20], bgp: w[21], obp0: w[22], obp1: w[23], wy: w[24], wx: w[25], line: w[26], dot: w[27], mode: w[16] & 3 },
-      apu, buttons: w[29],
+      apu, buttons: w[29], model: this.model, doubleSpeed: this.doubleSpeed,
+      baseClockTicks: this.x.matcha_base_clock_ticks?.(this.h) ?? (w[10] + w[11] * 2 ** 32) * 4,
     };
   }
 

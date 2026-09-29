@@ -5,7 +5,7 @@
 //                              that wrap content in their own skeleton
 //
 // Inputs: web/src/index.html, web/src/app.js, web/matcha.js, web/matcha.wasm,
-// web/roms/shelf.json (+ ROMs), docs/conformance.json (scoreboard numbers).
+// web/roms/shelf.json (+ ROMs), docs/conformance{,-cgb}.json (scoreboards).
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -26,18 +26,26 @@ const shelf = JSON.parse(text("web/roms/shelf.json")).map((cart) => ({
   romB64: read(`web/roms/${cart.file}`).toString("base64"),
 }));
 
-// Scoreboard numbers come from the last `matcha test --json` run.
-const score = { blargg: ["?", "?"], mooneye: ["?", "?"], "dmg-acid2": ["?", "?"], gambatte: ["?", "?"], mealybug: ["?", "?"] };
-const scorePath = join(root, "docs/conformance.json");
-if (existsSync(scorePath)) {
-  const { results } = JSON.parse(readFileSync(scorePath, "utf8"));
-  for (const suite of Object.keys(score)) {
-    const rows = results.filter((r) => r.suite === suite);
-    score[suite] = [rows.filter((r) => r.status === "pass").length, rows.length];
+// Scoreboard numbers come from separate, explicitly selected hardware runs.
+// Missing suites stay unknown rather than displaying misleading zero totals.
+function loadScores(path, suites, model) {
+  const score = Object.fromEntries(suites.map((suite) => [suite, ["?", "?"]]));
+  const full = join(root, path);
+  if (!existsSync(full)) {
+    console.warn(`${path} not found; ${model.toUpperCase()} scoreboard shows '?'`);
+    return { score, excludedCount: "?" };
   }
-} else {
-  console.warn("docs/conformance.json not found; scoreboard shows '?' (run: matcha test testdata/roms --json docs/conformance.json)");
+  const report = JSON.parse(readFileSync(full, "utf8"));
+  for (const suite of suites) {
+    const rows = report.results.filter((r) => r.suite === suite && (r.model ?? "dmg") === model);
+    if (rows.length) score[suite] = [rows.filter((r) => r.status === "pass").length, rows.length];
+  }
+  return { score, excludedCount: report.excluded_count ?? "?" };
 }
+const { score } = loadScores("docs/conformance.json", ["blargg", "mooneye", "dmg-acid2", "gambatte", "mealybug"], "dmg");
+const { score: cgbScore, excludedCount } = loadScores("docs/conformance-cgb.json", [
+  "blargg-cgb", "mooneye-cgb", "cgb-acid2", "cgb-acid-hell", "gambatte-cgb", "same-suite-cgb",
+], "cgb");
 
 const lib = text("web/matcha.js");
 const app = text("web/src/app.js")
@@ -63,6 +71,14 @@ let html = text("web/src/index.html")
   .replace("@GAMBATTE_TOTAL@", score.gambatte[1].toLocaleString("en-US"))
   .replace("@MEALY_PASS@", String(score.mealybug[0]))
   .replace("@MEALY_TOTAL@", String(score.mealybug[1]));
+for (const [token, suite] of Object.entries({
+  CGB_BLARGG: "blargg-cgb", CGB_MOONEYE: "mooneye-cgb", CGB_ACID2: "cgb-acid2",
+  CGB_ACIDHELL: "cgb-acid-hell", CGB_GAMBATTE: "gambatte-cgb", CGB_SAMESUITE: "same-suite-cgb",
+})) {
+  html = html.replace(`@${token}_PASS@`, cgbScore[suite][0].toLocaleString("en-US"))
+    .replace(`@${token}_TOTAL@`, cgbScore[suite][1].toLocaleString("en-US"));
+}
+html = html.replace("@CGB_EXCLUDED@", String(excludedCount));
 const marker = "/*@BUNDLE@*/";
 if (!html.includes(marker)) throw new Error("index.html lost its bundle marker");
 // Function replacement: bundle contents may contain `$&`-style sequences.

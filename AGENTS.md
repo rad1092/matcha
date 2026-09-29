@@ -11,6 +11,7 @@ cargo build --release                      # core + CLI (target/release/matcha)
 cargo test --workspace                     # unit tests + 498k CPU cases; optimised, overflow-checked
 scripts/fetch-testdata.sh                  # test ROMs + SingleStepTests into testdata/ (once)
 cargo run --release -p matcha-cli -- test testdata/roms --baseline docs/conformance.json
+cargo run --release -p matcha-cli -- test testdata/roms --model cgb --baseline docs/conformance-cgb.json
 cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings
 
 scripts/build-wasm.sh                      # core -> web/matcha.wasm (MATCHA_BUILD_STD=1 if the
@@ -39,7 +40,9 @@ a crash; `--watch ADDR` shows which instructions changed a byte.
 - **Never regress the scoreboard.** CI runs the suites with `--baseline
   docs/conformance.json`. When accuracy improves, regenerate it:
   `matcha test testdata/roms --json docs/conformance.json --markdown docs/CONFORMANCE.md`,
-  then `node scripts/build-web.mjs` so the page's numbers follow.
+  also generate `docs/conformance-cgb.json` and `docs/CONFORMANCE-CGB.md`
+  with `--model cgb`. Preserve both named baselines and list compatibility-mode
+  exclusions explicitly. Then `node scripts/build-web.mjs` so the page's numbers follow.
 - **One wasm for every host.** After changing the core or `matcha-wasm`,
   rebuild `web/matcha.wasm` and run `node mcp/test.mjs`; the web player,
   MCP server and plugin all load that file through `web/matcha.js`.

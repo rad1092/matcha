@@ -1,11 +1,11 @@
 ---
 name: play-gameboy
-description: Plays or tests a Game Boy (.gb) ROM with the matcha emulator tools — boots it, reads the screen, presses buttons, and reports what happens. Use when asked to play a Game Boy game, try or smoke-test a homebrew ROM, check whether a ROM boots, get past a title screen, or describe what a game looks like.
+description: Plays or tests a Game Boy (.gb/.gbc) ROM with the matcha emulator tools — boots it, reads the screen, presses buttons, and reports what happens. Use when asked to play a Game Boy game, try or smoke-test a homebrew ROM, check whether a ROM boots, get past a title screen, or describe what a game looks like.
 ---
 
 # Playing a Game Boy ROM with matcha
 
-The `matcha` MCP server is a cycle-accurate original Game Boy (DMG). Every
+The `matcha` MCP server is a Game Boy / native Game Boy Color emulator. Every
 tool call advances or inspects one machine. Emulation is deterministic: the
 same state plus the same inputs always gives the same result, so experiments
 can be repeated exactly.
@@ -17,8 +17,10 @@ can be repeated exactly.
    `shock-lobster`, `2048`) — the tool description lists what each one is.
 2. Look at the returned screenshot before doing anything else. Describe what
    is on screen in one line so the user can follow along.
-3. If the header warns the cartridge is CGB-only, say that matcha emulates
-   the original DMG and stop unless the user wants to try anyway.
+3. Check the returned model. `load_rom` defaults to `model: "auto"`, choosing
+   native CGB for colour-capable cartridges and DMG otherwise. Explicit
+   `dmg` / `cgb` overrides are available for debugging. DMG-on-CGB
+   compatibility colourization is not implemented.
 
 ## Controls and timing
 
@@ -51,7 +53,7 @@ can be repeated exactly.
 
 - Screen stays blank for more than ~5 seconds of `run`: check `state` — LCDC
   bit 7 off means the game turned the display off; a `locked` CPU means it
-  executed an illegal opcode (the ROM is probably corrupt or not a DMG game).
+  executed an illegal opcode (inspect the ROM and trace before attributing the cause).
 - The game ignores input: some games only poll the joypad once per frame, so
   hold buttons for at least 2 frames; some wait for a release before
   accepting the next press.

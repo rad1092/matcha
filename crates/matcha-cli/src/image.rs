@@ -1,6 +1,6 @@
 //! PNG helpers for screenshots and reference-image comparison.
 
-use matcha_core::{GameBoy, HEIGHT, WIDTH};
+use matcha_core::{GameBoy, HEIGHT, Model, WIDTH};
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
@@ -55,4 +55,28 @@ pub fn diff_against(gb: &GameBoy, expected: &Path) -> Result<usize, String> {
     let mut rgba = vec![0u8; WIDTH * HEIGHT * 4];
     gb.render_rgba(&matcha_core::palettes::GREY, &mut rgba);
     Ok(rgba.chunks_exact(4).zip(px.iter()).filter(|(a, b)| a[..3] != b[..]).count())
+}
+
+/// Gambatte's CGB reference images use its historical RGB555 color matrix,
+/// then ignore the lowest three channel bits. Keep acid/Mealybug comparison
+/// and ordinary screenshots in uncorrected, expanded RGB555 instead.
+pub fn diff_gambatte(gb: &GameBoy, expected: &Path) -> Result<usize, String> {
+    if gb.model() == Model::Dmg {
+        return diff_against(gb, expected);
+    }
+    let (w, h, px) = read_png_rgb(expected)?;
+    if (w as usize, h as usize) != (WIDTH, HEIGHT) {
+        return Err(format!("reference image is {w}x{h}, expected {WIDTH}x{HEIGHT}"));
+    }
+    let mut rgba = vec![0; WIDTH * HEIGHT * 4];
+    gb.render_rgba(&matcha_core::palettes::GREY, &mut rgba);
+    Ok(rgba
+        .chunks_exact(4)
+        .zip(px.iter())
+        .filter(|(a, b)| {
+            let [r, g, blue] = [u16::from(a[0] >> 3), u16::from(a[1] >> 3), u16::from(a[2] >> 3)];
+            let corrected = [(r * 13 + g * 2 + blue) / 2, (g * 3 + blue) * 2, (r * 3 + g * 2 + blue * 11) / 2];
+            corrected.iter().zip(b.iter()).any(|(&a, &b)| (a as u8 ^ b) & 0xF8 != 0)
+        })
+        .count())
 }

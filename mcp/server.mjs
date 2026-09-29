@@ -33,7 +33,7 @@ const matcha = await loadMatcha(readFileSync(join(CORE_DIR, "matcha.wasm")));
 
 const SERVER_INFO = { name: "matcha", title: "matcha Game Boy", version: "0.1.0" };
 const PROTOCOLS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
-const INSTRUCTIONS = `matcha is a cycle-accurate Game Boy (DMG) emulator.
+const INSTRUCTIONS = `matcha is a Game Boy / Game Boy Color emulator.
 Start with load_rom. Use press to tap buttons and see the result, run to let
 time pass, and screenshot to look. Emulation is deterministic: save_state
 before risky moves and load_state to retry. For debugging use state,
@@ -138,7 +138,7 @@ function image(gb, scale = 2) {
 
 function statusLine(gb) {
   const s = gb.snapshot();
-  return `frame ${s.frames} · PC $${hex4(s.pc)} · LY ${s.ppu.ly} · ${s.power}`;
+  return `${s.model.toUpperCase()}${s.doubleSpeed ? " · double CPU speed" : ""} · frame ${s.frames} · PC $${hex4(s.pc)} · LY ${s.ppu.ly} · ${s.power}`;
 }
 
 /** Runs `frames` frames holding `mask`; stops early at a break. */
@@ -160,6 +160,7 @@ function describeState(gb) {
   const f = s.flags;
   const p = s.ppu;
   return [
+    `model ${s.model.toUpperCase()} · CPU ${s.doubleSpeed ? "double" : "normal"} speed · ${(s.baseClockTicks / 4194304).toFixed(3)} s emulated`,
     `AF=${hex4(s.af)} BC=${hex4(s.bc)} DE=${hex4(s.de)} HL=${hex4(s.hl)} SP=${hex4(s.sp)} PC=${hex4(s.pc)}`,
     `flags ${f.z ? "Z" : "-"}${f.n ? "N" : "-"}${f.h ? "H" : "-"}${f.c ? "C" : "-"}  IME=${s.ime ? 1 : 0}  CPU ${s.power}  IE=${hex2(s.ie)} IF=${hex2(s.if)}  ROM bank ${s.romBank}`,
     `PPU LCDC=${hex2(p.lcdc)} STAT=${hex2(p.stat)} LY=${p.ly} LYC=${p.lyc} SCX=${p.scx} SCY=${p.scy} WX=${p.wx} WY=${p.wy} BGP=${hex2(p.bgp)} (line ${p.line}, dot ${p.dot})`,
@@ -220,17 +221,19 @@ const TOOLS = [
   {
     name: "load_rom",
     title: "Load ROM",
-    description: `Load a Game Boy ROM (.gb) and power on. Give a file path, or a bundled open-source sample: ${Object.entries(SAMPLES).map(([k, v]) => `"${k}" (${v.about})`).join("; ")}. Resets save slots and searches. Returns the cartridge header and the first screen.`,
+    description: `Load a Game Boy or Game Boy Color ROM (.gb/.gbc) and power on. Give a file path, or a bundled open-source sample: ${Object.entries(SAMPLES).map(([k, v]) => `"${k}" (${v.about})`).join("; ")}. Resets save slots and searches. Returns the cartridge header and the first screen.`,
     inputSchema: {
       type: "object",
       properties: {
-        path: { type: "string", description: "Path to the .gb file (absolute, or relative to the server's working directory)." },
+        path: { type: "string", description: "Path to the .gb/.gbc file (absolute, or relative to the server's working directory)." },
+        model: { type: "string", enum: ["auto", "dmg", "cgb"], description: "Hardware model; auto (default) reads the cartridge's CGB flag. cgb forces native color mode, not CGB DMG-compatibility mode." },
         sample: { type: "string", enum: Object.keys(SAMPLES), description: "Load a bundled sample instead of a file." },
         frames: { type: "integer", minimum: 0, maximum: 3600, description: "Frames to run before the screenshot (default 60 ≈ 1 s)." },
         ...ramSchema,
       },
     },
-    run({ path, sample, frames, ram, seed }) {
+    run({ path, sample, frames, ram, seed, model = "auto" }) {
+      if (!["auto", "dmg", "cgb"].includes(model)) throw new ToolError('model must be "auto", "dmg" or "cgb"');
       if (sample !== undefined && !(sample in SAMPLES)) throw new ToolError(`sample must be one of ${Object.keys(SAMPLES).join(", ")}`);
       if (!sample && (typeof path !== "string" || !path)) throw new ToolError("give a path to a .gb file, or a sample name");
       const full = sample ? join(SAMPLE_DIR, SAMPLES[sample].file) : resolve(process.cwd(), path);
@@ -244,7 +247,7 @@ const TOOLS = [
       }
       let gb;
       try {
-        gb = matcha.create(bytes);
+        gb = matcha.create(bytes, { model });
       } catch (e) {
         throw new ToolError(`${full} is not a ROM matcha can run: ${e.message}`);
       }
@@ -264,7 +267,7 @@ const TOOLS = [
       const text = [
         `Loaded ${full}`,
         `title "${h.title}" · ${h.cartTypeName} · ROM ${h.romSize / 1024} KiB · RAM ${h.ramSize / 1024} KiB${h.battery ? " (battery)" : ""}${h.rtc ? " · RTC" : ""}`,
-        h.cgbFlag === 0xc0 ? "Warning: CGB-only cartridge; matcha emulates the original DMG, so it may refuse to run." : "",
+        h.cgbFlag === 0xc0 && gb.model === "dmg" ? "CGB-only cartridge loaded with an explicit DMG override." : "",
         ramNote,
         statusLine(gb),
       ].filter(Boolean).join("\n");
@@ -325,7 +328,7 @@ const TOOLS = [
       type: "object",
       properties: {
         scale: { type: "integer", minimum: 1, maximum: 6, description: "Integer zoom (default 3)." },
-        palette: { type: "string", enum: Object.keys(PALETTES), description: "Colour palette (default grey, the clearest for reading text)." },
+        palette: { type: "string", enum: Object.keys(PALETTES), description: "DMG palette (default grey). CGB uses the game's own colors." },
       },
     },
     run({ scale, palette }) {

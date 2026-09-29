@@ -12,7 +12,6 @@ use serde_json::json;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Instant;
 
 /// Frames per emulated second (rounded up).
 const FPS: u32 = 60;
@@ -25,6 +24,10 @@ pub enum Judge {
     Fibonacci,
     /// Run to `LD B,B`; pass if the screen matches the reference image.
     Screenshot(PathBuf),
+    /// Gambatte: run 15 frames, then read the hex digits the test printed.
+    GambatteHex(String),
+    /// Gambatte: run 15 frames, then compare the screen with the image.
+    GambatteScreenshot(PathBuf),
 }
 
 #[derive(Clone, Debug)]
@@ -48,7 +51,6 @@ pub struct Outcome {
     pub case: Case,
     pub verdict: Verdict,
     pub frames: u64,
-    pub millis: u128,
 }
 
 fn rel(root: &Path, p: &Path) -> String {
@@ -56,18 +58,37 @@ fn rel(root: &Path, p: &Path) -> String {
 }
 
 fn gb_files(dir: &Path) -> Vec<PathBuf> {
+    rom_files(dir, &["gb"])
+}
+
+fn rom_files(dir: &Path, extensions: &[&str]) -> Vec<PathBuf> {
     let mut out = Vec::new();
     let Ok(entries) = std::fs::read_dir(dir) else { return out };
     for e in entries.flatten() {
         let p = e.path();
         if p.is_dir() {
-            out.extend(gb_files(&p));
-        } else if p.extension().is_some_and(|x| x == "gb") {
+            out.extend(rom_files(&p, extensions));
+        } else if p.extension().is_some_and(|x| extensions.iter().any(|e| x == *e)) {
             out.push(p);
         }
     }
     out.sort();
     out
+}
+
+/// Gambatte names encode the expected output per model, e.g.
+/// `…_dmg08_cgb04c_out5` (both models print 5) or
+/// `…_dmg08_out65766576_cgb04c_out657665AA` (the DMG prints 65766576).
+/// Returns the hex string a DMG must print, if the test has one.
+fn gambatte_dmg_expectation(stem: &str) -> Option<String> {
+    let at = stem.find("_dmg08_")?;
+    let rest = &stem[at + "_dmg08_".len()..];
+    let rest = rest.strip_prefix("cgb04c_").unwrap_or(rest);
+    if rest.starts_with("outaudio") {
+        return None;
+    }
+    let hex: String = rest.strip_prefix("out")?.chars().take_while(char::is_ascii_hexdigit).collect();
+    (!hex.is_empty()).then_some(hex)
 }
 
 /// Mooneye naming: a trailing `-XYZ` lists the models a test is valid on.
@@ -141,6 +162,20 @@ pub fn discover(root: &Path) -> Vec<Case> {
             judge: Judge::Screenshot(root.join("dmg-acid2/dmg-acid2-dmg.png")),
             path: acid,
         });
+    }
+
+    for path in rom_files(&root.join("gambatte"), &["gb", "gbc"]) {
+        let stem = path.file_stem().unwrap().to_string_lossy().to_string();
+        let judge = if let Some(hex) = gambatte_dmg_expectation(&stem) {
+            Judge::GambatteHex(hex)
+        } else {
+            let reference = path.with_file_name(format!("{stem}_dmg08.png"));
+            if !reference.exists() {
+                continue;
+            }
+            Judge::GambatteScreenshot(reference)
+        };
+        cases.push(Case { suite: "gambatte", name: rel(root, &path), judge, path });
     }
 
     for path in gb_files(&root.join("mealybug-tearoom-tests/ppu")) {
@@ -219,6 +254,35 @@ fn run_blargg(gb: &mut GameBoy, seconds: u32, screenshot: Option<&Path>) -> Verd
     }
 }
 
+/// Reads the hex digits a Gambatte test printed. Its output routine draws
+/// digit N with tile N from the top-left of the background map; to make sure
+/// the judgement is about what is on screen, each tile is also compared with
+/// the pixels actually rendered there.
+fn gambatte_printed(gb: &GameBoy, len: usize) -> Result<String, String> {
+    let regs = gb.ppu_registers(); // LCDC STAT SCY SCX LY LYC BGP ...
+    let (lcdc, scy, scx, bgp) = (regs[0], regs[2], regs[3], regs[6]);
+    let map = if lcdc & 0x08 != 0 { 0x9C00u16 } else { 0x9800 };
+    let fb = gb.framebuffer();
+    let mut out = String::new();
+    for i in 0..len.min(20) {
+        let t = gb.peek(map + i as u16);
+        if t > 0x0F {
+            return Err(format!("tile {t:#04x} at column {i} is not a hex digit"));
+        }
+        if scx == 0 && scy == 0 && lcdc & 0x81 == 0x81 {
+            let index = if lcdc & 0x10 != 0 { usize::from(t) } else { 256 + usize::from(t) };
+            let mut tile = [0u8; 64];
+            gb.decode_tile(index, &mut tile);
+            let drawn = (0..64).all(|p| fb[(p / 8) * matcha_core::WIDTH + i * 8 + p % 8] == (bgp >> (tile[p] * 2)) & 3);
+            if !drawn {
+                return Err(format!("column {i}: the screen does not show tile {t:#04x}"));
+            }
+        }
+        out.push(char::from_digit(u32::from(t), 16).unwrap().to_ascii_uppercase());
+    }
+    Ok(out)
+}
+
 /// Runs until the `LD B,B` (0x40) software breakpoint executes.
 fn run_to_ld_b_b(gb: &mut GameBoy, max_seconds: u32) -> bool {
     let max_frames = u64::from(max_seconds * FPS);
@@ -234,11 +298,10 @@ fn run_to_ld_b_b(gb: &mut GameBoy, max_seconds: u32) -> bool {
 }
 
 fn run_case(case: &Case) -> Outcome {
-    let start = Instant::now();
     let rom = match std::fs::read(&case.path) {
         Ok(r) => r,
         Err(e) => {
-            return Outcome { case: case.clone(), verdict: Verdict::Error(e.to_string()), frames: 0, millis: 0 };
+            return Outcome { case: case.clone(), verdict: Verdict::Error(e.to_string()), frames: 0 };
         }
     };
     let mut gb = match GameBoy::new(rom) {
@@ -247,7 +310,7 @@ fn run_case(case: &Case) -> Outcome {
             gb
         }
         Err(e) => {
-            return Outcome { case: case.clone(), verdict: Verdict::Error(e.to_string()), frames: 0, millis: 0 };
+            return Outcome { case: case.clone(), verdict: Verdict::Error(e.to_string()), frames: 0 };
         }
     };
     let verdict = match &case.judge {
@@ -267,6 +330,26 @@ fn run_case(case: &Case) -> Outcome {
                 }
             }
         }
+        Judge::GambatteHex(expected) => {
+            while gb.frame_count() < 15 {
+                gb.run_frame();
+            }
+            match gambatte_printed(&gb, expected.len()) {
+                Ok(got) if got.eq_ignore_ascii_case(expected) => Verdict::Pass,
+                Ok(got) => Verdict::Fail(format!("printed {got}, expected {expected}")),
+                Err(e) => Verdict::Fail(e),
+            }
+        }
+        Judge::GambatteScreenshot(reference) => {
+            while gb.frame_count() < 15 {
+                gb.run_frame();
+            }
+            match image::diff_against(&gb, reference) {
+                Ok(0) => Verdict::Pass,
+                Ok(n) => Verdict::Fail(format!("{n} pixels differ from reference")),
+                Err(e) => Verdict::Error(e),
+            }
+        }
         Judge::Screenshot(reference) => {
             if !run_to_ld_b_b(&mut gb, 10) {
                 Verdict::Fail("timed out before LD B,B".into())
@@ -281,7 +364,7 @@ fn run_case(case: &Case) -> Outcome {
             }
         }
     };
-    Outcome { case: case.clone(), verdict, frames: gb.frame_count(), millis: start.elapsed().as_millis() }
+    Outcome { case: case.clone(), verdict, frames: gb.frame_count() }
 }
 
 /// Runs all cases on `threads` worker threads, preserving input order.
@@ -304,10 +387,11 @@ pub fn run_all(cases: &[Case], threads: usize) -> Vec<Outcome> {
 }
 
 /// Suites in scoreboard order, with a one-line description.
-const SUITES: [(&str, &str); 4] = [
+const SUITES: [(&str, &str); 5] = [
     ("blargg", "CPU, timing, sound and OAM-bug tests by Shay Green"),
     ("mooneye", "Mooneye Test Suite: acceptance + emulator-only (DMG-applicable)"),
     ("dmg-acid2", "PPU rendering torture test"),
+    ("gambatte", "Gambatte hardware-verified tests: DMG hex-result and screenshot cases"),
     ("mealybug", "Mealybug Tearoom: mid-scanline PPU effects (needs a pixel FIFO)"),
 ];
 
@@ -386,7 +470,6 @@ pub fn scoreboard_json(outcomes: &[Outcome]) -> serde_json::Value {
                 "status": status,
                 "detail": detail,
                 "frames": o.frames,
-                "millis": o.millis,
             })
         })
         .collect();

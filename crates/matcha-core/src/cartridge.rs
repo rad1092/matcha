@@ -16,6 +16,18 @@ pub enum MapperKind {
     Mbc5,
 }
 
+impl MapperKind {
+    /// 16 KiB banks the mapper can select (its bank register width).
+    fn max_rom_banks(self) -> usize {
+        match self {
+            Self::RomOnly => 2,
+            Self::Mbc1 | Self::Mbc3 => 128,
+            Self::Mbc2 => 16,
+            Self::Mbc5 => 512,
+        }
+    }
+}
+
 /// Everything the header at 0x0100–0x014F says about the cartridge.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Header {
@@ -275,6 +287,9 @@ impl Cartridge {
         let header = parse_header(&rom)?;
         let (kind, has_battery, has_rtc) = mapper_for(header.cart_type)?;
         let mut rom = rom;
+        // Bytes past the mapper's highest bank can never be read; dropping
+        // them bounds memory for oversized files (8 MiB at most, for MBC5).
+        rom.truncate(kind.max_rom_banks() * 0x4000);
         // Pad to a power-of-two number of 16 KiB banks so bank masking is exact.
         let banks = rom.len().div_ceil(0x4000).max(2).next_power_of_two();
         rom.resize(banks * 0x4000, 0xFF);
@@ -561,6 +576,11 @@ impl Cartridge {
             r.u8s(&mut rtc.latched)?;
             rtc.subsecond = r.u32()?;
             rtc.latch_armed = r.bool()?;
+            // The registers can only hold what `Rtc::write` lets through.
+            let [s, m, h, _, flags] = rtc.regs;
+            if s > 0x3F || m > 0x3F || h > 0x1F || flags & !0xC1 != 0 || rtc.subsecond >= RTC_HZ {
+                return Err(StateError::Corrupt("rtc"));
+            }
         }
         Ok(())
     }

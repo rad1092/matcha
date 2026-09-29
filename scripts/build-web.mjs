@@ -27,7 +27,7 @@ const shelf = JSON.parse(text("web/roms/shelf.json")).map((cart) => ({
 }));
 
 // Scoreboard numbers come from the last `matcha test --json` run.
-const score = { blargg: ["?", "?"], mooneye: ["?", "?"], "dmg-acid2": ["?", "?"], mealybug: ["?", "?"] };
+const score = { blargg: ["?", "?"], mooneye: ["?", "?"], "dmg-acid2": ["?", "?"], gambatte: ["?", "?"], mealybug: ["?", "?"] };
 const scorePath = join(root, "docs/conformance.json");
 if (existsSync(scorePath)) {
   const { results } = JSON.parse(readFileSync(scorePath, "utf8"));
@@ -59,6 +59,8 @@ let html = text("web/src/index.html")
   .replace("@MOONEYE_TOTAL@", String(score.mooneye[1]))
   .replace("@ACID_PASS@", String(score["dmg-acid2"][0]))
   .replace("@ACID_TOTAL@", String(score["dmg-acid2"][1]))
+  .replace("@GAMBATTE_PASS@", score.gambatte[0].toLocaleString("en-US"))
+  .replace("@GAMBATTE_TOTAL@", score.gambatte[1].toLocaleString("en-US"))
   .replace("@MEALY_PASS@", String(score.mealybug[0]))
   .replace("@MEALY_TOTAL@", String(score.mealybug[1]));
 const marker = "/*@BUNDLE@*/";

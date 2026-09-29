@@ -948,8 +948,14 @@ impl Ppu {
             return Err(StateError::Corrupt("ppu dot"));
         }
         self.off_dots = r.u32()?;
+        if self.off_dots >= DOTS_PER_FRAME {
+            return Err(StateError::Corrupt("ppu off-dot counter"));
+        }
         r.u8s(&mut self.framebuffer)?;
         self.frame_count = r.u64()?;
+        if self.frame_count >= 1 << 62 {
+            return Err(StateError::Corrupt("frame counter"));
+        }
         self.frame_ready = false;
         self.next_event = self.compute_next_event();
         Ok(())

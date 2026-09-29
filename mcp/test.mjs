@@ -66,6 +66,12 @@ for (const t of tools) assert.equal(t.inputSchema.type, "object", `${t.name} sch
 const missing = await call("state");
 assert.equal(missing.isError, true, "state before load_rom is an error result, not a crash");
 
+const notRom = await call("load_rom", { path: fileURLToPath(import.meta.url) });
+assert.equal(notRom.isError, true);
+assert.match(textOf(notRom), /not a ROM matcha can run/);
+const noFile = await call("load_rom", { path: join(here, "no-such.gb") });
+assert.match(textOf(noFile), /cannot read .*ENOENT/);
+
 const loaded = await call("load_rom", { path: rom, frames: 30 });
 assert.ok(!loaded.isError, textOf(loaded));
 checkPng(loaded.content.find((c) => c.type === "image").data, 320, 288);

@@ -5,7 +5,7 @@ mod image;
 mod profile;
 
 use matcha_core::cpu::StepKind;
-use matcha_core::{Buttons, GameBoy, RunEvent, palettes};
+use matcha_core::{Buttons, GameBoy, palettes};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -14,8 +14,9 @@ matcha — a Game Boy (DMG) emulator you can see inside
 
 USAGE:
   matcha info <rom>
-  matcha run <rom> [--seconds N | --frames N] [--hold BUTTONS] [--screenshot out.png]
-                   [--scale N] [--palette grey|matcha|dmg] [--serial] [--sav file.sav]
+  matcha run <rom> [--seconds N | --frames N] [--hold BUTTONS | --input none|monkey] [--audio]
+                   [--screenshot out.png] [--scale N] [--palette grey|matcha|dmg] [--serial]
+                   [--sav file.sav]
   matcha test <test-roms-dir> [--suite NAME] [--filter TEXT] [--threads N]
                    [--markdown out.md] [--json out.json] [--baseline old.json]
   matcha profile <rom>... [--seconds N] [--input none|monkey] [--json out.json]
@@ -89,12 +90,19 @@ fn palette(name: Option<&str>) -> Result<&'static [u32; 4], String> {
     }
 }
 
-/// Loads a ROM for headless use (no audio output).
-fn load(path: &str) -> Result<GameBoy, String> {
-    let rom = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
+fn read_rom(path: &str) -> Result<Vec<u8>, String> {
+    std::fs::read(path).map_err(|e| format!("{path}: {e}"))
+}
+
+/// Creates a machine for headless use (no audio output).
+fn boot(rom: Vec<u8>, path: &str) -> Result<GameBoy, String> {
     let mut gb = GameBoy::new(rom).map_err(|e| format!("{path}: {e}"))?;
     gb.set_audio_output(false);
     Ok(gb)
+}
+
+fn load(path: &str) -> Result<GameBoy, String> {
+    boot(read_rom(path)?, path)
 }
 
 fn cmd_info(args: &Args) -> Result<(), String> {
@@ -124,7 +132,14 @@ fn cmd_info(args: &Args) -> Result<(), String> {
 
 fn cmd_run(args: &Args) -> Result<(), String> {
     let path = args.positional.first().ok_or("run: missing <rom>")?;
-    let mut gb = load(path)?;
+    let rom = read_rom(path)?;
+    let mut input = match args.get("input") {
+        Some(mode) => {
+            Some(profile::InputDriver::new(profile::InputMode::parse(Some(mode), profile::InputMode::None)?, &rom))
+        }
+        None => None,
+    };
+    let mut gb = boot(rom, path)?;
     if let Some(sav) = args.get("sav") {
         if let Ok(data) = std::fs::read(sav) {
             gb.load_battery_ram(&data);
@@ -135,18 +150,27 @@ fn cmd_run(args: &Args) -> Result<(), String> {
         None => (args.number("seconds", 5.0f64)? * matcha_core::FRAME_RATE).round() as u64,
     };
     if let Some(list) = args.get("hold") {
+        if input.is_some() {
+            return Err("use either --hold or --input".into());
+        }
         gb.set_buttons(parse_buttons(list)?);
+    }
+    if args.has("audio") {
+        gb.set_sample_rate(48_000);
+        gb.set_audio_output(true);
     }
     let started = std::time::Instant::now();
     while gb.frame_count() < frames {
-        if let RunEvent::Breakpoint { pc } = gb.run_frame() {
-            return Err(format!("unexpected breakpoint at {pc:#06x}"));
+        if let Some(input) = &mut input {
+            input.drive(&mut gb);
         }
+        gb.run_frame();
+        gb.clear_audio(); // a host would play these
     }
     let elapsed = started.elapsed().as_secs_f64();
     let emulated = frames as f64 / matcha_core::FRAME_RATE;
     eprintln!(
-        "ran {frames} frames ({emulated:.1}s emulated) in {elapsed:.2}s — {:.0}x realtime",
+        "ran {frames} frames ({emulated:.1}s emulated) in {elapsed:.3}s — {:.1}x realtime",
         emulated / elapsed.max(1e-9)
     );
     if args.has("serial") {
@@ -368,7 +392,7 @@ fn main() -> ExitCode {
         eprint!("{USAGE}");
         return ExitCode::from(2);
     };
-    let args = Args::parse(raw, &["serial"]);
+    let args = Args::parse(raw, &["serial", "audio"]);
     let result = match cmd.as_str() {
         "info" => cmd_info(&args).map(|()| true),
         "run" => cmd_run(&args).map(|()| true),

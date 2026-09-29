@@ -35,6 +35,18 @@ struct Dma {
     /// M-cycles until a requested transfer starts (0 = none pending).
     start_delay: u8,
     pending_source: u8,
+    /// A CPU write that collided with the transfer this M-cycle; it takes
+    /// effect after the DMA's own access (see `dma_conflict`). Never outlives
+    /// the M-cycle, so it is not part of save states.
+    collided: Option<Collision>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Collision {
+    /// Lands on the address the DMA is reading (ROM or VRAM source).
+    Redirect(u16, u8),
+    /// Lost; ANDs into the byte the DMA writes to OAM (RAM source).
+    MaskOam(u8),
 }
 
 /// A memory watchpoint hit, reported after the step that caused it.
@@ -180,14 +192,21 @@ impl SystemBus {
 
     #[inline]
     fn tick_dma(&mut self) {
+        let collided = self.dma.collided.take();
         if self.dma.active {
             let src = u16::from(self.dma.source) << 8 | u16::from(self.dma.index);
-            let v = self.dma_source_read(src);
+            let mut v = self.dma_source_read(src);
+            if let Some(Collision::MaskOam(mask)) = collided {
+                v &= mask;
+            }
             self.ppu.oam[usize::from(self.dma.index)] = v;
             self.dma.index += 1;
             if self.dma.index == 160 {
                 self.dma.active = false;
             }
+        }
+        if let Some(Collision::Redirect(addr, value)) = collided {
+            self.write_mem(addr, value);
         }
         if self.dma.start_delay > 0 {
             self.dma.start_delay -= 1;
@@ -197,6 +216,27 @@ impl SystemBus {
                 self.dma.source = self.dma.pending_source;
             }
         }
+    }
+
+    /// OAM DMA drives the bus it reads from — the main bus (ROM, cartridge
+    /// RAM, WRAM) or the VRAM bus — so a CPU access to that bus collides with
+    /// it: the CPU sees the byte the DMA just read, and a write goes astray.
+    /// This is why games run their DMA routine from HRAM. Returns the address
+    /// the DMA reads in this M-cycle if `addr` collides with it (DMG rules as
+    /// in SameBoy, timed by Gambatte's hardware-verified oamdma tests).
+    fn dma_conflict(&self, addr: u16) -> Option<u16> {
+        if addr >= 0xFE00 || !self.dma.active {
+            return None;
+        }
+        let base = u16::from(self.dma.source) << 8;
+        let current = base | u16::from(self.dma.index);
+        // The address the DMA reads next is served normally.
+        let next = current.wrapping_add(1);
+        if addr == next || (next >= 0xE000 && next & !0x2000 == addr) {
+            return None;
+        }
+        let vram_bus = |a: u16| (0x8000..0xA000).contains(&a);
+        (vram_bus(addr) == vram_bus(base)).then_some(current)
     }
 
     /// What the DMA unit sees at `addr` (it bypasses PPU access locks).
@@ -420,13 +460,25 @@ impl SystemBus {
         [self.ie, self.if_, self.if_deferred] = [b[0], b[1] & 0x1F, b[2] & 0x1F];
         let mut d = [0u8; 6];
         r.u8s(&mut d)?;
-        if d[2] > 160 || d[4] > 2 {
+        if d[2] > 160 || d[4] > 2 || (d[3] != 0 && d[2] == 160) {
             return Err(StateError::Corrupt("dma"));
         }
-        self.dma =
-            Dma { reg: d[0], source: d[1], index: d[2], active: d[3] != 0, start_delay: d[4], pending_source: d[5] };
+        self.dma = Dma {
+            reg: d[0],
+            source: d[1],
+            index: d[2],
+            active: d[3] != 0,
+            start_delay: d[4],
+            pending_source: d[5],
+            collided: None,
+        };
         self.boot_rom_mapped = r.bool()? && self.boot_rom.is_some();
         self.cycles = r.u64()?;
+        if self.cycles >= 1 << 62 {
+            // 139,000 years of emulation: only a crafted state gets here, and
+            // counters that close to wrapping would overflow later.
+            return Err(StateError::Corrupt("cycle counter"));
+        }
         Ok(())
     }
 }
@@ -434,7 +486,10 @@ impl SystemBus {
 impl CpuBus for SystemBus {
     #[inline]
     fn read(&mut self, addr: u16) -> u8 {
-        let v = self.read_mem(addr);
+        let v = match self.dma_conflict(addr) {
+            Some(dma_addr) => self.dma_source_read(dma_addr),
+            None => self.read_mem(addr),
+        };
         if self.profile.is_some() || self.read_watch.is_some() {
             self.note_read(addr, v);
         }
@@ -447,7 +502,15 @@ impl CpuBus for SystemBus {
         if self.profile.is_some() || self.write_watch.is_some() {
             self.note_write(addr, value);
         }
-        self.write_mem(addr, value);
+        match self.dma_conflict(addr) {
+            // The write lands on the DMA's address instead (on ROM that is a
+            // mapper register) ...
+            Some(dma_addr) if dma_addr < 0xA000 => self.dma.collided = Some(Collision::Redirect(dma_addr, value)),
+            // ... or, from cartridge RAM/WRAM, is lost and ANDs into the OAM
+            // byte the DMA writes.
+            Some(_) => self.dma.collided = Some(Collision::MaskOam(value)),
+            None => self.write_mem(addr, value),
+        }
         self.tick();
     }
 

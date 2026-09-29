@@ -799,6 +799,12 @@ impl Apu {
         self.acc_n = r.u32()?;
         self.hpf_l = r.f32()?;
         self.hpf_r = r.f32()?;
+        // One output sample never averages more than a second of M-cycles,
+        // and the filter state is always finite.
+        let floats = [self.acc_l, self.acc_r, self.hpf_l, self.hpf_r];
+        if self.acc_n > MCYCLE_HZ || floats.iter().any(|x| !x.is_finite()) {
+            return Err(StateError::Corrupt("apu mixer"));
+        }
         self.mix_dirty = true;
         Ok(())
     }
@@ -912,6 +918,9 @@ fn load_pulse(ch: &mut Pulse, r: &mut StateReader) -> Result<(), StateError> {
     ch.sweep_timer = s[3];
     ch.sweep_enabled = r.bool()?;
     ch.sweep_shadow = r.u16()?;
+    if ch.sweep_shadow > 0x7FF {
+        return Err(StateError::Corrupt("sweep frequency"));
+    }
     ch.sweep_negated_once = r.bool()?;
     Ok(())
 }

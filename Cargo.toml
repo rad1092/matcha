@@ -25,7 +25,8 @@ codegen-units = 1
 panic = "abort"
 debug = false
 
-# Tests run tens of millions of emulated cycles; keep them fast.
+# Tests run tens of millions of emulated cycles: optimise them, but keep the
+# dev profile's overflow checks (run `cargo test` without --release).
 [profile.test]
 opt-level = 3
 

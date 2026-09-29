@@ -9,7 +9,7 @@
 //   node server.mjs            # stdio MCP server
 //   node server.mjs --self-test <rom>   # smoke-test the tools without a client
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, statSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createInterface } from "node:readline";
@@ -19,6 +19,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 // Packaged plugin: matcha.js/.wasm sit next to this file. Repo checkout: ../web.
 const CORE_DIR = existsSync(join(HERE, "matcha.wasm")) ? HERE : join(HERE, "..", "web");
 const SAMPLE_DIR = existsSync(join(HERE, "roms")) ? join(HERE, "roms") : join(HERE, "..", "web", "roms");
+/** The largest cartridge any supported mapper can address (MBC5). */
+const MAX_ROM_BYTES = 8 * 1024 * 1024;
 /** Open-source homebrew bundled with the plugin (see roms/LICENSES.md). */
 const SAMPLES = {
   "tobu": { file: "tobu.gb", about: "Tobu Tobu Girl — arcade platformer (Tangram Games, MIT / CC BY 4.0)" },
@@ -211,11 +213,18 @@ const TOOLS = [
       const full = sample ? join(SAMPLE_DIR, SAMPLES[sample].file) : resolve(process.cwd(), path);
       let bytes;
       try {
+        if (statSync(full).size > MAX_ROM_BYTES) throw new ToolError(`${full} is larger than any Game Boy cartridge (8 MiB)`);
         bytes = readFileSync(full);
       } catch (e) {
+        if (e instanceof ToolError) throw e;
         throw new ToolError(`cannot read ${full}: ${e.code ?? e.message}`);
       }
-      const gb = matcha.create(bytes);
+      let gb;
+      try {
+        gb = matcha.create(bytes);
+      } catch (e) {
+        throw new ToolError(`${full} is not a ROM matcha can run: ${e.message}`);
+      }
       gb.setAudioOutput(false); // nobody listens to an MCP server
       session.gb?.destroy();
       Object.assign(session, { gb, romPath: full, header: gb.header(), slots: new Map(), breaks: new Map(), search: null });

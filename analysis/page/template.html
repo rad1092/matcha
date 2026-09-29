@@ -1,0 +1,184 @@
+<title>Game Boy Homebrew Census</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:wght@700;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Martian+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f7f8f2;
+  --ink: #182018;
+  --ink-2: #4b5446;
+  --muted: #646c5e;
+  --rule: #dfe3d6;
+  --grid: #e3e6db;
+  --baseline: #b9bfb0;
+  --accent: #4f7a3a;
+  --accent-wash: #e7eed8;
+  --lcd: #e8f2c8;
+  --lcd-ink: #1f3326;
+  --tip-bg: #182018;
+  --tip-ink: #f3f5ee;
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --dots: "Doto", "Martian Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121611;
+    --ink: #eef2e8;
+    --ink-2: #c3c9ba;
+    --muted: #8b9383;
+    --rule: #262d24;
+    --grid: #222820;
+    --baseline: #3a4237;
+    --accent: #a9c47f;
+    --accent-wash: #1d2619;
+    --lcd: #1f3326;
+    --lcd-ink: #d6e8b0;
+    --tip-bg: #eef2e8;
+    --tip-ink: #121611;
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121611;
+  --ink: #eef2e8;
+  --ink-2: #c3c9ba;
+  --muted: #8b9383;
+  --rule: #262d24;
+  --grid: #222820;
+  --baseline: #3a4237;
+  --accent: #a9c47f;
+  --accent-wash: #1d2619;
+  --lcd: #1f3326;
+  --lcd-ink: #d6e8b0;
+  --tip-bg: #eef2e8;
+  --tip-ink: #121611;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 17px/1.6 var(--sans);
+  padding-inline: 20px;
+  padding-block: 40px 72px;
+  -webkit-font-smoothing: antialiased;
+}
+main { max-width: 980px; margin: 0 auto; display: grid; gap: 64px; }
+.prose { max-width: 66ch; }
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2.1rem, 5.2vw, 3.4rem); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.45rem, 3vw, 1.9rem); font-weight: 650; letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: 0; }
+.stack { display: grid; gap: 18px; }
+a { color: var(--accent); text-underline-offset: 3px; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: var(--accent-wash); padding: 0.1em 0.35em; border-radius: 4px; }
+
+header.masthead { display: grid; gap: 22px; }
+.brand { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.wordmark { font-family: var(--dots); font-weight: 900; font-size: 2rem; color: var(--accent); letter-spacing: 0.02em; line-height: 1; }
+.kicker { font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.dek { font-size: 1.2rem; color: var(--ink-2); max-width: 60ch; }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-block: 1px solid var(--rule); }
+.kpi { padding: 18px 16px 18px 0; display: grid; gap: 4px; align-content: start; }
+.kpi + .kpi { padding-left: 16px; border-left: 1px solid var(--rule); }
+.kpi b { font-size: 2.1rem; font-weight: 650; line-height: 1.05; letter-spacing: -0.02em; }
+.kpi span { font-size: 0.9rem; color: var(--ink-2); line-height: 1.35; }
+@media (max-width: 720px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi:nth-child(3) { padding-left: 0; border-left: 0; }
+  .kpi:nth-child(n+3) { border-top: 1px solid var(--rule); }
+}
+
+section { display: grid; gap: 22px; }
+.num { font-family: var(--mono); font-size: 0.74rem; color: var(--accent); letter-spacing: 0.08em; }
+
+figure { margin: 0; display: grid; gap: 10px; }
+figcaption { display: grid; gap: 4px; }
+figcaption h3 { font-size: 1rem; }
+figcaption p { font-size: 0.9rem; color: var(--ink-2); }
+.chart { width: 100%; min-height: 60px; }
+.chart svg { display: block; overflow: visible; font-family: var(--sans); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.86rem; color: var(--ink-2); }
+.legend-item { display: inline-flex; align-items: center; gap: 7px; }
+.legend-item i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.legend-item i.dot { border-radius: 50%; width: 10px; height: 10px; }
+.multiples { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 760px) { .multiples { grid-template-columns: 1fr; } }
+.panel-title { font-size: 0.9rem; font-weight: 600; }
+.panel-sub { font-size: 0.82rem; color: var(--muted); }
+
+svg .grid { stroke: var(--grid); stroke-width: 1; }
+svg .baseline { stroke: var(--baseline); stroke-width: 1; }
+svg .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg .axis-label { fill: var(--muted); font-size: 11px; }
+svg .cat { fill: var(--ink-2); font-size: 13px; }
+svg .value { fill: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+svg .note { fill: var(--ink-2); font-size: 12px; }
+svg .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+svg .ring { stroke: var(--bg); stroke-width: 2; }
+svg .cross { stroke: var(--baseline); stroke-width: 1; }
+svg .hit { outline: none; cursor: default; }
+svg .hit:focus-visible { stroke: var(--ink); stroke-width: 1; }
+
+.tip { position: fixed; z-index: 10; pointer-events: none; background: var(--tip-bg); color: var(--tip-ink);
+  border-radius: 8px; padding: 8px 10px; font-size: 0.8rem; display: grid; gap: 3px; max-width: 260px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18); }
+.tip-title { font-weight: 600; opacity: 0.8; margin-bottom: 2px; }
+.tip-row { display: flex; align-items: center; gap: 7px; }
+.tip-row i { width: 10px; height: 2px; border-radius: 1px; display: inline-block; }
+.tip-row b { font-variant-numeric: tabular-nums; }
+.tip-row span { opacity: 0.75; }
+
+details.data { font-size: 0.86rem; color: var(--ink-2); }
+details.data summary { cursor: pointer; color: var(--muted); width: fit-content; }
+.table-wrap { overflow-x: auto; margin-top: 8px; }
+table { border-collapse: collapse; font-size: 0.86rem; min-width: 100%; }
+th, td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th { font-weight: 600; color: var(--ink-2); font-size: 0.8rem; }
+td { font-variant-numeric: tabular-nums; }
+table.compare td:nth-child(n+2), table.compare th:nth-child(n+2) { text-align: right; padding-left: 16px; }
+
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; display: grid; gap: 8px; max-width: 66ch; }
+.findings { display: grid; gap: 14px; counter-reset: f; padding: 0; margin: 0; list-style: none; max-width: 70ch; }
+.findings li { counter-increment: f; display: grid; grid-template-columns: 2.2em 1fr; gap: 4px; }
+.findings li::before { content: counter(f, decimal-leading-zero); font-family: var(--mono); font-size: 0.8rem; color: var(--accent); padding-top: 0.25em; }
+.lcd-strip { display: inline-block; font-family: var(--mono); font-size: 0.78rem; background: var(--lcd); color: var(--lcd-ink); border-radius: 4px; padding: 0.15em 0.5em; }
+footer { border-top: 1px solid var(--rule); padding-top: 22px; font-size: 0.86rem; color: var(--muted); display: grid; gap: 8px; max-width: 70ch; }
+</style>
+
+<main>
+  <header class="masthead">
+    <div class="brand"><span class="wordmark">matcha</span><span class="kicker">Corpus study · {{date}}</span></div>
+    <h1>Game Boy Homebrew Census</h1>
+    <p class="dek">{{dek}}</p>
+    <div class="kpis" aria-label="Headline figures">{{kpis}}</div>
+  </header>
+
+  {{sections}}
+
+  <footer>
+    <p>{{footer}}</p>
+  </footer>
+</main>
+
+<script type="application/json" id="data">{{data}}</script>
+<script>
+{{charts_js}}
+{{page_js}}
+</script>

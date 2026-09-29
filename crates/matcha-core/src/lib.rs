@@ -696,6 +696,63 @@ mod tests {
     }
 
     #[test]
+    fn corrupted_states_never_panic() {
+        // MBC3 with RTC and RAM, so every component's loader is exercised.
+        let mut rom = test_rom(b"FUZZ");
+        rom[0x147] = 0x10;
+        rom[0x149] = 0x02;
+        let mut gb = GameBoy::new(rom).unwrap();
+        run(&mut gb, 5);
+        let earlier = gb.save_state();
+        run(&mut gb, 3);
+        let good = gb.save_state();
+        // Bytes that changed between the two states are live counters and
+        // registers; corrupting around them reaches every component's fields
+        // instead of mostly hitting RAM.
+        let live: Vec<usize> = (12..good.len()).filter(|&i| earlier[i] != good[i]).collect();
+        let mut seed = 0x2545_F491_4F6C_DD1Du64;
+        let mut next = move || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed
+        };
+        let mut accepted = 0;
+        for _ in 0..4000 {
+            let mut bad = good.clone();
+            for _ in 0..1 + next() % 4 {
+                let near = live[(next() as usize) % live.len()] + (next() as usize) % 48;
+                let i = (near.saturating_sub(24)).clamp(12, bad.len() - 4);
+                if next() % 2 == 0 {
+                    bad[i] = next() as u8;
+                } else {
+                    bad[i..i + 4].fill(0xFF); // extremes find overflow bugs
+                }
+            }
+            if gb.load_state(&bad).is_ok() {
+                accepted += 1;
+                gb.run_frame(); // must not panic, whatever the values
+                gb.run_frame();
+                gb.rtc_advance_seconds(90_000);
+                gb.load_state(&good).unwrap();
+            }
+        }
+        assert!(accepted > 1000, "most corruptions still describe a valid machine ({accepted})");
+    }
+
+    #[test]
+    fn oversized_roms_are_bounded_by_what_the_mapper_can_reach() {
+        let mut rom = test_rom(b"HUGE");
+        rom[0x147] = 0x19; // MBC5: 512 banks at most
+        rom.resize(20 << 20, 0x76);
+        let gb = GameBoy::new(rom).unwrap();
+        assert_eq!(gb.cartridge().rom().len(), 8 << 20);
+        let mut rom_only = test_rom(b"SMALL");
+        rom_only.resize(3 << 20, 0);
+        assert_eq!(GameBoy::new(rom_only).unwrap().cartridge().rom().len(), 0x8000);
+    }
+
+    #[test]
     fn breakpoints_stop_before_execution_and_resume() {
         let mut gb = GameBoy::new(test_rom(b"MATCHATEST")).unwrap();
         gb.add_breakpoint(0x0170);

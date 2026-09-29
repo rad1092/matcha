@@ -410,6 +410,7 @@ def style(plt):
         "axes.facecolor": SURFACE, "savefig.facecolor": SURFACE, "axes.grid": True, "grid.color": GRID,
         "grid.linewidth": 0.8, "axes.spines.top": False, "axes.spines.right": False, "svg.fonttype": "none",
         "legend.frameon": False, "legend.labelcolor": INK2,
+        "svg.hashsalt": "matcha-analysis",  # stable element ids: reruns give identical files
     })
 
 
@@ -436,7 +437,7 @@ def charts(summary):
     ax.grid(axis="x", visible=False)
     ax.legend(loc="upper center", ncol=3)
     fig.tight_layout()
-    fig.savefig(IMG / "corpus-years.svg")
+    fig.savefig(IMG / "corpus-years.svg", metadata={"Date": None})
     plt.close(fig)
 
     # 2. CPU utilisation histograms, one panel per toolchain. Shares, not counts: the toolchains
@@ -456,7 +457,7 @@ def charts(summary):
     axes[0].set_ylabel("share of programs (%)")
     fig.suptitle("How hard homebrew works the CPU", x=0.01, ha="left", fontweight="bold", color=INK)
     fig.tight_layout()
-    fig.savefig(IMG / "cpu-utilization.svg")
+    fig.savefig(IMG / "cpu-utilization.svg", metadata={"Date": None})
     plt.close(fig)
 
     # 3. Opcode Pareto curve.
@@ -479,7 +480,7 @@ def charts(summary):
     ax.set_ylabel("share of executed instructions (%)")
     ax.set_title("A few dozen opcodes do almost all the work", pad=10)
     fig.tight_layout()
-    fig.savefig(IMG / "opcode-pareto.svg")
+    fig.savefig(IMG / "opcode-pareto.svg", metadata={"Date": None})
     plt.close(fig)
 
     # 4. Interrupt usage.
@@ -496,7 +497,7 @@ def charts(summary):
     ax.grid(axis="y", visible=False)
     ax.set_title("Which interrupts homebrew relies on", pad=10)
     fig.tight_layout()
-    fig.savefig(IMG / "interrupts.svg")
+    fig.savefig(IMG / "interrupts.svg", metadata={"Date": None})
     plt.close(fig)
 
     # 5. Speed vs utilisation.
@@ -513,7 +514,7 @@ def charts(summary):
         ax.legend(loc="upper right")
         ax.set_title("Idle games emulate fastest: HALT is skipped in bulk", pad=10)
         fig.tight_layout()
-        fig.savefig(IMG / "speed.svg")
+        fig.savefig(IMG / "speed.svg", metadata={"Date": None})
         plt.close(fig)
 
 

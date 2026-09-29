@@ -968,227 +968,227 @@
       "suite": "dmg-acid2"
     },
     {
-      "detail": "18312 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx08_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "16248 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx08_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "16008 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx08_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "13944 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx08_4.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "18432 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx09_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "16256 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx09_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "16128 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx09_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "13952 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx09_4.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "18432 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0A_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "16256 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0A_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "16128 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0A_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "13952 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0A_4.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "18424 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0B_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "16136 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0B_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "16120 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0B_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "13832 pixels differ from reference",
+      "detail": "1152 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtiledata/bgtiledata_spx0B_4.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "17400 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx08_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "17160 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx08_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "15096 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx08_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "14856 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx08_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "17400 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx09_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "17160 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx09_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "15096 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx09_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "14856 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx09_4.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "17400 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx0A_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "17160 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx0A_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "15096 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx0A_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "14856 pixels differ from reference",
+      "detail": "128 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx0A_4.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "17288 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx0B_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "17272 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx0B_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "14984 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx0B_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "14968 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/bgtilemap/bgtilemap_spx0B_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -1234,119 +1234,119 @@
       "suite": "gambatte"
     },
     {
-      "detail": "23040 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/dmgpalette_during_m3_1.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "22611 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/dmgpalette_during_m3_2.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "22035 pixels differ from reference",
+      "detail": "1 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/dmgpalette_during_m3_3.gb",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "21312 pixels differ from reference",
+      "detail": "144 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/dmgpalette_during_m3_4.gb",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "20160 pixels differ from reference",
+      "detail": "144 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/dmgpalette_during_m3_5.gb",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "23040 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/dmgpalette_during_m3_scx1_1.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "21312 pixels differ from reference",
+      "detail": "144 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/dmgpalette_during_m3_scx1_4.gb",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "22897 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/dmgpalette_during_m3_scx2_1.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "22451 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/lycint_dmgpalette_during_m3_1.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "21879 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/lycint_dmgpalette_during_m3_2.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "21164 pixels differ from reference",
+      "detail": "143 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/lycint_dmgpalette_during_m3_3.gb",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "20020 pixels differ from reference",
+      "detail": "143 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/lycint_dmgpalette_during_m3_4.gb",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "22754 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/scx3/dmgpalette_during_m3_1.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "22180 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/scx3/dmgpalette_during_m3_2.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "21604 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/scx3/dmgpalette_during_m3_3.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "21026 pixels differ from reference",
+      "detail": "1 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/scx3/dmgpalette_during_m3_4.gb",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "20160 pixels differ from reference",
+      "detail": "144 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/dmgpalette_during_m3/scx3/dmgpalette_during_m3_5.gb",
       "status": "fail",
@@ -1416,10 +1416,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/enable_display/enable_display_ly0_wemaster_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -1682,10 +1682,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 84, expected 87",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/enable_display/ly0_late_scx7_m3stat_scx0_1_dmg08_cgb04c_out87.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -1703,10 +1703,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 84, expected 87",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/enable_display/ly0_late_scx7_m3stat_scx1_1_dmg08_cgb04c_out87.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -1717,10 +1717,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 84, expected 87",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/enable_display/ly0_late_scx7_m3stat_scx3_1_dmg08_cgb04c_out87.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -1829,10 +1829,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/halt/ifandie_ei_halt_m2int_m0stat_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -1878,10 +1878,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/halt/late_m0int_halt_m0stat_scx2_3a_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -1934,10 +1934,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 2",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/halt/late_m0int_halt_m0stat_scx3_2b_dmg08_cgb04c_out2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -1997,10 +1997,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 6, expected 7",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/halt/late_m0irq_halt_dec_scx3_1_dmg08_cgb04c_out7.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -2039,10 +2039,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/halt/late_m0irq_halt_m0stat_scx2_3a_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -2053,10 +2053,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/halt/late_m0irq_halt_m0stat_scx2_4a_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -2102,10 +2102,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/halt/late_m0irq_halt_m0stat_scx3_3a_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -2116,10 +2116,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/halt/late_m0irq_halt_m0stat_scx3_4a_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -2326,10 +2326,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/halt/noime_ifandie_m2int_m0stat_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -2424,10 +2424,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed E0, expected E2",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/irq_precedence/late_m0irq_retrigger_scx1_1_dmg08_cgb04c_outE2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -2438,10 +2438,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 4",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/irq_precedence/late_m0irq_vs_tima_scx2_1_dmg08_cgb04c_out4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -2466,10 +2466,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 4",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/irq_precedence/late_m0irq_vs_tima_scx3_1_dmg08_cgb04c_out4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -2830,10 +2830,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed E2, expected E0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/ly0/lycint152_lyc0irq_late_retrigger_2_dmg08_cgb04c_outE0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -2956,10 +2956,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/lyc153int_m2irq/lyc153int_m2irq_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -3523,10 +3523,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed E2, expected E0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/lycEnable/lycwirq_trigger_ly00_stat50_2_dmg08_outE0_cgb04c_outE2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -3635,10 +3635,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/lycm2int/lycm2int_m0stat_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -3649,10 +3649,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 1",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/lycm2int/lycm2int_m2irq_1_dmg08_cgb04c_out1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -3663,10 +3663,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 1",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/lycm2int/m2irq_before_lycint_1_dmg08_cgb04c_out1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -3908,10 +3908,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 2",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m0enable/enable_wxA6_2x_spxA7_1_dmg08_cgb04c_out2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -4202,10 +4202,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m0int_m0stat/m0int_m0stat_scx2_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -4377,10 +4377,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 1",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m1/lycint143_m1irq_late_retrigger_2_dmg08_cgb04c_out1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -4447,10 +4447,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 1, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m1/lycint_vblankirq_late_retrigger_2_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -4741,10 +4741,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 2",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2enable/late_enable_1_dmg08_cgb04c_out2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -4783,10 +4783,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 2",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2enable/late_enable_after_lycint_disable_1_dmg08_cgb04c_out2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -4965,10 +4965,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0irq/m2int_m0irq_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -4979,10 +4979,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0irq/m2int_m0irq_scx2_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5007,10 +5007,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0irq/m2int_m0irq_scx2_ei_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5035,10 +5035,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0irq/m2int_m0irq_scx2_reti_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5049,10 +5049,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0irq/m2int_m0irq_scx3_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5063,10 +5063,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 8, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0irq/m2int_m0irq_scx3_di_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5077,10 +5077,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0irq/m2int_m0irq_scx3_ei_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5091,10 +5091,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 8, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0irq/m2int_m0irq_scx3_ie_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5133,10 +5133,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0irq/m2int_m0irq_scx3_reti_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5147,10 +5147,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 2",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0irq/m2int_m0irq_scx4_ifw_1_dmg08_cgb04c_out2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5161,10 +5161,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 8",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0irq/m2int_m0irq_scx4_ifw_3_dmg08_cgb04c_out8.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5175,10 +5175,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0irq/m2int_m0irq_scx5_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5189,10 +5189,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m0stat/m2int_m0stat_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5203,10 +5203,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m2irq/m2int_m2irq_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5217,10 +5217,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 2",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m2irq/m2int_m2irq_ifw_1_dmg08_cgb04c_out2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5231,10 +5231,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 2",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m2irq/m2int_m2irq_late_retrigger_1_dmg08_cgb04c_out2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5245,10 +5245,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 2",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m2stat/m2int_m2stat_1_dmg08_cgb04c_out2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5259,10 +5259,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m3stat/m2int_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5273,10 +5273,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m3stat/scx/late_scx4_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5287,10 +5287,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m3stat/scx/m2int_scx2_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5301,10 +5301,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m3stat/scx/m2int_scx3_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5315,10 +5315,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/m2int_m3stat/scx/m2int_scx5_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -5476,10 +5476,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed E2, expected E0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/miscmstatirq/lycstatwirq_trigger_ly00_10_50_1_dmg08_cgb04c_outE0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -6008,10 +6008,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 2",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/miscmstatirq/m1statwirq_3_dmg08_out2.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -6351,10 +6351,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/oam_access/postread_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -6365,10 +6365,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/oam_access/postread_scx2_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -6379,10 +6379,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/oam_access/postread_scx3_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -6393,10 +6393,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/oam_access/postread_scx5_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -6407,10 +6407,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 1, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/oam_access/postwrite_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -6428,10 +6428,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/oam_access/preread_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -6449,10 +6449,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 1",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/oam_access/prewrite_2_dmg08_out1_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -9207,7 +9207,7 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2B, expected 81",
+      "detail": "printed 2A, expected 81",
       "frames": 15,
       "rom": "gambatte/oamdma/oamdmasrc80_halt_m2irq_read8000_dmg08_cgb04c_out81.gbc",
       "status": "fail",
@@ -9221,10 +9221,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "14104 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx2_scx0_during_m3_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -9235,283 +9235,283 @@
       "suite": "gambatte"
     },
     {
-      "detail": "13824 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0060c0/scx_during_m3_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "14960 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0060c0/scx_during_m3_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "13824 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0060c0/scx_during_m3_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "14960 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0060c0/scx_during_m3_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "13824 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0060c0/scx_during_m3_5.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "14960 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0060c0/scx_during_m3_6.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "17568 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0063c0/scx_during_m3_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "18249 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0063c0/scx_during_m3_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "13824 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0063c0/scx_during_m3_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "14960 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0063c0/scx_during_m3_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "13824 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0063c0/scx_during_m3_5.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "14960 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0063c0/scx_during_m3_6.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "16992 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0360c0/scx_during_m3_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "17712 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0360c0/scx_during_m3_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "18459 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0360c0/scx_during_m3_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "22312 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0360c0/scx_during_m3_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "21168 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0360c0/scx_during_m3_5.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "21160 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0360c0/scx_during_m3_6.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "13824 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0363c0/scx_during_m3_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "14963 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0363c0/scx_during_m3_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "14256 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0363c0/scx_during_m3_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "15392 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0363c0/scx_during_m3_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "14256 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0363c0/scx_during_m3_5.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "15392 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0363c0/scx_during_m3_6.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "18720 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0367c0/scx_during_m3_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "19292 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0367c0/scx_during_m3_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "19261 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0367c0/scx_during_m3_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "15392 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0367c0/scx_during_m3_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "14256 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0367c0/scx_during_m3_5.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "15392 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0367c0/scx_during_m3_6.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "20448 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0761c0/scx_during_m3_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "20736 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0761c0/scx_during_m3_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "21024 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0761c0/scx_during_m3_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "21315 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0761c0/scx_during_m3_4.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "21744 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0761c0/scx_during_m3_5.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "21736 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_0761c0/scx_during_m3_6.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "15040 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_during_m3_spx0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "15040 pixels differ from reference",
+      "detail": "8 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_during_m3_spx1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "15040 pixels differ from reference",
+      "detail": "8 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_during_m3_spx2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scx_during_m3/scx_m3_extend_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -9522,168 +9522,168 @@
       "suite": "gambatte"
     },
     {
-      "detail": "22603 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scx3/scy_during_m3_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "21587 pixels differ from reference",
+      "detail": "1008 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scx3/scy_during_m3_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "20736 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scx3/scy_during_m3_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "19712 pixels differ from reference",
+      "detail": "1008 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scx3/scy_during_m3_4.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "18432 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scx3/scy_during_m3_5.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "17408 pixels differ from reference",
+      "detail": "1008 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scx3/scy_during_m3_6.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "23032 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "22016 pixels differ from reference",
+      "detail": "1008 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "20736 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "19712 pixels differ from reference",
+      "detail": "1008 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_4.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "18432 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_5.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "17408 pixels differ from reference",
+      "detail": "1008 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_6.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "18560 pixels differ from reference",
+      "detail": "896 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx08_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "17280 pixels differ from reference",
+      "detail": "112 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx08_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "16256 pixels differ from reference",
+      "detail": "896 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx08_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "18560 pixels differ from reference",
+      "detail": "912 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx09_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "17392 pixels differ from reference",
+      "detail": "240 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx09_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "16256 pixels differ from reference",
+      "detail": "912 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx09_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "18560 pixels differ from reference",
+      "detail": "912 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx0A_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "17392 pixels differ from reference",
+      "detail": "240 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx0A_2.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "16256 pixels differ from reference",
+      "detail": "912 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx0A_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "18560 pixels differ from reference",
+      "detail": "1008 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx0B_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "17280 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx0B_2.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "16256 pixels differ from reference",
+      "detail": "1008 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/scy/scy_during_m3_spx0B_3.gbc",
       "status": "fail",
@@ -10628,10 +10628,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/sprites/late_disable_1_dmg08_out0.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -10817,10 +10817,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/sprites/sprite_late_disable_spx18_1_dmg08_out0.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -10831,10 +10831,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/sprites/sprite_late_disable_spx19_1_dmg08_out0.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -10873,10 +10873,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/sprites/sprite_late_enable_spx18_1_dmg08_out3.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -10887,10 +10887,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/sprites/sprite_late_enable_spx19_1_dmg08_out3.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -10908,10 +10908,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/sprites/sprite_late_enable_spx1B_1_dmg08_out3.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -10922,10 +10922,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/sprites/sprite_late_late_disable_spx18_1_dmg08_out0.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -10936,10 +10936,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/sprites/sprite_late_late_disable_spx19_1_dmg08_out0.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -11853,10 +11853,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/vram_m3/postread_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -11867,10 +11867,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/vram_m3/postread_scx2_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -11881,10 +11881,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/vram_m3/postread_scx3_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -11895,10 +11895,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/vram_m3/postread_scx5_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -11930,10 +11930,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 1",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/vram_m3/vramw_m3start_1_dmg08_cgb04c_out1.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12049,10 +12049,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_scx_late_wy_FFto4_ly4_wx00_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12070,10 +12070,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_scx_late_wy_FFto4_ly4_wx20_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12098,24 +12098,24 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wx_late_wy_FFto2_ly2_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_10to0_ly1_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_10to0_ly1_2_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12126,10 +12126,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_10to1_ly1_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12168,17 +12168,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_1toFF_3_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12196,17 +12196,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_2toFF_3_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto0_ly0_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12224,17 +12224,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto0_ly2_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto0_ly2_2_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12245,17 +12245,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto1_ly2_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto1_ly2_2_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12266,10 +12266,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto2_ly2_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12287,17 +12287,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto2_ly2_scx2_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto2_ly2_scx2_2_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12308,17 +12308,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto2_ly2_scx3_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto2_ly2_scx3_2_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12329,10 +12329,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto2_ly2_scx5_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12350,10 +12350,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto2_ly2_wx00_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12371,10 +12371,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/arg/late_wy_FFto2_ly2_wx0f_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12399,24 +12399,24 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_1_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_early_scx03_wx0f_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12427,10 +12427,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_early_scx03_wx10_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12441,10 +12441,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_early_scx03_wx11_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12455,17 +12455,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_early_scx03_wx12_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_early_scx03_wx12_2_dmg08_out0_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12483,17 +12483,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_late_scx03_wx0f_2_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_late_scx03_wx0f_3_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12504,17 +12504,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_late_scx03_wx10_2_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_late_scx03_wx10_3_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12525,17 +12525,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_late_scx03_wx11_2_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_late_scx03_wx11_3_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12546,10 +12546,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_late_scx03_wx12_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12560,17 +12560,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_scx2_1_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_scx2_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12581,17 +12581,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_scx3_1_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_scx3_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12602,24 +12602,24 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_scx5_1_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_scx5_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_spx10_wx0f_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12637,17 +12637,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_wx0f_1_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_disable_wx0f_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12672,10 +12672,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_reenable_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12686,10 +12686,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_reenable_scx2_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12707,17 +12707,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_reenable_scx3_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_reenable_scx3_2_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12728,10 +12728,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_reenable_scx5_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12749,10 +12749,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_reenable_wx0f_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12770,17 +12770,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_scx_late_disable_1_dmg08_out3_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_scx_late_disable_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12791,17 +12791,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_wx_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_wx_ff_07_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12812,10 +12812,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_wx_ff_0f_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12833,10 +12833,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_wx_scx2_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12854,10 +12854,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_wx_scx3_3_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12868,10 +12868,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_wx_scx5_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12882,10 +12882,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_wx_wx03_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12896,10 +12896,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_wx_wx0f_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12910,17 +12910,17 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/late_wy_2_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wx00_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12931,10 +12931,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wx03_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12945,10 +12945,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wx03_scx2_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12959,10 +12959,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wx03_scx3_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12973,10 +12973,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wx03_scx5_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -12987,10 +12987,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wx07_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -13001,10 +13001,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wx07_scx2_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -13015,10 +13015,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wx07_scx3_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -13029,10 +13029,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wx07_scx5_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -13043,10 +13043,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wx17_wxA5_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -13057,10 +13057,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 2, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wxA5_m0irq_1_dmg08_cgb04c_out0.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -13071,10 +13071,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 0, expected 3",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wxA5_m3stat_1_dmg08_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -13190,10 +13190,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wxA6_scx2_m3stat_2_dmg08_out0_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -13218,10 +13218,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wxA6_scx3_m3stat_2_dmg08_out0_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -13281,10 +13281,10 @@
       "suite": "gambatte"
     },
     {
-      "detail": "printed 3, expected 0",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/m2int_wxA6_spxA7_m3stat_2_dmg08_out0_cgb04c_out3.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
@@ -13323,14 +13323,14 @@
       "suite": "gambatte"
     },
     {
-      "detail": "8380 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/on_screen/weon_wx18_weoff_weon_wx80.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "6784 pixels differ from reference",
+      "detail": "960 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/window/on_screen/wx17_weoff_wxA5_weon.gbc",
       "status": "fail",
@@ -13344,28 +13344,28 @@
       "suite": "gambatte"
     },
     {
-      "detail": "240 pixels differ from reference",
+      "detail": "",
       "frames": 15,
       "rom": "gambatte/window/on_screen/wxA5_weoff_at_xposA5.gbc",
-      "status": "fail",
+      "status": "pass",
       "suite": "gambatte"
     },
     {
-      "detail": "10780 pixels differ from reference",
+      "detail": "328 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/window/on_screen/wxA6_3.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "14624 pixels differ from reference",
+      "detail": "6548 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/window/on_screen/wxA6_late_we_reenable_1.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "14672 pixels differ from reference",
+      "detail": "6548 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/window/on_screen/wxA6_late_we_reenable_2.gbc",
       "status": "fail",
@@ -13386,28 +13386,28 @@
       "suite": "gambatte"
     },
     {
-      "detail": "10992 pixels differ from reference",
+      "detail": "282 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/window/on_screen/wxA6_scx7.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "8952 pixels differ from reference",
+      "detail": "8832 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/window/on_screen/wxA6_weoff_at_xposA6.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "21816 pixels differ from reference",
+      "detail": "272 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/window/on_screen/wxA6_wy00.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "21657 pixels differ from reference",
+      "detail": "424 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/window/on_screen/wxA6_wy01.gbc",
       "status": "fail",
@@ -13421,14 +13421,14 @@
       "suite": "gambatte"
     },
     {
-      "detail": "7303 pixels differ from reference",
+      "detail": "436 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/window/on_screen/wxA6_wy01_weoff_ly02_weon_ly60.gbc",
       "status": "fail",
       "suite": "gambatte"
     },
     {
-      "detail": "160 pixels differ from reference",
+      "detail": "162 pixels differ from reference",
       "frames": 15,
       "rom": "gambatte/window/on_screen/wxA6_wy01_wxA5_ly02.gbc",
       "status": "fail",
@@ -13456,49 +13456,49 @@
       "suite": "mealybug"
     },
     {
-      "detail": "6192 pixels differ from reference",
+      "detail": "",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_bgp_change.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "mealybug"
     },
     {
-      "detail": "4290 pixels differ from reference",
+      "detail": "",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_bgp_change_sprites.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "mealybug"
     },
     {
-      "detail": "2189 pixels differ from reference",
+      "detail": "403 pixels differ from reference",
       "frames": 12,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_bg_en_change.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "832 pixels differ from reference",
+      "detail": "384 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_bg_map_change.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "256 pixels differ from reference",
+      "detail": "60 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_obj_en_change.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "1444 pixels differ from reference",
+      "detail": "92 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_obj_en_change_variant.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "310 pixels differ from reference",
+      "detail": "170 pixels differ from reference",
       "frames": 12,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_obj_size_change.gb",
       "status": "fail",
@@ -13512,77 +13512,77 @@
       "suite": "mealybug"
     },
     {
-      "detail": "1020 pixels differ from reference",
+      "detail": "1084 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_tile_sel_change.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "1336 pixels differ from reference",
+      "detail": "1090 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_tile_sel_win_change.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "8982 pixels differ from reference",
+      "detail": "",
       "frames": 13,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_win_en_change_multiple.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "mealybug"
     },
     {
-      "detail": "6020 pixels differ from reference",
+      "detail": "358 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_win_en_change_multiple_wx.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "754 pixels differ from reference",
+      "detail": "182 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_lcdc_win_map_change.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "290 pixels differ from reference",
+      "detail": "",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_obp0_change.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "mealybug"
     },
     {
-      "detail": "6426 pixels differ from reference",
+      "detail": "65 pixels differ from reference",
       "frames": 12,
       "rom": "mealybug-tearoom-tests/ppu/m3_scx_high_5_bits.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "324 pixels differ from reference",
+      "detail": "",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_scx_low_3_bits.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "mealybug"
     },
     {
-      "detail": "9873 pixels differ from reference",
+      "detail": "5284 pixels differ from reference",
       "frames": 12,
       "rom": "mealybug-tearoom-tests/ppu/m3_scy_change.gb",
       "status": "fail",
       "suite": "mealybug"
     },
     {
-      "detail": "1215 pixels differ from reference",
+      "detail": "",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_window_timing.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "mealybug"
     },
     {
-      "detail": "954 pixels differ from reference",
+      "detail": "126 pixels differ from reference",
       "frames": 11,
       "rom": "mealybug-tearoom-tests/ppu/m3_window_timing_wx_0.gb",
       "status": "fail",
@@ -13610,10 +13610,10 @@
       "suite": "mealybug"
     },
     {
-      "detail": "13799 pixels differ from reference",
+      "detail": "",
       "frames": 6,
       "rom": "mealybug-tearoom-tests/ppu/m3_wx_6_change.gb",
-      "status": "fail",
+      "status": "pass",
       "suite": "mealybug"
     }
   ],

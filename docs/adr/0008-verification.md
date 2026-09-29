@@ -64,4 +64,4 @@ emulator is assumed right.
 3. [x] CI workflow (`.github/workflows/ci.yml`).
 4. [x] Corpus-wide comparison with SameBoy (`analysis/reference/`).
 5. [x] OAM corruption bug (Blargg `oam_bug`).
-6. [ ] Pixel FIFO (Mealybug).
+6. [x] Pixel FIFO (ADR-0009); remaining Mealybug quirks stay visible in the scoreboard.

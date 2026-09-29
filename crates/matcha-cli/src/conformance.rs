@@ -401,7 +401,7 @@ const SUITES: [(&str, &str); 5] = [
     ("mooneye", "Mooneye Test Suite: acceptance + emulator-only (DMG-applicable)"),
     ("dmg-acid2", "PPU rendering torture test"),
     ("gambatte", "Gambatte hardware-verified tests: DMG hex-result and screenshot cases"),
-    ("mealybug", "Mealybug Tearoom: mid-scanline PPU effects (needs a pixel FIFO)"),
+    ("mealybug", "Mealybug Tearoom: mid-scanline register, fetch and window effects"),
 ];
 
 pub fn scoreboard_markdown(outcomes: &[Outcome]) -> String {

@@ -25,6 +25,13 @@ pub trait CpuBus {
     }
     /// Interrupts that are both requested and enabled (`IE & IF & 0x1F`).
     fn pending_interrupts(&self) -> u8;
+
+    /// HALT samples the interrupt lines two dots before the end of its
+    /// idle M-cycle. Running instructions sample at their boundary instead.
+    /// Buses without sub-cycle devices use the same value at both points.
+    fn halted_pending_interrupts(&self) -> u8 {
+        self.pending_interrupts()
+    }
     /// Clears the given bit in `IF` (interrupt acknowledged).
     fn acknowledge_interrupt(&mut self, mask: u8);
     /// Called when `STOP` executes. Returns false if a selected button is
@@ -159,6 +166,9 @@ pub struct Cpu {
     power: PowerState,
     /// The next opcode fetch does not increment PC (HALT bug).
     halt_bug: bool,
+    /// The first HALT wait samples before, rather than halfway through,
+    /// its idle cycle (SameBoy's DMG `just_halted` latch).
+    just_halted: bool,
     locked_opcode: u8,
 }
 
@@ -200,8 +210,15 @@ impl Cpu {
                 // Idle until an interrupt is pending (or the bus asks us to
                 // yield); each iteration is exactly one M-cycle.
                 loop {
-                    bus.idle();
-                    if bus.pending_interrupts() != 0 {
+                    let pending = if core::mem::take(&mut self.just_halted) {
+                        let pending = bus.pending_interrupts();
+                        bus.idle();
+                        pending
+                    } else {
+                        bus.idle();
+                        bus.halted_pending_interrupts()
+                    };
+                    if pending != 0 {
                         // Wake-up: the interrupt (if IME) is dispatched next step.
                         self.power = PowerState::Running;
                         break;
@@ -256,6 +273,10 @@ impl Cpu {
         self.ime = false;
         bus.idle();
         bus.idle_at(self.regs.sp);
+        // The two stack accesses occur at dots 12 and 16 of the 20-dot
+        // entry sequence (SameBoy sm83_cpu.c interrupt dispatch). Keeping
+        // the spare cycle after the pushes writes four dots too early.
+        bus.idle();
         let [hi, lo] = self.regs.pc.to_be_bytes();
         self.regs.sp = self.regs.sp.wrapping_sub(1);
         bus.write(self.regs.sp, hi);
@@ -270,7 +291,6 @@ impl Cpu {
             VECTORS[bit]
         };
         self.regs.pc = vector;
-        bus.idle();
         vector
     }
 
@@ -636,6 +656,7 @@ impl Cpu {
                     self.power = PowerState::Stopped;
                 } else if !pending {
                     self.power = PowerState::Halted;
+                    self.just_halted = true;
                 }
             }
             0xF3 => {
@@ -658,10 +679,10 @@ impl Cpu {
         let pending = bus.pending_interrupts() != 0;
         if !pending {
             self.power = PowerState::Halted;
-        } else if ime_just_enabled {
-            // `EI; HALT` with an interrupt already pending: IME was still 0 when
-            // HALT executed on hardware, so the halt bug fires, the interrupt is
-            // serviced, and the handler returns to the HALT itself.
+            self.just_halted = true;
+        } else if self.ime || ime_just_enabled {
+            // An interrupt becoming pending during the HALT fetch returns
+            // to HALT itself after service. This also covers `EI; HALT`.
             self.regs.pc = self.regs.pc.wrapping_sub(1);
         } else if !self.ime {
             // HALT bug: the next opcode fetch does not increment PC.
@@ -847,6 +868,7 @@ impl Cpu {
         w.bool(self.ei_delay);
         w.u8(self.power as u8);
         w.bool(self.halt_bug);
+        w.bool(self.just_halted);
         w.u8(self.locked_opcode);
     }
 
@@ -865,6 +887,7 @@ impl Cpu {
             _ => return Err(crate::state::StateError::Corrupt("cpu power state")),
         };
         self.halt_bug = r.bool()?;
+        self.just_halted = r.bool()?;
         self.locked_opcode = r.u8()?;
         Ok(())
     }

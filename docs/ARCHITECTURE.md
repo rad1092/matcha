@@ -25,12 +25,12 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
 
 | Property | Target | Status |
 |---|---|---|
-| Accuracy | Pass the CPU, timing, sound and PPU suites real games depend on; agree with a reference emulator on real software | SST 498,000/498,000; Mooneye 94/94; dmg-acid2 1/1; Blargg 43/43; Gambatte 1,353/1,783; Mealybug 1/24 ([scoreboard](CONFORMANCE.md)); same outcome as SameBoy on 866 of 868 homebrew programs ([analysis](analysis.md)) |
-| Speed | Full speed with audio in a browser on a phone-class CPU | Median 52× real time across 150 homebrew programs, slowest 37×; 40–47× with 48 kHz audio (native, one core of the 2-vCPU build container) |
+| Accuracy | Pass the CPU, timing, sound and PPU suites real games depend on; agree with a reference emulator on real software | SST 498,000/498,000; Mooneye 94/94; dmg-acid2 1/1; Blargg 43/43; Gambatte 1,567/1,783; Mealybug 8/24 ([scoreboard](CONFORMANCE.md)); pre-FIFO corpus comparison: same outcome as SameBoy on 866 of 868 homebrew programs ([analysis](analysis.md)) |
+| Speed | Full speed with audio in a browser on a phone-class CPU | FIFO: 46–56× native across the four bundled games, 40–48× with 48 kHz audio on Apple silicon; desktop browser smoke-tested. Phone performance and the 150-ROM benchmark have not been remeasured. |
 | Determinism | Same ROM + inputs + state ⇒ identical frames and audio, bit for bit | Unit-tested (two machines, save/replay) |
 | Portability | One core for browser, Node and native; no OS services | `no_std` + `alloc`, zero dependencies |
 | Safety | Any byte sequence is a valid ROM or state input: no panics, no UB | `#![forbid(unsafe_code)]` in the core; bounds-checked state reader; atomic state load |
-| Footprint | Small enough to embed in one HTML file | `matcha.wasm` ≈ 148 KiB, no imports |
+| Footprint | Small enough to embed in one HTML file | `matcha.wasm` ≈ 164 KiB, no imports |
 | Install | Plugin works with nothing but Node | MCP server has no npm dependencies |
 
 ### Constraints
@@ -78,7 +78,7 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
 |---|---|---|
 | `cpu.rs` | SM83 interpreter over the `CpuBus` trait | One bus access per M-cycle, EI delay, HALT bug, IE-push dispatch quirk, DMG STOP, illegal-opcode lock; internal cycles that put a 16-bit register on the address bus say so (`idle_at`) |
 | `bus.rs` | Memory map, interrupts, OAM DMA, clocking of all devices | Implements `CpuBus`; the only place devices are ticked; DMA bus conflicts (the CPU sees the DMA's byte on the bus it occupies) |
-| `ppu.rs` | LCD timing, STAT/LY interrupts, access blocking, rendering | Event-scheduled line timing (ADR-0001, ADR-0002); the DMG OAM corruption bug, keyed to the OAM row being scanned |
+| `ppu.rs` | LCD timing, STAT/LY interrupts, access blocking, rendering | Event-scheduled timing with per-dot BG/OBJ FIFOs in mode 3 (ADR-0009); the DMG OAM corruption bug, keyed to the OAM row being scanned |
 | `apu.rs` | Four channels, frame sequencer, mixer, resampler | Cached mix + box filter + DMG high-pass (ADR-0005) |
 | `timer.rs` | 16-bit system counter, falling-edge TIMA, DIV-APU and serial clocks | TIMA reload state machine |
 | `cartridge.rs` | Header parsing, MBC1/1M/2/3/5, RTC, battery RAM | RTC runs on emulated time only |
@@ -108,19 +108,21 @@ tick_dma()           → one OAM DMA byte
 cart.tick_rtc(4)     → MBC3 clock on emulated time
 ```
 
-Interrupts that the PPU raises in the last two dots of an M-cycle are marked
-`late` and hidden from dispatch for one M-cycle (`if_deferred`), matching
-when real hardware samples IF.
+Running instructions sample the current interrupt lines at the instruction
+boundary. A halted CPU samples halfway through its idle M-cycle; PPU edges
+in the final two dots are hidden from that earlier sample (`if_deferred`).
+Interrupt entry still takes five M-cycles, with stack writes at dots 12/16
+and acknowledgement at dot 18. Edges after acknowledgement can reassert IF.
 
 ### Keeping it fast without losing accuracy
 
 Three mechanisms keep the per-M-cycle work small:
 
-1. **PPU event scheduling.** Within a line, the PPU knows the dot of its next
-   state change (mode switch, STAT update, LY compare, access-window edge).
-   When the next event is more than one M-cycle away, `tick` adds 4 to the
-   dot counter and returns. Rendering happens a line at a time at the mode-3
-   boundary, using the per-line register values (ADR-0002).
+1. **PPU event scheduling.** Outside mode 3, the PPU skips M-cycles without
+   a mode switch, STAT/LY comparison, delayed register write or access edge.
+   During mode 3 the tile fetcher and pixel queues advance every dot, so
+   mid-line register writes affect the correct fetched or output pixels
+   (ADR-0009). The last visible pixel determines the HBlank boundary.
 2. **HALT fast path.** A halted CPU loops on `idle()` inside `Cpu::step`
    until an interrupt is pending or the bus says to yield (end of frame,
    breakpoint budget). No instruction decode happens while halted — and
@@ -182,13 +184,33 @@ Claude ──tools/call press {buttons:["a"]}──▶ server.mjs
 | Conformance results | JSON + Markdown | `docs/` | — |
 | Corpus manifest and profiles | CSV + JSON | `analysis/data/` | — |
 
+The current snapshot format is version 2, including in-flight pixel queues
+and interrupt phase latches. Version-1 quick saves are rejected; battery
+RAM uses its separate, unchanged format.
+
 Loading a state is atomic: the current state is saved first and restored if
 any field fails validation, so a bad file can never leave a half-loaded
 machine.
 
 ## 6. Performance
 
-Measured with `matcha run --seconds 60 --input monkey` (release build,
+The FIFO build was measured on 2026-09-30 with a release build on an Apple
+silicon Mac (Rust 1.98.1), `--frames 3600 --input monkey`, one game at a time:
+
+| Bundled game | Video only (× real time) | With 48 kHz audio |
+|---|---:|---:|
+| 2048 | 50.7 | 45.8 |
+| Libbet | 55.5 | 48.0 |
+| Shock Lobster | 47.8 | 45.5 |
+| Tobu Tobu Girl | 46.0 | 40.0 |
+
+All four remain above the roadmap's 30× native target. A same-machine
+pre-FIFO run measured 115–154× without audio: the extra per-dot work has a
+real cost. Browser execution was smoke-tested on this desktop; these
+native timings do not establish performance on a phone.
+
+The following historical measurements predate the pixel FIFO. They were
+measured with `matcha run --seconds 60 --input monkey` (release build,
 native, one ROM at a time on one core of the 2-vCPU build container):
 
 | Configuration | Speed (× real time) |
@@ -202,12 +224,8 @@ Speed tracks how busy the game keeps the CPU: halted time is skipped in
 bulk, so programs that wait for VBlank with HALT emulate fastest (see
 [`analysis.md`](analysis.md), "Emulation speed").
 
-A frame is 17,556 M-cycles (16.74 ms of Game Boy time). At the slowest
-measured speed (37×, less 17–33% for sound) the core
-needs well under 1 ms per frame, leaving the browser most of its 16.7 ms
-budget for painting and the debugger panels even when WebAssembly runs a few
-times slower than native. Fast-forward runs at four times speed (at most eight
-emulated frames per display frame).
+A frame is 17,556 M-cycles (16.74 ms of Game Boy time). Fast-forward runs
+at four times speed (at most eight emulated frames per display frame).
 
 ## 7. Reliability and safety
 
@@ -238,7 +256,7 @@ emulated frames per display frame).
 | Choice | Gained | Given up | ADR |
 |---|---|---|---|
 | CPU-driven M-cycle ticking | Simple, exact interleaving of CPU accesses and device state | Every access pays a function call per device | 0001 |
-| Scanline renderer with measured line timing | Speed; all DMG timing tests pass | Mid-scanline register effects (Mealybug 1/24) | 0002 |
+| Per-dot BG/OBJ FIFO during mode 3, event scheduling elsewhere | Mid-scanline register effects and fetch-driven transfer length | More work per pixel; some hardware quirks remain | 0009 (supersedes 0002) |
 | `no_std`, zero dependencies, safe Rust | Runs anywhere; auditable | Writing small utilities (hashing, `powf`) ourselves | 0003 |
 | Hand-written C ABI | One `.wasm` for browser and Node; no toolchain coupling | Manual glue; `unsafe` at the boundary | 0004 |
 | Box-filter audio | Cheap, deterministic, sounds right for chiptune | Slight aliasing at very high pitches | 0005 |
@@ -253,8 +271,8 @@ In priority order (details in [`ROADMAP.md`](../ROADMAP.md)):
 1. **Game Boy Color.** 29% of the corpus is CGB-only (see
    [`analysis.md`](analysis.md)); double-speed mode, VRAM/WRAM banking,
    palettes and HDMA fit the existing bus/PPU split.
-2. **Pixel FIFO renderer** for mid-scanline effects (Mealybug), behind the
-   same line-timing model so existing tests keep passing.
+2. **Remaining pixel-fetch/window quirks** in Mealybug and Gambatte,
+   preserving all currently passing cases.
 3. **Band-limited audio** if audio quality becomes a priority.
 4. **SharedArrayBuffer audio ring** where a host can provide cross-origin
    isolation.

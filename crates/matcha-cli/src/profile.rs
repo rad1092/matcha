@@ -6,6 +6,19 @@ use matcha_core::{Buttons, GameBoy, RunEvent};
 use serde_json::{Value, json};
 use std::time::Instant;
 
+/// Frames between samples for `distinct_frames_sampled`.
+const SAMPLE_EVERY: u64 = 15;
+/// Identical consecutive frames that make a "static screen".
+const STATIC_RUN: u32 = 30;
+/// At most this many static screens are recorded per ROM.
+const MAX_STATIC: usize = 64;
+
+/// 64-bit FNV-1a; seeds the monkey input and fingerprints frames. The
+/// SameBoy reference runner (analysis/reference/) uses the same function.
+fn fnv1a(bytes: &[u8]) -> u64 {
+    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |h, &b| (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3))
+}
+
 /// Deterministic xorshift PRNG so "monkey" input is reproducible per ROM.
 struct XorShift(u64);
 
@@ -26,6 +39,17 @@ pub enum InputMode {
     None,
     /// Press Start periodically, then random buttons (a "monkey tester").
     Monkey,
+}
+
+impl InputMode {
+    pub fn parse(name: Option<&str>, default: Self) -> Result<Self, String> {
+        match name {
+            None => Ok(default),
+            Some("none") => Ok(Self::None),
+            Some("monkey") => Ok(Self::Monkey),
+            Some(other) => Err(format!("unknown --input '{other}' (none|monkey)")),
+        }
+    }
 }
 
 /// Button state for frame `frame` under `mode`, or `None` to keep the
@@ -65,6 +89,36 @@ fn input_for(mode: InputMode, frame: u64, rng: &mut XorShift) -> Option<Buttons>
     }
 }
 
+/// Feeds a machine the scripted input: call [`InputDriver::drive`] before
+/// running; it applies each frame's buttons once, when that frame begins.
+pub struct InputDriver {
+    mode: InputMode,
+    rng: XorShift,
+    held: Buttons,
+    frame: Option<u64>,
+}
+
+impl InputDriver {
+    /// `rom` seeds the random input, so every ROM gets its own sequence.
+    pub fn new(mode: InputMode, rom: &[u8]) -> Self {
+        Self { mode, rng: XorShift(fnv1a(rom) | 1), held: Buttons::NONE, frame: None }
+    }
+
+    pub fn drive(&mut self, gb: &mut GameBoy) {
+        let frame = gb.frame_count();
+        if self.frame == Some(frame) {
+            return;
+        }
+        self.frame = Some(frame);
+        if let Some(b) = input_for(self.mode, frame, &mut self.rng) {
+            if b != self.held {
+                self.held = b;
+                gb.set_buttons(b);
+            }
+        }
+    }
+}
+
 /// Profiles one ROM; returns a JSON record (never fails: errors are recorded).
 pub fn profile_rom(path: &str, seconds: f64, mode: InputMode) -> Value {
     let started = Instant::now();
@@ -73,7 +127,7 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode) -> Value {
         Err(e) => return json!({ "rom": path, "error": e.to_string() }),
     };
     let rom_len = rom.len();
-    let seed = rom.iter().fold(0xcbf2_9ce4_8422_2325u64, |h, &b| (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3));
+    let mut input = InputDriver::new(mode, &rom);
     let mut gb = match GameBoy::new(rom) {
         Ok(gb) => gb,
         Err(e) => {
@@ -88,32 +142,41 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode) -> Value {
     gb.set_audio_output(false);
     gb.enable_profiling();
     let frames = (seconds * matcha_core::FRAME_RATE).round() as u64;
-    let mut rng = XorShift(seed | 1);
-    let mut held = Buttons::NONE;
     let mut lcd_on_frames = 0u64;
-    let mut distinct_frames = std::collections::HashSet::new();
     let mut nonblank_frames = 0u64;
+    let mut distinct_frames = std::collections::HashSet::new();
+    // Screens that stay identical for STATIC_RUN frames (titles, menus, text):
+    // comparable across emulators regardless of small timing offsets.
+    let mut static_screens: Vec<u64> = Vec::new();
+    let (mut last_hash, mut run) = (0u64, 0u32);
     while gb.frame_count() < frames {
-        if let Some(b) = input_for(mode, gb.frame_count(), &mut rng) {
-            if b != held {
-                held = b;
-                gb.set_buttons(held);
-            }
+        let frame = gb.frame_count();
+        input.drive(&mut gb);
+        match gb.run_frame() {
+            RunEvent::FrameComplete | RunEvent::CycleBudget => {}
+            RunEvent::Breakpoint { .. } | RunEvent::Watchpoint { .. } => unreachable!("none are set"),
         }
-        if let RunEvent::Breakpoint { .. } = gb.run_frame() {
-            unreachable!("no breakpoints are set");
+        if gb.frame_count() == frame {
+            continue; // no frame completed (CPU in STOP with the LCD off)
         }
         let fb = gb.framebuffer();
         if gb.ppu_registers()[0] & 0x80 != 0 {
             lcd_on_frames += 1;
         }
-        let first = fb[0];
-        if fb.iter().any(|&p| p != first) {
+        if fb.iter().any(|&p| p != fb[0]) {
             nonblank_frames += 1;
         }
-        if gb.frame_count() % 15 == 0 {
-            let h = fb.iter().fold(0xcbf2_9ce4_8422_2325u64, |h, &b| (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3));
+        let h = fnv1a(fb);
+        if gb.frame_count() % SAMPLE_EVERY == 0 {
             distinct_frames.insert(h);
+        }
+        if h == last_hash {
+            run += 1;
+            if run == STATIC_RUN && static_screens.len() < MAX_STATIC && !static_screens.contains(&h) {
+                static_screens.push(h);
+            }
+        } else {
+            (last_hash, run) = (h, 1);
         }
     }
     let p = gb.profile().expect("profiling enabled").clone();
@@ -138,6 +201,7 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode) -> Value {
         "busy_cycles": p.busy_cycles,
         "halted_cycles": p.halted_cycles,
         "stopped_cycles": p.stopped_cycles,
+        "locked_cycles": p.locked_cycles,
         "interrupt_cycles": p.interrupt_cycles,
         "cpu_utilization": p.cpu_utilization(),
         "instructions": p.instructions,
@@ -151,6 +215,7 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode) -> Value {
         "lcd_on_frames": lcd_on_frames,
         "nonblank_frames": nonblank_frames,
         "distinct_frames_sampled": distinct_frames.len(),
+        "static_screens": static_screens.iter().map(|h| format!("{h:016x}")).collect::<Vec<_>>(),
         "wall_ms": started.elapsed().as_millis() as u64,
     })
 }
@@ -165,11 +230,7 @@ pub fn cmd_profile(
     if roms.is_empty() {
         return Err("profile: give at least one ROM".into());
     }
-    let mode = match input.unwrap_or("monkey") {
-        "none" => InputMode::None,
-        "monkey" => InputMode::Monkey,
-        other => return Err(format!("unknown --input '{other}' (none|monkey)")),
-    };
+    let mode = InputMode::parse(input, InputMode::Monkey)?;
     let threads = std::thread::available_parallelism().map_or(2, |n| n.get());
     let next = std::sync::atomic::AtomicUsize::new(0);
     let results = std::sync::Mutex::new(vec![Value::Null; roms.len()]);

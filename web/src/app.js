@@ -586,11 +586,12 @@ function updateHeat() {
       cells[op].dataset.count = counts[op];
     }
   }
-  const total = p.busy + p.halted + p.interrupt + p.stopped || 1;
+  const idle = p.halted + p.stopped + p.locked;
+  const total = p.busy + p.interrupt + idle || 1;
   const pct = (v) => ((v / total) * 100).toFixed(1);
   $("util").innerHTML = `
-    <span>busy ${pct(p.busy)}%</span><span>interrupts ${pct(p.interrupt)}%</span><span>halted ${pct(p.halted + p.stopped)}%</span><span class="readout" style="text-align:right">${p.instructions.toLocaleString()} instructions</span>
-    <div class="stack"><i style="width:${pct(p.busy)}%;background:var(--heat-4)"></i><i style="width:${pct(p.interrupt)}%;background:var(--heat-2)"></i><i style="width:${pct(p.halted + p.stopped)}%;background:var(--heat-1)"></i></div>`;
+    <span>busy ${pct(p.busy)}%</span><span>interrupts ${pct(p.interrupt)}%</span><span>${p.locked ? "halted / locked" : "halted"} ${pct(idle)}%</span><span class="readout" style="text-align:right">${p.instructions.toLocaleString()} instructions</span>
+    <div class="stack"><i style="width:${pct(p.busy)}%;background:var(--heat-4)"></i><i style="width:${pct(p.interrupt)}%;background:var(--heat-2)"></i><i style="width:${pct(idle)}%;background:var(--heat-1)"></i></div>`;
 }
 
 function memStart() {

@@ -18,8 +18,18 @@ pub trait CpuBus {
     fn pending_interrupts(&self) -> u8;
     /// Clears the given bit in `IF` (interrupt acknowledged).
     fn acknowledge_interrupt(&mut self, mask: u8);
-    /// Called when the `STOP` instruction executes (resets DIV on hardware).
-    fn stop(&mut self) {}
+    /// Called when `STOP` executes. Returns false if a selected button is
+    /// being held, in which case the system does not enter STOP mode.
+    /// Otherwise DIV resets and the system clock stops until a selected
+    /// button line goes low (see [`Cpu::wake_from_stop`]).
+    fn stop(&mut self) -> bool {
+        true
+    }
+    /// One M-cycle in STOP mode: the system clock is stopped, so on a DMG
+    /// the PPU, timer and APU do not advance. Defaults to [`CpuBus::idle`].
+    fn idle_stopped(&mut self) {
+        self.idle();
+    }
     /// Lets a halted CPU idle through many M-cycles in one step until this
     /// returns true (the system uses it to stop at frame boundaries).
     /// The default never batches: one halted M-cycle per step.
@@ -164,7 +174,8 @@ impl Cpu {
         self.ei_delay
     }
 
-    /// Leaves STOP mode (called by the system when a button is pressed).
+    /// Leaves STOP mode (the system calls this when a selected joypad line
+    /// goes low).
     pub fn wake_from_stop(&mut self) {
         if self.power == PowerState::Stopped {
             self.power = PowerState::Running;
@@ -193,7 +204,7 @@ impl Cpu {
                 return Step { pc, kind: StepKind::Halted };
             }
             PowerState::Stopped => {
-                bus.idle();
+                bus.idle_stopped();
                 return Step { pc, kind: StepKind::Stopped };
             }
             PowerState::Locked => {
@@ -601,11 +612,22 @@ impl Cpu {
             // --- control -----------------------------------------------------
             0x00 => {}
             0x10 => {
-                // STOP. On DMG this enters a very-low-power state until a button
-                // is pressed; the byte after it is conventionally 0x00 and skipped.
-                // DIV is reset.
-                bus.stop();
-                self.power = PowerState::Stopped;
+                // STOP (Pan Docs, "Using the STOP instruction", DMG cases):
+                // - a selected button is held: no STOP mode; with no interrupt
+                //   pending the CPU halts instead;
+                // - otherwise: DIV resets and STOP mode begins.
+                // With no interrupt pending STOP is two bytes long (the next
+                // byte is skipped); with one pending, the next byte executes.
+                let pending = bus.pending_interrupts() != 0;
+                let entered = bus.stop();
+                if !pending {
+                    self.regs.pc = self.regs.pc.wrapping_add(1);
+                }
+                if entered {
+                    self.power = PowerState::Stopped;
+                } else if !pending {
+                    self.power = PowerState::Halted;
+                }
             }
             0xF3 => {
                 self.ime = false;

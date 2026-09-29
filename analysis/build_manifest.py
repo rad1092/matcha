@@ -12,6 +12,7 @@ Get the database with (blobless keeps it to the ROMs you actually read):
 """
 
 import csv
+import hashlib
 import json
 import re
 import sys
@@ -31,6 +32,12 @@ CART_TYPES = {
 # Cartridge types matcha-core implements (see crates/matcha-core/src/cartridge.rs).
 SUPPORTED = {0x00, 0x01, 0x02, 0x03, 0x05, 0x06, 0x08, 0x09, 0x0F, 0x10, 0x11, 0x12,
              0x13, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E}
+
+# SHA-256 of the 48-byte logo at 0x0104 that the DMG boot ROM compares
+# against (taken from known-good cartridges; the bytes themselves are not
+# reproduced here). A mismatch, or a bad header checksum, makes a real DMG
+# lock up before the game starts.
+LOGO_SHA256 = "daf4cabdc852baa0291849203f0b41fd0b4ecd58e0d7aff4a509f5de4d7f9a2e"
 
 # Byte signatures, found by mining strings shared by entries tagged with a
 # toolchain (see docs/analysis.md, "Toolchain fingerprints").
@@ -71,7 +78,7 @@ def main(db_root: str) -> None:
         "slug", "title", "developer", "platform", "typetag", "year", "license", "event_tags",
         "rom_path", "rom_bytes", "header_title", "cgb_flag", "cgb_mode", "sgb", "cart_type",
         "cart_type_name", "mapper", "mapper_supported", "rom_size", "ram_size", "battery",
-        "header_checksum_ok", "toolchain", "dmg_runnable",
+        "header_checksum_ok", "logo_ok", "toolchain", "dmg_runnable",
     ])
     for game_json in sorted(root.glob("entries/*/game.json")):
         entry = json.loads(game_json.read_text())
@@ -121,6 +128,7 @@ def main(db_root: str) -> None:
             ram_size,
             int("BATTERY" in CART_TYPES.get(cart, "")),
             int(checksum == data[0x14D]),
+            int(hashlib.sha256(data[0x104:0x134]).hexdigest() == LOGO_SHA256),
             toolchain,
             int(cgb != 0xC0 and cart in SUPPORTED),
         ])

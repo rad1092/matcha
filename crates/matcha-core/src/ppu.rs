@@ -168,6 +168,34 @@ impl Ppu {
         p
     }
 
+    /// Writes the VRAM contents the DMG boot ROM leaves behind: the logo from
+    /// the cartridge header (0x0104..0x0134) scaled 2x into tiles 1-24, a ®
+    /// in tile 25, and the tile map entries that centre them on rows 8-9.
+    /// Software that never clears VRAM shows (or scrolls) this logo.
+    pub fn load_boot_logo(&mut self, logo: &[u8]) {
+        const TRADEMARK: [u8; 8] = [0x3C, 0x42, 0xB9, 0xA5, 0xB9, 0xA5, 0x42, 0x3C];
+        let mut addr = 0x0010;
+        for &byte in logo.iter().take(48) {
+            // Each nibble becomes one 8-pixel row, every bit doubled
+            // (b3 b2 b1 b0 -> b3 b3 b2 b2 b1 b1 b0 b0), written twice; only
+            // the low bit plane is set, so the logo uses colour 1.
+            for nibble in [byte >> 4, byte & 0x0F] {
+                let row = (0..4).fold(0u8, |acc, i| (acc << 2) | (((nibble >> (3 - i)) & 1) * 0b11));
+                self.vram[addr] = row;
+                self.vram[addr + 2] = row;
+                addr += 4;
+            }
+        }
+        for (i, &row) in TRADEMARK.iter().enumerate() {
+            self.vram[0x0190 + 2 * i] = row;
+        }
+        self.vram[0x1910] = 25;
+        for i in 0..12u8 {
+            self.vram[0x1904 + usize::from(i)] = 1 + i;
+            self.vram[0x1924 + usize::from(i)] = 13 + i;
+        }
+    }
+
     pub fn power_on() -> Self {
         Self {
             vram: [0; 0x2000],
@@ -396,6 +424,19 @@ impl Ppu {
 
     /// Advances one M-cycle (4 dots).
     #[inline]
+    /// One M-cycle with the system clock stopped (CPU in STOP). On a DMG the
+    /// PPU does not advance and the LCD shows no picture; hosts still get a
+    /// blank frame every 70,224 dots so their frame loops keep running.
+    pub fn tick_stopped(&mut self) {
+        self.off_dots += 4;
+        if self.off_dots >= DOTS_PER_FRAME {
+            self.off_dots -= DOTS_PER_FRAME;
+            self.framebuffer.fill(0);
+            self.frame_ready = true;
+            self.frame_count += 1;
+        }
+    }
+
     pub fn tick(&mut self) -> PpuIrq {
         let mut irq = PpuIrq::default();
         if !self.lcd_on() {

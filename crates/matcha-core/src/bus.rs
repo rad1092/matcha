@@ -122,9 +122,16 @@ impl core::fmt::Debug for SystemBus {
 impl SystemBus {
     pub fn new(cart: Cartridge, boot_rom: Option<Box<[u8; 0x100]>>) -> Self {
         let booting = boot_rom.is_some();
+        let ppu = if booting {
+            Ppu::power_on()
+        } else {
+            let mut ppu = Ppu::new();
+            ppu.load_boot_logo(&cart.rom()[0x104..0x134]);
+            ppu
+        };
         Self {
             cart,
-            ppu: if booting { Ppu::power_on() } else { Ppu::new() },
+            ppu,
             apu: if booting { Apu::power_on() } else { Apu::new() },
             timer: if booting { Timer::power_on() } else { Timer::new() },
             joypad: Joypad::new(),
@@ -459,8 +466,19 @@ impl CpuBus for SystemBus {
         self.if_ &= !mask;
     }
 
-    fn stop(&mut self) {
+    fn stop(&mut self) -> bool {
+        if self.joypad.any_line_low() {
+            return false;
+        }
         self.timer.reset_div();
+        true
+    }
+
+    fn idle_stopped(&mut self) {
+        self.cycles += 1;
+        self.ppu.tick_stopped();
+        self.apu.tick_stopped();
+        self.cart.tick_rtc(4); // the cartridge clock has its own crystal
     }
 
     /// Batch halted cycles, but hand control back at frame boundaries and

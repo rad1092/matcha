@@ -567,13 +567,14 @@ pub unsafe extern "C" fn matcha_profile_json(e: *mut Emu) -> u32 {
     let join = |v: &[u64]| v.iter().map(u64::to_string).collect::<Vec<_>>().join(",");
     let json = format!(
         concat!(
-            "{{\"instructions\":{},\"busy\":{},\"halted\":{},\"stopped\":{},\"interrupt\":{},",
+            "{{\"instructions\":{},\"busy\":{},\"halted\":{},\"stopped\":{},\"locked\":{},\"interrupt\":{},",
             "\"utilization\":{:.6},\"interrupts\":[{}],\"opcodes\":[{}],\"cb\":[{}],\"covered\":{}}}"
         ),
         p.instructions,
         p.busy_cycles,
         p.halted_cycles,
         p.stopped_cycles,
+        p.locked_cycles,
         p.interrupt_cycles,
         p.cpu_utilization(),
         join(&p.interrupts),

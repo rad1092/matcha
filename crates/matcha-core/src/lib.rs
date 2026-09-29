@@ -180,7 +180,7 @@ impl GameBoy {
                 StepKind::Halted => p.halted_cycles += cycles,
                 StepKind::Stopped => p.stopped_cycles += cycles,
                 StepKind::Locked { opcode } => {
-                    p.stopped_cycles += cycles;
+                    p.locked_cycles += cycles;
                     p.locked_opcode = Some(opcode);
                 }
             }
@@ -188,10 +188,11 @@ impl GameBoy {
         step
     }
 
-    /// Runs until the next frame completes, a breakpoint/watchpoint triggers,
-    /// or two frames' worth of cycles pass (only possible with the CPU stuck
-    /// in STOP while the LCD is off). A breakpoint at the current PC is
-    /// stepped over, so calling this again after a breakpoint continues.
+    /// Runs until the next frame completes or a breakpoint/watchpoint
+    /// triggers. Frames complete every 70,224 dots even with the LCD off or
+    /// the CPU in STOP (as blank frames); two frames' worth of cycles is only
+    /// a safety net. A breakpoint at the current PC is stepped over, so
+    /// calling this again after a breakpoint continues.
     pub fn run_frame(&mut self) -> RunEvent {
         self.run_cycles(MCYCLES_PER_FRAME * 2, true)
     }
@@ -228,9 +229,10 @@ impl GameBoy {
 
     /// Sets the full button state (1 = held).
     pub fn set_buttons(&mut self, buttons: Buttons) {
-        let newly_pressed = buttons.0 & !self.bus.joypad.pressed().0 != 0;
         self.bus.set_buttons(buttons);
-        if newly_pressed {
+        // STOP ends when a P10-P13 line goes low, which needs the pressed
+        // button's row to be selected in P1 (as the game left it).
+        if self.bus.joypad.any_line_low() {
             self.cpu.wake_from_stop();
         }
     }
@@ -539,6 +541,27 @@ mod tests {
         rom
     }
 
+    /// A ROM-only cartridge whose code at 0x0150 is `program`.
+    fn rom_with_program(program: &[u8]) -> Vec<u8> {
+        let mut rom = vec![0u8; 0x8000];
+        rom[0x100..0x104].copy_from_slice(&[0x00, 0xC3, 0x50, 0x01]); // nop; jp $0150
+        rom[0x150..0x150 + program.len()].copy_from_slice(program);
+        rom[0x14D] = rom[0x134..=0x14C].iter().fold(0u8, |a, &b| a.wrapping_sub(b).wrapping_sub(1));
+        rom
+    }
+
+    /// Selects `p1` rows, then `stop`, then counts up in A forever.
+    fn stop_rom(p1: u8) -> Vec<u8> {
+        rom_with_program(&[
+            0xAF, // xor a
+            0xE0, 0xFF, // ldh [IE], a  (no interrupts)
+            0x3E, p1, 0xE0, 0x00, // ld a, p1; ldh [P1], a
+            0x10, 0x00, // stop
+            0x3C, // inc a
+            0x18, 0xFD, // jr -3
+        ])
+    }
+
     fn snapshot(gb: &GameBoy) -> (Vec<u8>, Registers, Vec<u32>, u64) {
         let audio = gb.audio_samples().iter().map(|s| s.to_bits()).collect();
         (gb.framebuffer().to_vec(), gb.registers(), audio, gb.cycles())
@@ -548,6 +571,57 @@ mod tests {
         for _ in 0..frames {
             while gb.run_frame() != RunEvent::FrameComplete {}
         }
+    }
+
+    #[test]
+    fn stop_freezes_the_system_until_a_selected_button_is_pressed() {
+        let mut gb = GameBoy::new(stop_rom(0x10)).unwrap(); // action-button row selected
+        for _ in 0..3 {
+            assert_eq!(gb.run_frame(), RunEvent::FrameComplete, "hosts still get frames");
+        }
+        assert_eq!(gb.power_state(), PowerState::Stopped);
+        assert!(gb.framebuffer().iter().all(|&p| p == 0), "no picture in STOP");
+        let (div, ly) = (gb.peek(0xFF04), gb.peek(0xFF44));
+        gb.run_frame();
+        assert_eq!((gb.peek(0xFF04), gb.peek(0xFF44)), (div, ly), "timer and PPU are frozen");
+        gb.set_buttons(Buttons::RIGHT); // its row is not selected: no effect
+        gb.run_frame();
+        assert_eq!(gb.power_state(), PowerState::Stopped);
+        gb.set_buttons(Buttons::START);
+        gb.run_frame();
+        assert_eq!(gb.power_state(), PowerState::Running);
+        assert_ne!(gb.registers().a, 0x10, "execution continued after STOP");
+    }
+
+    #[test]
+    fn stop_with_no_row_selected_never_wakes() {
+        let mut gb = GameBoy::new(stop_rom(0x30)).unwrap();
+        gb.run_frame();
+        gb.set_buttons(Buttons(0xFF));
+        gb.run_frame();
+        assert_eq!(gb.power_state(), PowerState::Stopped);
+    }
+
+    #[test]
+    fn stop_with_a_selected_button_held_halts_instead() {
+        let mut gb = GameBoy::new(stop_rom(0x10)).unwrap();
+        gb.set_buttons(Buttons::A);
+        gb.run_frame();
+        assert_eq!(gb.power_state(), PowerState::Halted);
+    }
+
+    #[test]
+    fn post_boot_vram_holds_the_cartridge_logo() {
+        let mut rom = test_rom(b"LOGO");
+        rom[0x104] = 0xC5; // first logo byte: rows 11110000 x2, then 00110011 x2
+        let gb = GameBoy::new(rom).unwrap();
+        assert_eq!([gb.peek(0x8010), gb.peek(0x8011), gb.peek(0x8012)], [0xF0, 0x00, 0xF0]);
+        assert_eq!([gb.peek(0x8014), gb.peek(0x8016)], [0x33, 0x33]);
+        assert_eq!(gb.peek(0x8190), 0x3C, "® tile");
+        assert_eq!([gb.peek(0x9904), gb.peek(0x990F), gb.peek(0x9910)], [1, 12, 25]);
+        assert_eq!([gb.peek(0x9924), gb.peek(0x992F)], [13, 24]);
+        let booted = GameBoy::with_boot_rom(test_rom(b"LOGO"), &[0; 256]).unwrap();
+        assert_eq!(booted.peek(0x9904), 0, "a real boot ROM draws the logo itself");
     }
 
     #[test]

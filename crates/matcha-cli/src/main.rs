@@ -4,6 +4,7 @@ mod conformance;
 mod image;
 mod profile;
 
+use matcha_core::cpu::StepKind;
 use matcha_core::{Buttons, GameBoy, RunEvent, palettes};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -19,6 +20,7 @@ USAGE:
                    [--markdown out.md] [--json out.json] [--baseline old.json]
   matcha profile <rom>... [--seconds N] [--input none|monkey] [--json out.json]
   matcha disasm <rom> [--addr HEX] [--count N]
+  matcha trace <rom> [--input none|monkey] [--frames N] [--skip N] [--count N | --last N [--watch HEX]]
 
 BUTTONS is a comma list: a,b,start,select,up,down,left,right
 
@@ -213,6 +215,140 @@ fn cmd_test(args: &Args) -> Result<bool, String> {
     Ok(outcomes.iter().all(|o| o.verdict == conformance::Verdict::Pass))
 }
 
+/// One executed instruction, as `trace` prints it.
+struct TraceLine {
+    regs: matcha_core::cpu::Registers,
+    bytes: [u8; 3],
+    bank: usize,
+    kind: StepKind,
+    /// With `--watch`: the watched byte's (old, new) value if this step changed it.
+    changed: Option<(u8, u8)>,
+}
+
+impl TraceLine {
+    fn print(&self) {
+        let r = &self.regs;
+        match self.kind {
+            StepKind::Interrupt { vector } => println!("      interrupt -> {vector:04x}"),
+            StepKind::Stopped => println!("{:04x}  stopped", r.pc),
+            StepKind::Halted => println!("{:04x}  halted", r.pc),
+            StepKind::Locked { opcode } => println!("{:04x}  {opcode:02x}        illegal opcode: CPU locked up", r.pc),
+            StepKind::Instruction { .. } => {
+                let ins = matcha_core::disasm::decode(r.pc, self.bytes);
+                let bytes: Vec<String> = ins.bytes[..usize::from(ins.len)].iter().map(|b| format!("{b:02x}")).collect();
+                let flags: String = [(0x80, 'z'), (0x40, 'n'), (0x20, 'h'), (0x10, 'c')]
+                    .iter()
+                    .map(|&(bit, c)| if r.f & bit != 0 { c } else { '-' })
+                    .collect();
+                let changed = self.changed.map(|(old, new)| format!("  watched: {old:02x} -> {new:02x}"));
+                println!(
+                    "{:04x}  {:<9} {:<22} af={:04x} bc={:04x} de={:04x} hl={:04x} sp={:04x} {flags} bank={}{}",
+                    r.pc,
+                    bytes.join(" "),
+                    ins.text,
+                    r.af(),
+                    r.bc(),
+                    r.de(),
+                    r.hl(),
+                    r.sp,
+                    self.bank,
+                    changed.unwrap_or_default()
+                );
+            }
+        }
+    }
+}
+
+/// Prints executed instructions with the registers before each one: the
+/// first `--count` after `--frames`/`--skip`, or with `--last N` the final N
+/// before the CPU locks up or `--frames` runs out. `--watch ADDR` limits
+/// `--last` to the instructions that changed the byte at ADDR.
+fn cmd_trace(args: &Args) -> Result<(), String> {
+    let path = args.positional.first().ok_or("trace: missing <rom>")?;
+    let rom = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
+    let mut input =
+        profile::InputDriver::new(profile::InputMode::parse(args.get("input"), profile::InputMode::None)?, &rom);
+    let mut gb = load(path)?;
+    let frames = args.number("frames", 0u64)?;
+    let last = args.number("last", 0usize)?;
+    let watch = args.get("watch").map(parse_hex).transpose()?;
+    let step = |gb: &mut GameBoy, input: &mut profile::InputDriver| -> TraceLine {
+        input.drive(gb);
+        let regs = gb.registers();
+        let bytes = [gb.peek(regs.pc), gb.peek(regs.pc.wrapping_add(1)), gb.peek(regs.pc.wrapping_add(2))];
+        let bank = gb.cartridge().current_rom_bank();
+        let old = watch.map(|a| gb.peek(a));
+        let kind = gb.step().kind;
+        let changed = watch.zip(old).and_then(|(a, old)| Some((old, gb.peek(a))).filter(|(o, n)| o != n));
+        TraceLine { regs, bytes, bank, kind, changed }
+    };
+    if last > 0 {
+        let limit = if frames == 0 { (60.0 * matcha_core::FRAME_RATE) as u64 } else { frames };
+        let mut ring = std::collections::VecDeque::with_capacity(last);
+        while gb.frame_count() < limit {
+            let line = step(&mut gb, &mut input);
+            let locked = matches!(line.kind, StepKind::Locked { .. });
+            let repeat_idle = matches!(line.kind, StepKind::Halted | StepKind::Stopped)
+                && ring.back().is_some_and(|l: &TraceLine| l.kind == line.kind);
+            if repeat_idle || (watch.is_some() && line.changed.is_none() && !locked) {
+                continue;
+            }
+            if ring.len() == last {
+                ring.pop_front();
+            }
+            ring.push_back(line);
+            if locked {
+                break;
+            }
+        }
+        println!("frame {} ({} M-cycles):", gb.frame_count(), gb.cycles());
+        ring.iter().for_each(TraceLine::print);
+        return Ok(());
+    }
+    while gb.frame_count() < frames {
+        input.drive(&mut gb);
+        gb.run_frame();
+    }
+    for _ in 0..args.number("skip", 0u64)? {
+        if let StepKind::Locked { .. } = step(&mut gb, &mut input).kind {
+            break;
+        }
+    }
+    // A HALT or STOP that nothing ends would print forever; give up after a second.
+    let idle_limit = matcha_core::MCYCLES_PER_FRAME * 60;
+    let mut idle_since: Option<u64> = None;
+    let mut printed = 0;
+    let count = args.number("count", 64u64)?;
+    while printed < count {
+        let before = gb.cycles();
+        let line = step(&mut gb, &mut input);
+        if matches!(line.kind, StepKind::Halted | StepKind::Stopped) {
+            let since = *idle_since.get_or_insert(before);
+            if since == before {
+                line.print();
+                printed += 1;
+            }
+            if gb.cycles() - since > idle_limit {
+                println!(
+                    "      still {} after a second; stopping",
+                    if line.kind == StepKind::Halted { "halted" } else { "stopped" }
+                );
+                break;
+            }
+            continue;
+        }
+        if let Some(since) = idle_since.take() {
+            println!("      ({} M-cycles)", before - since);
+        }
+        line.print();
+        printed += 1;
+        if matches!(line.kind, StepKind::Locked { .. }) {
+            break;
+        }
+    }
+    Ok(())
+}
+
 fn cmd_disasm(args: &Args) -> Result<(), String> {
     let path = args.positional.first().ok_or("disasm: missing <rom>")?;
     let gb = load(path)?;
@@ -241,6 +377,7 @@ fn main() -> ExitCode {
             profile::cmd_profile(&args.positional, args.get("json"), args.get("input"), args.number("seconds", 30.0f64))
         }
         "disasm" => cmd_disasm(&args).map(|()| true),
+        "trace" => cmd_trace(&args).map(|()| true),
         "help" | "--help" | "-h" => {
             print!("{USAGE}");
             Ok(true)

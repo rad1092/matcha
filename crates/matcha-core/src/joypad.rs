@@ -74,6 +74,12 @@ impl Joypad {
         lines
     }
 
+    /// True if a pressed button's row is selected (a P10–P13 line is low):
+    /// the condition that ends STOP mode.
+    pub fn any_line_low(&self) -> bool {
+        self.lines() != 0x0F
+    }
+
     pub fn read(&self) -> u8 {
         0xC0 | self.select | self.lines()
     }

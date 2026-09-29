@@ -551,7 +551,7 @@ const TOOLS = [
       }
       const p = gb.profile();
       if (!p) throw new ToolError("profiling is off; call profile with action \"start\" first");
-      const total = p.busy + p.halted + p.interrupt + p.stopped || 1;
+      const total = p.busy + p.halted + p.interrupt + p.stopped + p.locked || 1;
       const pct = (v) => `${((v / total) * 100).toFixed(1)}%`;
       const hot = p.opcodes
         .map((n, op) => [n, op])
@@ -561,7 +561,8 @@ const TOOLS = [
         .map(([n, op]) => `  ${hex2(op)} ${gb.opcodeText(op).padEnd(18)} ${((n / p.instructions) * 100).toFixed(1)}%`);
       const names = ["VBlank", "STAT", "Timer", "Serial", "Joypad"];
       const text = [
-        `${p.instructions.toLocaleString("en-US")} instructions; CPU busy ${pct(p.busy)}, in interrupt dispatch ${pct(p.interrupt)}, halted ${pct(p.halted + p.stopped)}`,
+        `${p.instructions.toLocaleString("en-US")} instructions; CPU busy ${pct(p.busy)}, in interrupt dispatch ${pct(p.interrupt)}, halted ${pct(p.halted + p.stopped)}` +
+          (p.locked ? `, locked up by an illegal opcode ${pct(p.locked)}` : ""),
         `interrupts: ${p.interrupts.map((n, i) => `${names[i]} ${n}`).join(", ")}`,
         `ROM bytes where instructions started: ${p.covered.toLocaleString("en-US")}`,
         "hottest opcodes:",

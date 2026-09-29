@@ -440,6 +440,17 @@ impl Apu {
         self.accumulate();
     }
 
+    /// One M-cycle with the system clock stopped (CPU in STOP): the channels
+    /// hold their levels, and output samples keep flowing at a steady rate.
+    pub fn tick_stopped(&mut self) {
+        if self.output_enabled {
+            if self.mix_dirty {
+                self.recompute_mix();
+            }
+            self.accumulate();
+        }
+    }
+
     /// Recomputes the mixer output from the channels' current levels.
     fn recompute_mix(&mut self) {
         self.mix_dirty = false;

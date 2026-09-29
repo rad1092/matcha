@@ -54,8 +54,10 @@ pub struct Profile {
     pub busy_cycles: u64,
     /// M-cycles spent in HALT.
     pub halted_cycles: u64,
-    /// M-cycles spent in STOP or locked by an illegal opcode.
+    /// M-cycles spent in STOP.
     pub stopped_cycles: u64,
+    /// M-cycles spent hung after an illegal opcode.
+    pub locked_cycles: u64,
     /// M-cycles spent dispatching interrupts.
     pub interrupt_cycles: u64,
     /// Dispatches per interrupt source (VBlank, STAT, Timer, Serial, Joypad).
@@ -78,6 +80,7 @@ impl Profile {
             busy_cycles: 0,
             halted_cycles: 0,
             stopped_cycles: 0,
+            locked_cycles: 0,
             interrupt_cycles: 0,
             interrupts: [0; 5],
             reads: [0; 10],
@@ -89,10 +92,10 @@ impl Profile {
     }
 
     pub fn total_cycles(&self) -> u64 {
-        self.busy_cycles + self.halted_cycles + self.stopped_cycles + self.interrupt_cycles
+        self.busy_cycles + self.halted_cycles + self.stopped_cycles + self.locked_cycles + self.interrupt_cycles
     }
 
-    /// Fraction of time the CPU was doing work (not halted/stopped).
+    /// Fraction of time the CPU was doing work (not halted, stopped or locked).
     pub fn cpu_utilization(&self) -> f64 {
         let total = self.total_cycles();
         if total == 0 {

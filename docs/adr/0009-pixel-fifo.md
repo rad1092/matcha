@@ -46,6 +46,32 @@ Serialize and validate it, and bump the save-state format to version 2.
 Version-1 snapshots are rejected with the existing version error; cartridge
 battery-save bytes are a separate format and are unaffected.
 
+### Register-address refinement
+
+Scroll and LCDC writes reach the fetcher at different dot phases. Preserve
+which address phase actually ran on the recent dots, including its pixel
+position, so a write can update the affected address without changing an
+older VRAM read. Tracking performed work is essential: an object stall can
+hold the fetcher at a phase without performing a new address lookup.
+
+These additional latches are part of the machine state; the refinement
+advances the snapshot format to version 3. Battery-save format is unchanged.
+
+The register phases follow the DMG cases in
+[SameBoy's write-conflict handling](https://github.com/LIJI32/SameBoy/blob/213a12ce93d66b105a113debd9396306066a7cfc/Core/sm83_cpu.c):
+SCY and the full LCDC value are visible one dot earlier, SCX two dots earlier.
+SCX can therefore affect the map byte that has just been read as well as an
+address waiting to be read. It does not change window addressing.
+
+Object height is sampled when each bitplane is read, after the fetcher's
+wait. A size write colliding with the last dot can replace that plane read.
+For a high-plane collision, restore the eight queued object pixels from
+before the overlay and apply it again with the corrected data. This
+preserves earlier objects' priority and removes pixels that become
+transparent; simply drawing over the old overlay cannot do either.
+The read marker expires each dot, and its queue backup is validated and
+serialized with the other in-flight state.
+
 ## Verification
 
 The committed conformance scoreboard is the regression baseline. A net

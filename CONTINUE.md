@@ -34,14 +34,27 @@ The interrupted Claude work was recovered from upstream `fe2d0ed`: OAM
 corruption and seeded RAM noise were already committed there. The FIFO
 change also corrects running-versus-halted interrupt sampling, interrupt
 entry bus phases, and IF register-write collisions exposed by raster tests.
-See ADR-0009 and the update to ADR-0001. Save states are version 2; old
+See ADR-0009 and the update to ADR-0001. Save states are version 3; old
 quick-save snapshots are rejected, while battery saves remain compatible.
 The 868-ROM corpus study predates this renderer and has not been rerun.
 
-FIFO verification: 221 newly passing ROMs and zero regressions against
+Initial FIFO verification: 221 newly passing ROMs and zero regressions against
 `fe2d0ed` (Gambatte 1,567/1,783; Mealybug 8/24; Blargg 43/43, Mooneye
 94/94 and dmg-acid2 1/1 preserved). Hardware reference images and test
 selection are unchanged. CPU SingleStepTests remain 498,000/498,000.
+
+The subsequent register-fetch refinement preserves that baseline and adds
+29 passing ROMs: Gambatte 1,595/1,783 and Mealybug 9/24. SCY/LCDC writes
+correct the address formed on the last dot; SCX also corrects the map byte
+read during its two-dot visibility interval. Object height is sampled for
+each bitplane, including LCDC size writes colliding with a read. The two
+Mealybug object-size cases improve to 15/30 differing pixels but still fail.
+All recent address/read latches and the prior object queue are included in
+version-3 snapshots. Test selection and hardware references are unchanged.
+
+The remaining 203 ROM failures span several devices, not only the PPU:
+the largest groups include OAM DMA and timer tests. Keep those separate
+from fetch/window timing work. The full list is in the generated scoreboard.
 
 ## Set up a machine
 

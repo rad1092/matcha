@@ -3,9 +3,9 @@
 | blargg | 43 | 43 | CPU, timing, sound and OAM-bug tests by Shay Green |
 | mooneye | 94 | 94 | Mooneye Test Suite: acceptance + emulator-only (DMG-applicable) |
 | dmg-acid2 | 1 | 1 | PPU rendering torture test |
-| gambatte | 1567 | 1783 | Gambatte hardware-verified tests: DMG hex-result and screenshot cases |
-| mealybug | 8 | 24 | Mealybug Tearoom: mid-scanline register, fetch and window effects |
-| **all** | **1713** | **1945** | |
+| gambatte | 1595 | 1783 | Gambatte hardware-verified tests: DMG hex-result and screenshot cases |
+| mealybug | 9 | 24 | Mealybug Tearoom: mid-scanline register, fetch and window effects |
+| **all** | **1742** | **1945** | |
 
 Left out because they cannot pass on hardware either:
 
@@ -15,26 +15,14 @@ Left out because they cannot pass on hardware either:
 
 | ROM | Result |
 |---|---|
-| `gambatte/bgtiledata/bgtiledata_spx08_1.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx08_2.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx08_3.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx08_4.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx09_1.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx09_2.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx09_3.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx09_4.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx0A_1.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx0A_2.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx0A_3.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx0A_4.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx0B_1.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx0B_2.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx0B_3.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtiledata/bgtiledata_spx0B_4.gbc` | fail: 1152 pixels differ from reference |
-| `gambatte/bgtilemap/bgtilemap_spx09_1.gbc` | fail: 128 pixels differ from reference |
-| `gambatte/bgtilemap/bgtilemap_spx09_2.gbc` | fail: 128 pixels differ from reference |
-| `gambatte/bgtilemap/bgtilemap_spx09_3.gbc` | fail: 128 pixels differ from reference |
-| `gambatte/bgtilemap/bgtilemap_spx09_4.gbc` | fail: 128 pixels differ from reference |
+| `gambatte/bgtiledata/bgtiledata_spx08_1.gbc` | fail: 128 pixels differ from reference |
+| `gambatte/bgtiledata/bgtiledata_spx08_2.gbc` | fail: 128 pixels differ from reference |
+| `gambatte/bgtiledata/bgtiledata_spx08_3.gbc` | fail: 128 pixels differ from reference |
+| `gambatte/bgtiledata/bgtiledata_spx08_4.gbc` | fail: 128 pixels differ from reference |
+| `gambatte/bgtiledata/bgtiledata_spx0A_1.gbc` | fail: 128 pixels differ from reference |
+| `gambatte/bgtiledata/bgtiledata_spx0A_2.gbc` | fail: 128 pixels differ from reference |
+| `gambatte/bgtiledata/bgtiledata_spx0A_3.gbc` | fail: 128 pixels differ from reference |
+| `gambatte/bgtiledata/bgtiledata_spx0A_4.gbc` | fail: 128 pixels differ from reference |
 | `gambatte/bgtilemap/bgtilemap_spx0A_1.gbc` | fail: 128 pixels differ from reference |
 | `gambatte/bgtilemap/bgtilemap_spx0A_2.gbc` | fail: 128 pixels differ from reference |
 | `gambatte/bgtilemap/bgtilemap_spx0A_3.gbc` | fail: 128 pixels differ from reference |
@@ -123,25 +111,10 @@ Left out because they cannot pass on hardware either:
 | `gambatte/oamdma/oamdma_srcFE00_readFE00_dmg08_cgb04c_out0.gbc` | fail: printed 1, expected 0 |
 | `gambatte/oamdma/oamdmasrc80_halt_lycirq_read8000_dmg08_cgb04c_out81.gbc` | fail: printed A0, expected 81 |
 | `gambatte/oamdma/oamdmasrc80_halt_m2irq_read8000_dmg08_cgb04c_out81.gbc` | fail: printed 2A, expected 81 |
-| `gambatte/scx_during_m3/scx_during_m3_spx1.gbc` | fail: 8 pixels differ from reference |
-| `gambatte/scx_during_m3/scx_during_m3_spx2.gbc` | fail: 8 pixels differ from reference |
-| `gambatte/scy/scx3/scy_during_m3_2.gbc` | fail: 1008 pixels differ from reference |
-| `gambatte/scy/scx3/scy_during_m3_4.gbc` | fail: 1008 pixels differ from reference |
-| `gambatte/scy/scx3/scy_during_m3_6.gbc` | fail: 1008 pixels differ from reference |
-| `gambatte/scy/scy_during_m3_2.gbc` | fail: 1008 pixels differ from reference |
-| `gambatte/scy/scy_during_m3_4.gbc` | fail: 1008 pixels differ from reference |
-| `gambatte/scy/scy_during_m3_6.gbc` | fail: 1008 pixels differ from reference |
-| `gambatte/scy/scy_during_m3_spx08_1.gbc` | fail: 896 pixels differ from reference |
 | `gambatte/scy/scy_during_m3_spx08_2.gbc` | fail: 112 pixels differ from reference |
-| `gambatte/scy/scy_during_m3_spx08_3.gbc` | fail: 896 pixels differ from reference |
-| `gambatte/scy/scy_during_m3_spx09_1.gbc` | fail: 912 pixels differ from reference |
-| `gambatte/scy/scy_during_m3_spx09_2.gbc` | fail: 240 pixels differ from reference |
-| `gambatte/scy/scy_during_m3_spx09_3.gbc` | fail: 912 pixels differ from reference |
-| `gambatte/scy/scy_during_m3_spx0A_1.gbc` | fail: 912 pixels differ from reference |
+| `gambatte/scy/scy_during_m3_spx0A_1.gbc` | fail: 16 pixels differ from reference |
 | `gambatte/scy/scy_during_m3_spx0A_2.gbc` | fail: 240 pixels differ from reference |
-| `gambatte/scy/scy_during_m3_spx0A_3.gbc` | fail: 912 pixels differ from reference |
-| `gambatte/scy/scy_during_m3_spx0B_1.gbc` | fail: 1008 pixels differ from reference |
-| `gambatte/scy/scy_during_m3_spx0B_3.gbc` | fail: 1008 pixels differ from reference |
+| `gambatte/scy/scy_during_m3_spx0A_3.gbc` | fail: 16 pixels differ from reference |
 | `gambatte/serial/nopx2_start_wait_read_if_1_dmg08_cgb04c_outE0.gbc` | fail: printed E8, expected E0 |
 | `gambatte/serial/start_late_div_write_wait_read_if_2b_dmg08_cgb04c_outE8.gbc` | fail: printed E0, expected E8 |
 | `gambatte/serial/start_late_div_write_wait_read_if_3a_dmg08_cgb04c_outE0.gbc` | fail: printed E8, expected E0 |
@@ -217,7 +190,6 @@ Left out because they cannot pass on hardware either:
 | `gambatte/window/late_reenable_scx2_2_dmg08_out3_cgb04c_out0.gbc` | fail: printed 0, expected 3 |
 | `gambatte/window/late_reenable_scx5_2_dmg08_out3_cgb04c_out0.gbc` | fail: printed 0, expected 3 |
 | `gambatte/window/m2int_wxA6_spxA7_m0irq_2_dmg08_cgb04c_out2.gbc` | fail: printed 0, expected 2 |
-| `gambatte/window/on_screen/wx17_weoff_wxA5_weon.gbc` | fail: 960 pixels differ from reference |
 | `gambatte/window/on_screen/wxA6_3.gbc` | fail: 328 pixels differ from reference |
 | `gambatte/window/on_screen/wxA6_late_we_reenable_1.gbc` | fail: 6548 pixels differ from reference |
 | `gambatte/window/on_screen/wxA6_late_we_reenable_2.gbc` | fail: 6548 pixels differ from reference |
@@ -232,17 +204,16 @@ Left out because they cannot pass on hardware either:
 | `gambatte/window/on_screen/wxA6_wy01_wxA7_ly02.gbc` | fail: 160 pixels differ from reference |
 | `gambatte/window/on_screen/wxA6_wy8F.gbc` | fail: 160 pixels differ from reference |
 | `mealybug-tearoom-tests/ppu/m3_lcdc_bg_en_change.gb` | fail: 403 pixels differ from reference |
-| `mealybug-tearoom-tests/ppu/m3_lcdc_bg_map_change.gb` | fail: 384 pixels differ from reference |
+| `mealybug-tearoom-tests/ppu/m3_lcdc_bg_map_change.gb` | fail: 192 pixels differ from reference |
 | `mealybug-tearoom-tests/ppu/m3_lcdc_obj_en_change.gb` | fail: 60 pixels differ from reference |
 | `mealybug-tearoom-tests/ppu/m3_lcdc_obj_en_change_variant.gb` | fail: 92 pixels differ from reference |
-| `mealybug-tearoom-tests/ppu/m3_lcdc_obj_size_change.gb` | fail: 170 pixels differ from reference |
-| `mealybug-tearoom-tests/ppu/m3_lcdc_obj_size_change_scx.gb` | fail: 190 pixels differ from reference |
-| `mealybug-tearoom-tests/ppu/m3_lcdc_tile_sel_change.gb` | fail: 1084 pixels differ from reference |
-| `mealybug-tearoom-tests/ppu/m3_lcdc_tile_sel_win_change.gb` | fail: 1090 pixels differ from reference |
-| `mealybug-tearoom-tests/ppu/m3_lcdc_win_en_change_multiple_wx.gb` | fail: 358 pixels differ from reference |
-| `mealybug-tearoom-tests/ppu/m3_lcdc_win_map_change.gb` | fail: 182 pixels differ from reference |
-| `mealybug-tearoom-tests/ppu/m3_scx_high_5_bits.gb` | fail: 65 pixels differ from reference |
-| `mealybug-tearoom-tests/ppu/m3_scy_change.gb` | fail: 5284 pixels differ from reference |
+| `mealybug-tearoom-tests/ppu/m3_lcdc_obj_size_change.gb` | fail: 15 pixels differ from reference |
+| `mealybug-tearoom-tests/ppu/m3_lcdc_obj_size_change_scx.gb` | fail: 30 pixels differ from reference |
+| `mealybug-tearoom-tests/ppu/m3_lcdc_tile_sel_change.gb` | fail: 192 pixels differ from reference |
+| `mealybug-tearoom-tests/ppu/m3_lcdc_tile_sel_win_change.gb` | fail: 178 pixels differ from reference |
+| `mealybug-tearoom-tests/ppu/m3_lcdc_win_en_change_multiple_wx.gb` | fail: 334 pixels differ from reference |
+| `mealybug-tearoom-tests/ppu/m3_lcdc_win_map_change.gb` | fail: 122 pixels differ from reference |
+| `mealybug-tearoom-tests/ppu/m3_scy_change.gb` | fail: 627 pixels differ from reference |
 | `mealybug-tearoom-tests/ppu/m3_window_timing_wx_0.gb` | fail: 126 pixels differ from reference |
 | `mealybug-tearoom-tests/ppu/m3_wx_4_change.gb` | fail: 229 pixels differ from reference |
 | `mealybug-tearoom-tests/ppu/m3_wx_4_change_sprites.gb` | fail: 10 pixels differ from reference |

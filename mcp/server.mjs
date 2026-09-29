@@ -188,6 +188,28 @@ function searchSnapshot(gb) {
 
 // --- tools -----------------------------------------------------------------------------
 
+const ramSchema = {
+  ram: {
+    type: "string",
+    enum: ["zero", "noise"],
+    description: "Power-on RAM: zeros (default), or DMG-like junk as on real hardware — use noise to catch code that reads memory before writing it.",
+  },
+  seed: { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER, description: "Seed for ram \"noise\" (default 0); same seed, same bytes." },
+};
+
+/** Power-cycles into the requested RAM contents; returns a note for the reply. */
+function powerOn(gb, ram, seed) {
+  if (ram === undefined) {
+    if (seed !== undefined) throw new ToolError("seed only applies with ram \"noise\"");
+    return "";
+  }
+  if (ram !== "zero" && ram !== "noise") throw new ToolError('ram must be "zero" or "noise"');
+  if (ram === "zero" && seed !== undefined) throw new ToolError("seed only applies with ram \"noise\"");
+  const s = int(seed, "seed", 0, Number.MAX_SAFE_INTEGER, 0);
+  gb.reset({ ram, seed: s });
+  return ram === "noise" ? `power-on RAM: noise (seed ${s})` : "power-on RAM: zeros";
+}
+
 const buttonsSchema = {
   type: "array",
   items: { type: "string", enum: ["a", "b", "start", "select", "up", "down", "left", "right"] },
@@ -205,9 +227,10 @@ const TOOLS = [
         path: { type: "string", description: "Path to the .gb file (absolute, or relative to the server's working directory)." },
         sample: { type: "string", enum: Object.keys(SAMPLES), description: "Load a bundled sample instead of a file." },
         frames: { type: "integer", minimum: 0, maximum: 3600, description: "Frames to run before the screenshot (default 60 ≈ 1 s)." },
+        ...ramSchema,
       },
     },
-    run({ path, sample, frames }) {
+    run({ path, sample, frames, ram, seed }) {
       if (sample !== undefined && !(sample in SAMPLES)) throw new ToolError(`sample must be one of ${Object.keys(SAMPLES).join(", ")}`);
       if (!sample && (typeof path !== "string" || !path)) throw new ToolError("give a path to a .gb file, or a sample name");
       const full = sample ? join(SAMPLE_DIR, SAMPLES[sample].file) : resolve(process.cwd(), path);
@@ -225,6 +248,13 @@ const TOOLS = [
       } catch (e) {
         throw new ToolError(`${full} is not a ROM matcha can run: ${e.message}`);
       }
+      let ramNote;
+      try {
+        ramNote = powerOn(gb, ram, seed);
+      } catch (e) {
+        gb.destroy();
+        throw e;
+      }
       gb.setAudioOutput(false); // nobody listens to an MCP server
       session.gb?.destroy();
       Object.assign(session, { gb, romPath: full, header: gb.header(), slots: new Map(), breaks: new Map(), search: null });
@@ -235,6 +265,7 @@ const TOOLS = [
         `Loaded ${full}`,
         `title "${h.title}" · ${h.cartTypeName} · ROM ${h.romSize / 1024} KiB · RAM ${h.ramSize / 1024} KiB${h.battery ? " (battery)" : ""}${h.rtc ? " · RTC" : ""}`,
         h.cgbFlag === 0xc0 ? "Warning: CGB-only cartridge; matcha emulates the original DMG, so it may refuse to run." : "",
+        ramNote,
         statusLine(gb),
       ].filter(Boolean).join("\n");
       return [{ type: "text", text }, image(gb)];
@@ -594,12 +625,13 @@ const TOOLS = [
   {
     name: "reset",
     title: "Reset",
-    description: "Power-cycle the Game Boy. Cartridge RAM (save data), breakpoints and save slots survive.",
-    inputSchema: { type: "object", properties: {} },
-    run() {
+    description: "Power-cycle the Game Boy. Cartridge RAM (save data), breakpoints and save slots survive. Pass ram to change what RAM holds at power-on (kept for later resets).",
+    inputSchema: { type: "object", properties: { ...ramSchema } },
+    run({ ram, seed }) {
       const gb = need();
-      gb.reset();
-      return [{ type: "text", text: `reset · ${statusLine(gb)}` }];
+      const note = powerOn(gb, ram, seed);
+      if (!note) gb.reset();
+      return [{ type: "text", text: `reset${note ? ` · ${note}` : ""} · ${statusLine(gb)}` }];
     },
   },
 ];

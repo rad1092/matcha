@@ -46,6 +46,10 @@ on an address or register meaning.
 
 ## Memory
 
+- A ROM that works here but misbehaves on a real console often reads RAM
+  before writing it: matcha powers on with zeroed RAM, hardware with junk.
+  `reset` (or `load_rom`) with `ram: "noise"` reproduces that; try a few
+  `seed` values, and set a `read` watchpoint on the variable that differs.
 - `read_memory` never has side effects (reading $FF00-$FF7F does not
   acknowledge anything), so dump I/O registers freely.
 - The stack lives where SP points (usually HRAM $FFFE down, or WRAM). A

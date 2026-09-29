@@ -48,6 +48,7 @@ open dist/matcha.html
 cargo build --release
 target/release/matcha run game.gb --seconds 10 --screenshot shot.png
 target/release/matcha trace game.gb --input monkey --last 50
+target/release/matcha run game.gb --ram noise   # power on with junk in RAM, as hardware does
 target/release/matcha disasm game.gb --addr 0150
 
 # Tests

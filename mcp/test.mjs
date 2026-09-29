@@ -90,6 +90,16 @@ assert.equal(bad.isError, true);
 const dump = textOf(await call("read_memory", { address: "0134", length: 16 }));
 assert.match(dump, /^0134 {2}/, "hex dump starts at the address");
 
+const wram = async () => textOf(await call("read_memory", { address: "c000", length: 64 }));
+await call("reset", { ram: "noise", seed: 7 });
+const noisy = await wram();
+assert.doesNotMatch(noisy, /^c000 {2}(00 ){16}/, "noise fills WRAM");
+await call("reset", {});
+assert.equal(await wram(), noisy, "a plain reset keeps the power-on choice");
+assert.equal((await call("reset", { ram: "zero", seed: 7 })).isError, true, "seed needs ram noise");
+const zeroed = await call("load_rom", { path: rom, frames: 0, ram: "zero" });
+assert.match(textOf(zeroed), /power-on RAM: zeros/);
+
 const unknown = await request("does/not/exist", {});
 assert.equal(unknown.error.code, -32601);
 

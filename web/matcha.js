@@ -98,7 +98,17 @@ export class Emulator {
     this.h = 0;
   }
 
-  reset() { this.x.matcha_reset(this.h); }
+  /**
+   * Power-cycles. With `{ ram: "noise", seed }` (or `{ ram: "zero" }`) RAM
+   * starts filled with DMG-like junk from that seed (or zeros), and later
+   * resets keep the choice; without arguments the current choice is kept.
+   */
+  reset({ ram, seed = 0 } = {}) {
+    if (ram === undefined) return this.x.matcha_reset(this.h);
+    if (ram !== "zero" && ram !== "noise") throw new Error(`ram must be "zero" or "noise", not ${ram}`);
+    const s = BigInt.asUintN(64, BigInt(seed));
+    this.x.matcha_power_cycle(this.h, ram === "noise" ? 1 : 0, Number(s & 0xffffffffn), Number(s >> 32n));
+  }
 
   /** Runs one frame. Returns { event, pc?, addr?, value?, write? }. */
   runFrame() {

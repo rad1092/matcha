@@ -47,18 +47,7 @@ stay green; `matcha run` stays above 30× real time.
 **First step.** Port the Mealybug `m3_bgp_change` case first: it only needs
 BGP sampled per pixel.
 
-## 3. Power-on RAM contents
-
-**Why.** matcha starts WRAM, HRAM and OAM at zero, SameBoy with noise.
-The corpus comparison measured how much this matters (see "Uninitialised
-memory" in the analysis); a few programs read memory before writing it.
-
-**What.** Optionally fill RAM at power-on with a fixed-seed DMG-like pattern
-(deterministic, so replays stay exact), selectable per host.
-
-**First step.** `GameBoy::with_power_on_ram(PowerOnRam::Zero | Noise(seed))`.
-
-## 4. Quality and reach
+## 3. Quality and reach
 
 - **Band-limited audio** (ADR-0005 option B) if the box filter's aliasing at
   high square-wave pitches becomes noticeable.

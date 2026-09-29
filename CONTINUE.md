@@ -11,7 +11,8 @@ Done and verified:
 - **Core** (`crates/matcha-core`): SM83 CPU, PPU with measured line timing,
   APU, timer, serial, joypad, OAM DMA with bus conflicts, the DMG OAM
   corruption bug, MBC1/1M/2/3+RTC/5, versioned save states with atomic,
-  validated loading, debugger hooks, profiler. Scoreboard: [`docs/CONFORMANCE.md`](docs/CONFORMANCE.md).
+  validated loading, optional DMG-like power-on RAM noise, debugger hooks,
+  profiler. Scoreboard: [`docs/CONFORMANCE.md`](docs/CONFORMANCE.md).
 - **Hosts**: web player (`web/`, bundled into `dist/matcha.html`), MCP server
   and Claude plugin (`mcp/`, `plugin/`, packaged as `dist/matcha.plugin`),
   CLI (`crates/matcha-cli`: run, test, profile, trace, disasm, info).
@@ -27,7 +28,6 @@ Not done (in order — details, verification and first steps in
 
 1. Game Boy Color mode — the biggest compatibility gap (29% of the corpus).
 2. Pixel FIFO renderer — Mealybug 1/24, Gambatte's mid-mode-3 tests.
-3. Optional noisy power-on RAM.
 
 ## Set up a machine
 

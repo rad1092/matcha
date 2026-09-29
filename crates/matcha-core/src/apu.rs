@@ -728,6 +728,11 @@ impl Apu {
         self.powered = false;
     }
 
+    /// Wave RAM, for filling at power-on.
+    pub(crate) fn wave_ram_mut(&mut self) -> &mut [u8; 16] {
+        &mut self.ch3.ram
+    }
+
     /// Channel status for visualisers: (enabled, digital output 0..15) x4.
     pub fn channel_levels(&self) -> [(bool, u8); 4] {
         [

@@ -10,7 +10,7 @@
 //! obtained from [`matcha_alloc`] (or otherwise valid for `len` bytes).
 
 use matcha_core::cpu::StepKind;
-use matcha_core::{Buttons, GameBoy, HEIGHT, RunEvent, WIDTH, palettes};
+use matcha_core::{Buttons, GameBoy, HEIGHT, Options, PowerOnRam, RunEvent, WIDTH, palettes};
 use std::fmt::Write as _;
 use std::sync::Mutex;
 
@@ -132,6 +132,18 @@ pub unsafe extern "C" fn matcha_destroy(emu: *mut Emu) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn matcha_reset(e: *mut Emu) {
     unsafe { emu(e) }.gb.reset();
+}
+
+/// Power-cycles with RAM zeroed (`noise` = 0) or filled with DMG-like noise
+/// from the 64-bit seed `seed_hi:seed_lo`; later resets keep the choice.
+///
+/// # Safety
+/// See module docs.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn matcha_power_cycle(e: *mut Emu, noise: u32, seed_lo: u32, seed_hi: u32) {
+    let power_on_ram =
+        if noise != 0 { PowerOnRam::Noise(u64::from(seed_hi) << 32 | u64::from(seed_lo)) } else { PowerOnRam::Zero };
+    unsafe { emu(e) }.gb.reset_with(Options { power_on_ram });
 }
 
 // --- running ---------------------------------------------------------------------

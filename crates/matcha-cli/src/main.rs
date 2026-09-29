@@ -5,7 +5,7 @@ mod image;
 mod profile;
 
 use matcha_core::cpu::StepKind;
-use matcha_core::{Buttons, GameBoy, palettes};
+use matcha_core::{Buttons, GameBoy, Options, PowerOnRam, palettes};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -16,14 +16,17 @@ USAGE:
   matcha info <rom>
   matcha run <rom> [--seconds N | --frames N] [--hold BUTTONS | --input none|monkey] [--audio]
                    [--screenshot out.png] [--scale N] [--palette grey|matcha|dmg] [--serial]
-                   [--sav file.sav]
+                   [--sav file.sav] [--ram zero|noise[:SEED]]
   matcha test <test-roms-dir> [--suite NAME] [--filter TEXT] [--threads N]
                    [--markdown out.md] [--json out.json] [--baseline old.json]
-  matcha profile <rom>... [--seconds N] [--input none|monkey] [--json out.json]
+  matcha profile <rom>... [--seconds N] [--input none|monkey] [--ram zero|noise[:SEED]] [--json out.json]
   matcha disasm <rom> [--addr HEX] [--count N]
-  matcha trace <rom> [--input none|monkey] [--frames N] [--skip N] [--count N | --last N [--watch HEX]]
+  matcha trace <rom> [--input none|monkey] [--ram zero|noise[:SEED]] [--frames N] [--skip N]
+                   [--count N | --last N [--watch HEX]]
 
 BUTTONS is a comma list: a,b,start,select,up,down,left,right
+--ram noise fills RAM at power-on with DMG-like junk (seed 0 unless given)
+instead of zeros, to catch software that reads memory before writing it.
 
 `test` exits non-zero if any ROM fails; with --baseline (a previous --json
 scoreboard) it exits non-zero only if a ROM that passed there fails now.
@@ -94,15 +97,28 @@ fn read_rom(path: &str) -> Result<Vec<u8>, String> {
     std::fs::read(path).map_err(|e| format!("{path}: {e}"))
 }
 
+/// `--ram zero|noise[:SEED]`.
+pub fn parse_ram(value: Option<&str>) -> Result<Options, String> {
+    let power_on_ram = match value.unwrap_or("zero") {
+        "zero" => PowerOnRam::Zero,
+        "noise" => PowerOnRam::Noise(0),
+        other => match other.strip_prefix("noise:").map(str::parse) {
+            Some(Ok(seed)) => PowerOnRam::Noise(seed),
+            _ => return Err(format!("--ram: expected zero, noise or noise:SEED, got '{other}'")),
+        },
+    };
+    Ok(Options { power_on_ram })
+}
+
 /// Creates a machine for headless use (no audio output).
-fn boot(rom: Vec<u8>, path: &str) -> Result<GameBoy, String> {
-    let mut gb = GameBoy::new(rom).map_err(|e| format!("{path}: {e}"))?;
+fn boot(rom: Vec<u8>, path: &str, options: Options) -> Result<GameBoy, String> {
+    let mut gb = GameBoy::with_options(rom, options).map_err(|e| format!("{path}: {e}"))?;
     gb.set_audio_output(false);
     Ok(gb)
 }
 
 fn load(path: &str) -> Result<GameBoy, String> {
-    boot(read_rom(path)?, path)
+    boot(read_rom(path)?, path, Options::default())
 }
 
 fn cmd_info(args: &Args) -> Result<(), String> {
@@ -139,7 +155,7 @@ fn cmd_run(args: &Args) -> Result<(), String> {
         }
         None => None,
     };
-    let mut gb = boot(rom, path)?;
+    let mut gb = boot(rom, path, parse_ram(args.get("ram"))?)?;
     if let Some(sav) = args.get("sav") {
         if let Ok(data) = std::fs::read(sav) {
             gb.load_battery_ram(&data);
@@ -292,7 +308,7 @@ fn cmd_trace(args: &Args) -> Result<(), String> {
     let rom = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
     let mut input =
         profile::InputDriver::new(profile::InputMode::parse(args.get("input"), profile::InputMode::None)?, &rom);
-    let mut gb = load(path)?;
+    let mut gb = boot(rom, path, parse_ram(args.get("ram"))?)?;
     let frames = args.number("frames", 0u64)?;
     let last = args.number("last", 0usize)?;
     let watch = args.get("watch").map(parse_hex).transpose()?;
@@ -397,9 +413,15 @@ fn main() -> ExitCode {
         "info" => cmd_info(&args).map(|()| true),
         "run" => cmd_run(&args).map(|()| true),
         "test" => cmd_test(&args),
-        "profile" => {
-            profile::cmd_profile(&args.positional, args.get("json"), args.get("input"), args.number("seconds", 30.0f64))
-        }
+        "profile" => parse_ram(args.get("ram")).and_then(|options| {
+            profile::cmd_profile(
+                &args.positional,
+                args.get("json"),
+                args.get("input"),
+                args.number("seconds", 30.0f64),
+                &options,
+            )
+        }),
         "disasm" => cmd_disasm(&args).map(|()| true),
         "trace" => cmd_trace(&args).map(|()| true),
         "help" | "--help" | "-h" => {

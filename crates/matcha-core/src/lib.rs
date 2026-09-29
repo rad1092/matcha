@@ -72,13 +72,33 @@ pub mod palettes {
     pub const DMG: [u32; 4] = [0x9BBC0F, 0x8BAC0F, 0x306230, 0x0F380F];
 }
 
+/// What WRAM, HRAM, OAM and wave RAM hold at power-on.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PowerOnRam {
+    /// All zero (the default).
+    #[default]
+    Zero,
+    /// DMG-like noise from this seed (same seed, same bytes). Real consoles
+    /// power up with junk in RAM, so software that reads memory before
+    /// writing it can behave differently than it does with zeros.
+    Noise(u64),
+}
+
+/// Machine options for [`GameBoy::with_options`]. The default is what
+/// [`GameBoy::new`] builds.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Options {
+    pub power_on_ram: PowerOnRam,
+}
+
 /// A complete Game Boy.
 pub struct GameBoy {
     cpu: Cpu,
     bus: SystemBus,
     breakpoints: Option<AddrSet>,
-    /// Kept so [`GameBoy::reset`] can boot the same way again.
+    /// Kept so [`GameBoy::reset`] can power on the same way again.
     boot_rom: Option<Box<[u8; 0x100]>>,
+    options: Options,
 }
 
 impl core::fmt::Debug for GameBoy {
@@ -95,18 +115,23 @@ impl GameBoy {
     /// Creates a machine in the state the DMG boot ROM leaves it in, ready to
     /// execute the cartridge at 0x0100. No boot ROM image is needed.
     pub fn new(rom: Vec<u8>) -> Result<Self, CartridgeError> {
+        Self::with_options(rom, Options::default())
+    }
+
+    /// Like [`GameBoy::new`], with non-default [`Options`].
+    pub fn with_options(rom: Vec<u8>, options: Options) -> Result<Self, CartridgeError> {
         let cart = Cartridge::new(rom)?;
-        Ok(Self::from_cartridge(cart, None))
+        Ok(Self::from_cartridge(cart, None, options))
     }
 
     /// Creates a machine that runs `boot_rom` (256 bytes) from 0x0000.
     pub fn with_boot_rom(rom: Vec<u8>, boot_rom: &[u8]) -> Result<Self, CartridgeError> {
         let cart = Cartridge::new(rom)?;
         let boot = bus::boot_rom_from(boot_rom).ok_or(CartridgeError::TooSmall(boot_rom.len()))?;
-        Ok(Self::from_cartridge(cart, Some(boot)))
+        Ok(Self::from_cartridge(cart, Some(boot), Options::default()))
     }
 
-    fn from_cartridge(cart: Cartridge, boot: Option<Box<[u8; 0x100]>>) -> Self {
+    fn from_cartridge(cart: Cartridge, boot: Option<Box<[u8; 0x100]>>, options: Options) -> Self {
         let mut cpu = Cpu::new();
         if boot.is_none() {
             let checksum_zero = cart.header().header_checksum == 0;
@@ -123,20 +148,34 @@ impl GameBoy {
                 pc: 0x0100,
             };
         }
-        Self { cpu, bus: SystemBus::new(cart, boot.clone()), breakpoints: None, boot_rom: boot }
+        let mut bus = SystemBus::new(cart, boot.clone());
+        if let PowerOnRam::Noise(seed) = options.power_on_ram {
+            bus.fill_power_on_noise(seed);
+        }
+        Self { cpu, bus, breakpoints: None, boot_rom: boot, options }
     }
 
     /// Power-cycles the machine. Cartridge RAM (the save file), breakpoints,
     /// watchpoints and profiling survive.
     pub fn reset(&mut self) {
+        self.reset_with(self.options.clone());
+    }
+
+    /// Power-cycles the machine with different [`Options`].
+    pub fn reset_with(&mut self, options: Options) {
         let mut cart = self.bus.cart.clone();
         cart.reset();
-        let mut fresh = Self::from_cartridge(cart, self.boot_rom.take());
+        let mut fresh = Self::from_cartridge(cart, self.boot_rom.take(), options);
         fresh.breakpoints = self.breakpoints.take();
         fresh.bus.profile = self.bus.profile.take();
         fresh.bus.read_watch = self.bus.read_watch.take();
         fresh.bus.write_watch = self.bus.write_watch.take();
         *self = fresh;
+    }
+
+    /// The options the machine was powered on with.
+    pub fn options(&self) -> &Options {
+        &self.options
     }
 
     // --- running -----------------------------------------------------------------
@@ -608,6 +647,30 @@ mod tests {
         gb.set_buttons(Buttons::A);
         gb.run_frame();
         assert_eq!(gb.power_state(), PowerState::Halted);
+    }
+
+    #[test]
+    fn power_on_noise_is_deterministic_biased_and_survives_reset() {
+        let noisy = |seed| {
+            let options = Options { power_on_ram: PowerOnRam::Noise(seed) };
+            GameBoy::with_options(test_rom(b"NOISE"), options).unwrap()
+        };
+        let ram = |gb: &GameBoy| -> Vec<u8> {
+            let wram = (0xC000..0xE000).map(|a| gb.peek(a));
+            let rest = (0xFF80..0xFFFF).chain(0xFE00..0xFEA0).chain(0xFF30..0xFF40).map(|a| gb.peek(a));
+            wram.chain(rest).collect()
+        };
+        let mut a = noisy(1);
+        let first = ram(&a);
+        assert_eq!(first, ram(&noisy(1)), "same seed, same bytes");
+        assert_ne!(first, ram(&noisy(2)));
+        assert!(ram(&GameBoy::new(test_rom(b"NOISE")).unwrap()).iter().all(|&b| b == 0), "default: zeros");
+        // SameBoy's DMG-B measurements: WRAM rows with address bit 8 set lean
+        // toward 0 bits, the others toward 1 bits.
+        let ones = |range: core::ops::Range<u16>| range.map(|x| a.peek(x).count_ones()).sum::<u32>();
+        assert!(ones(0xC100..0xC200) * 2 < ones(0xC000..0xC100));
+        a.reset();
+        assert_eq!(ram(&a), first, "reset powers on the same way");
     }
 
     #[test]

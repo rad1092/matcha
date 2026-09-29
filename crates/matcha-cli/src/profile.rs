@@ -2,7 +2,7 @@
 //! emit one JSON record per ROM (the input to `analysis/`).
 
 use matcha_core::profile::REGION_NAMES;
-use matcha_core::{Buttons, GameBoy, RunEvent};
+use matcha_core::{Buttons, GameBoy, Options, RunEvent};
 use serde_json::{Value, json};
 use std::time::Instant;
 
@@ -120,7 +120,7 @@ impl InputDriver {
 }
 
 /// Profiles one ROM; returns a JSON record (never fails: errors are recorded).
-pub fn profile_rom(path: &str, seconds: f64, mode: InputMode) -> Value {
+pub fn profile_rom(path: &str, seconds: f64, mode: InputMode, options: &Options) -> Value {
     let started = Instant::now();
     let rom = match std::fs::read(path) {
         Ok(r) => r,
@@ -128,7 +128,7 @@ pub fn profile_rom(path: &str, seconds: f64, mode: InputMode) -> Value {
     };
     let rom_len = rom.len();
     let mut input = InputDriver::new(mode, &rom);
-    let mut gb = match GameBoy::new(rom) {
+    let mut gb = match GameBoy::with_options(rom, options.clone()) {
         Ok(gb) => gb,
         Err(e) => {
             return json!({
@@ -225,6 +225,7 @@ pub fn cmd_profile(
     json_out: Option<&str>,
     input: Option<&str>,
     seconds: Result<f64, String>,
+    options: &Options,
 ) -> Result<bool, String> {
     let seconds = seconds?;
     if roms.is_empty() {
@@ -240,7 +241,7 @@ pub fn cmd_profile(
                 loop {
                     let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     let Some(rom) = roms.get(i) else { break };
-                    let rec = profile_rom(rom, seconds, mode);
+                    let rec = profile_rom(rom, seconds, mode, options);
                     results.lock().unwrap()[i] = rec;
                 }
             });

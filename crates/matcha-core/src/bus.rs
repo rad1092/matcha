@@ -165,6 +165,34 @@ impl SystemBus {
         }
     }
 
+    /// Fills WRAM, HRAM, OAM and wave RAM with the junk a DMG-B powers up
+    /// with: random bytes biased toward 1s or 0s depending on the region and
+    /// address bits (SameBoy's measurements, `reset_ram`). Deterministic in
+    /// `seed` (SplitMix64).
+    pub(crate) fn fill_power_on_noise(&mut self, seed: u64) {
+        let mut state = seed;
+        let mut next = || {
+            state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+            let mut z = state;
+            z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+            z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+            ((z ^ (z >> 31)) >> 56) as u8
+        };
+        for (i, b) in self.wram.iter_mut().enumerate() {
+            let r = next();
+            *b = if i & 0x100 != 0 { r & next() } else { r | next() };
+        }
+        for (i, b) in self.hram.iter_mut().enumerate() {
+            *b = if i & 1 != 0 { next() | next() | next() } else { next() & next() & next() };
+        }
+        for (i, b) in self.ppu.oam.iter_mut().enumerate() {
+            *b = if i & 2 != 0 { next() & next() & next() } else { next() | next() | next() };
+        }
+        for (i, b) in self.apu.wave_ram_mut().iter_mut().enumerate() {
+            *b = if i & 1 != 0 { next() & next() & next() } else { next() | next() | next() };
+        }
+    }
+
     // --- clock ---------------------------------------------------------------
 
     /// Advances every peripheral by one M-cycle.

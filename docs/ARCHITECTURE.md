@@ -86,7 +86,7 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
 | `state.rs` | Versioned binary writer/reader | ADR-0006 |
 | `disasm.rs` | RGBDS-syntax disassembler | Used by the debugger, MCP and CLI |
 | `profile.rs` | Opt-in execution profile | Opcode counts, cycles by state, memory regions, coverage |
-| `lib.rs` | `GameBoy` facade | Post-boot state (including the boot logo left in VRAM), run loop, breakpoints, palettes, public API |
+| `lib.rs` | `GameBoy` facade | Post-boot state (including the boot logo left in VRAM), power-on RAM (zeros, or seeded DMG-like noise), run loop, breakpoints, palettes, public API |
 
 ## 3. How time works
 

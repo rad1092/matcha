@@ -121,7 +121,10 @@ analysis/            corpus study pipeline (manifest, profiling, SameBoy referen
   CGB의 DMG 호환 모드와 일부 정밀 타이밍은 아직 남아 있다.
 - **코퍼스 분석**: Homebrew Hub에서 원조 게임보이로 돌아가는 868개를 matcha와
   SameBoy로 1분씩 같은 입력으로 돌려 비교했다. 이 비교로 matcha 버그 3개
-  (부트 로고 VRAM, STOP 동작, OAM DMA 버스 충돌)를 찾아 고쳤다.
+  (부트 로고 VRAM, STOP 동작, OAM DMA 버스 충돌)를 찾아 고쳤다. 새 컬러 포함
+  비교는 1,235개 중 1,229개에서 실행 상태가 일치했다. 이 숫자는 화면·소리·
+  게임 진행의 완전한 호환율이 아니다. [`새 보고서`](docs/cgb-analysis.md)에
+  제외 대상과 불일치 원인을 함께 기록했다.
 
 이어서 작업하려면 [`CONTINUE.md`](CONTINUE.md)부터 읽으면 된다.
 

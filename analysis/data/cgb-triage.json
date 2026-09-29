@@ -1,0 +1,80 @@
+{
+  "scope": "Controlled follow-up diagnostics; primary 60-second results remain unmodified.",
+  "source_commit": "170b9d7",
+  "sources": [
+    "https://gbdev.io/pandocs/Palettes.html",
+    "https://github.com/LIJI32/SameBoy/blob/213a12ce93d66b105a113debd9396306066a7cfc/Core/gb.c",
+    "docs/analysis.md",
+    "https://github.com/LIJI32/SameBoy/blob/213a12ce93d66b105a113debd9396306066a7cfc/Core/mbc.c"
+  ],
+  "cases": {
+    "bomber": {
+      "category": "Uninitialized OBJ palette",
+      "note": "SameBoy with randomness disabled starts OBJ palette RAM at 00; matcha uses FF. Changing only those 64 bytes to 00 changes non-uniform output from 0 to 292 of 600 frames; final shade-index pixel counts are unchanged. Hardware OBJ palette colors are uninitialized, so neither deterministic choice is a hardware reference.",
+      "measurement": {
+        "frames": 600,
+        "default_non_uniform": 0,
+        "zero_obj_non_uniform": 292,
+        "final_color_indices": [
+          14735,
+          5617,
+          260,
+          2428
+        ]
+      }
+    },
+    "headache-boy": {
+      "category": "Uninitialized OBJ palette",
+      "note": "The same controlled OBJ-palette change gives 595 non-uniform frames instead of 0 in 600 frames, with unchanged final shade-index pixel counts.",
+      "measurement": {
+        "frames": 600,
+        "default_non_uniform": 0,
+        "zero_obj_non_uniform": 595,
+        "final_color_indices": [
+          21694,
+          415,
+          325,
+          606
+        ]
+      }
+    },
+    "font-demo-waugh": {
+      "category": "Boot handoff P1 value",
+      "note": "The ROM waits for joypad IF before selecting a row. SameBoy hands off P1=FF and matcha P1=CF. Changing only reference P1 to CF gives 12 distinct sampled frames instead of 1 over 12 seconds and reproduces the first five static hashes observed in matcha.",
+      "measurement": {
+        "emulated_seconds": 12.0,
+        "frames": 717,
+        "nonblank_frames": 708,
+        "distinct_frames_sampled": 12,
+        "static_screens": [
+          "5be7601a3238f554",
+          "f9421e275e9f3b54",
+          "d20161b808548db0",
+          "afa56887314d3520",
+          "d0f6d5018c56bbac"
+        ]
+      }
+    },
+    "hybrid-gbplot": {
+      "category": "Historical boot-phase difference",
+      "note": "The earlier DMG investigation traces its branch to the STAT mode read just after boot; the current run retains the same mismatch. This cause is inherited from the historical study, not newly established by this revalidation."
+    },
+    "vip": {
+      "category": "Invalid cartridge; cause not isolated",
+      "note": "Both logo and header checksum are invalid. matcha reaches opcode FD at PC006B after 89 instructions. The distinct SameBoy blank outcome is recorded; its precise cause is unresolved."
+    },
+    "gb-pda": {
+      "category": "Fresh cartridge RAM value",
+      "note": "matcha initializes fresh cartridge RAM to 00; SameBoy uses FF. The ROM reads a saved palette color from cartridge configuration and complements it. Setting only reference cartridge RAM to 00 gives a nonblank UI, 3 sampled pictures and the exact matcha static hash a2ac73363d56bba4. A two-second snapshot finds both 8 KiB VRAM banks byte-identical; palette contents differ under default startup inputs.",
+      "measurement": {
+        "emulated_seconds": 12.000001907,
+        "frames": 716,
+        "nonblank_frames": 692,
+        "distinct_frames_sampled": 3,
+        "static_screens": [
+          "a2ac73363d56bba4"
+        ]
+      }
+    }
+  }
+}

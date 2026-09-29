@@ -371,7 +371,7 @@
    },
    {
     "slug": "fatass",
-    "year": NaN,
+    "year": null,
     "toolchain": "other / unknown",
     "z_outcome": "crashed",
     "r_outcome": "running"

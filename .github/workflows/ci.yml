@@ -1,4 +1,4 @@
-# Every push runs the whole definition of done (docs/adr/0008-verification.md):
+# Main pushes and pull requests run the whole definition of done (docs/adr/0008-verification.md):
 # formatting, lints, unit tests, all 498k SingleStepTests CPU cases, the
 # DMG and native CGB conformance suites (failing only on regressions against
 # their separate committed scoreboards), the WebAssembly build, and the MCP
@@ -7,13 +7,26 @@ name: ci
 
 on:
   push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE*'
   pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE*'
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   core:
+    timeout-minutes: 30
     name: core, CPU cases, conformance
     runs-on: ubuntu-latest
     env:
@@ -54,6 +67,7 @@ jobs:
             conformance-cgb.md
 
   wasm:
+    timeout-minutes: 15
     name: wasm, web bundle, MCP server
     runs-on: ubuntu-latest
     steps:

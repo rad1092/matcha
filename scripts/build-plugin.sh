@@ -13,7 +13,7 @@ cp mcp/server.mjs web/matcha.js web/matcha.wasm plugin/server/
 cp web/roms/*.gb web/roms/LICENSES.md plugin/server/roms/
 
 # Smoke-test the packaged server exactly as the plugin will launch it.
-node plugin/server/server.mjs --self-test plugin/server/roms/libbet.gb > /dev/null
+node mcp/debug-homebrew.mjs plugin/server/server.mjs
 
 if command -v claude > /dev/null 2>&1; then
   claude plugin validate plugin/.claude-plugin/plugin.json

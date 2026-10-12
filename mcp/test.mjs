@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // End-to-end test of the MCP server over real stdio JSON-RPC.
-//   node mcp/test.mjs [rom.gb]     (defaults to web/roms/libbet.gb)
+//   node mcp/test.mjs [rom.gb]     (defaults to a self-authored fixture)
 
 import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
@@ -11,8 +11,14 @@ import { inflateSync } from "node:zlib";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 
+import { homebrewRom } from "./fixtures/homebrew.mjs";
+
+const fixtureDir = mkdtempSync(join(tmpdir(), "matcha-fixture-"));
+process.on("exit", () => rmSync(fixtureDir, { recursive: true, force: true }));
+const fixtureRom = join(fixtureDir, "debug.gb");
+writeFileSync(fixtureRom, homebrewRom());
 const here = dirname(fileURLToPath(import.meta.url));
-const rom = process.argv[2] ?? join(here, "..", "web", "roms", "libbet.gb");
+const rom = process.argv[2] ?? fixtureRom;
 
 const server = spawn(process.execPath, [join(here, "server.mjs")], { stdio: ["pipe", "pipe", "inherit"] });
 const lines = createInterface({ input: server.stdout });

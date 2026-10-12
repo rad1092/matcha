@@ -80,5 +80,6 @@ jobs:
           node-version: 22
       - run: scripts/build-wasm.sh
       - run: node mcp/test.mjs
+      - run: node mcp/debug-homebrew.mjs
       - run: node scripts/build-web.mjs
       - run: scripts/build-plugin.sh

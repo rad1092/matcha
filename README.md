@@ -43,6 +43,16 @@ records the remaining timing failures and excluded compatibility-mode tests.
 DMG-on-CGB colourization and precise hardware quirks remain; see
 [`ROADMAP.md`](ROADMAP.md).
 
+## Reproduce a homebrew debugging session
+
+With Node 18 or newer, run `node mcp/debug-homebrew.mjs`. No package install,
+ROM download or credentials are needed. The script creates a small original
+program, identifies the instruction writing `$42` to `$C000`, steps to the next
+write, and proves that save/restore replays it exactly. It also verifies rejected
+requests preserve the machine, save slots, breakpoints, search and palette.
+See [the manual MCP walkthrough](docs/MCP-HOMEBREW.md) for the tool calls and
+known limits. This is debugger workflow evidence, not a hardware accuracy score.
+
 ## Quick start
 
 ```sh

@@ -31,7 +31,7 @@ const SAMPLES = {
 const { loadMatcha, buttonMask, PALETTES, WIDTH, HEIGHT } = await import(pathToFileURL(join(CORE_DIR, "matcha.js")).href);
 const matcha = await loadMatcha(readFileSync(join(CORE_DIR, "matcha.wasm")));
 
-const SERVER_INFO = { name: "matcha", title: "matcha Game Boy", version: "0.1.0" };
+const SERVER_INFO = { name: "matcha", title: "matcha Game Boy", version: "0.1.1" };
 const PROTOCOLS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 const INSTRUCTIONS = `matcha is a Game Boy / Game Boy Color emulator.
 Start with load_rom. Use press to tap buttons and see the result, run to let
@@ -251,27 +251,33 @@ const TOOLS = [
       } catch (e) {
         throw new ToolError(`${full} is not a ROM matcha can run: ${e.message}`);
       }
-      let ramNote;
+      // Prepare the complete reply before committing the replacement. A rejected
+      // request must leave the old machine, debugger and save slots intact.
+      let content;
+      let header;
       try {
-        ramNote = powerOn(gb, ram, seed);
+        const ramNote = powerOn(gb, ram, seed);
+        gb.setAudioOutput(false); // nobody listens to an MCP server
+        gb.setPalette(PALETTES[session.palette]);
+        runFrames(gb, int(frames, "frames", 0, 3600, 60), 0);
+        header = gb.header();
+        const h = header;
+        const text = [
+          `Loaded ${full}`,
+          `title "${h.title}" · ${h.cartTypeName} · ROM ${h.romSize / 1024} KiB · RAM ${h.ramSize / 1024} KiB${h.battery ? " (battery)" : ""}${h.rtc ? " · RTC" : ""}`,
+          h.cgbFlag === 0xc0 && gb.model === "dmg" ? "CGB-only cartridge loaded with an explicit DMG override." : "",
+          ramNote,
+          statusLine(gb),
+        ].filter(Boolean).join("\n");
+        content = [{ type: "text", text }, image(gb)];
       } catch (e) {
         gb.destroy();
         throw e;
       }
-      gb.setAudioOutput(false); // nobody listens to an MCP server
-      session.gb?.destroy();
-      Object.assign(session, { gb, romPath: full, header: gb.header(), slots: new Map(), breaks: new Map(), search: null });
-      gb.setPalette(PALETTES[session.palette]);
-      runFrames(gb, int(frames, "frames", 0, 3600, 60), 0);
-      const h = session.header;
-      const text = [
-        `Loaded ${full}`,
-        `title "${h.title}" · ${h.cartTypeName} · ROM ${h.romSize / 1024} KiB · RAM ${h.ramSize / 1024} KiB${h.battery ? " (battery)" : ""}${h.rtc ? " · RTC" : ""}`,
-        h.cgbFlag === 0xc0 && gb.model === "dmg" ? "CGB-only cartridge loaded with an explicit DMG override." : "",
-        ramNote,
-        statusLine(gb),
-      ].filter(Boolean).join("\n");
-      return [{ type: "text", text }, image(gb)];
+      const previous = session.gb;
+      Object.assign(session, { gb, romPath: full, header, slots: new Map(), breaks: new Map(), search: null });
+      previous?.destroy();
+      return content;
     },
   },
   {
@@ -639,6 +645,40 @@ const TOOLS = [
   },
 ];
 
+// Validate the published contracts before any tool can mutate its session.
+// This covers only the schema keywords used by these locally defined tools.
+function validateInput(value, schema, name = "arguments") {
+  if (schema.anyOf) {
+    for (const branch of schema.anyOf) {
+      try { validateInput(value, branch, name); return; } catch (e) {
+        if (!(e instanceof ToolError)) throw e;
+      }
+    }
+    throw new ToolError(`${name} has an invalid type or value`);
+  }
+  const types = Array.isArray(schema.type) ? schema.type : [schema.type];
+  const matches = (type) => type === "integer" ? Number.isInteger(value)
+    : type === "array" ? Array.isArray(value)
+    : type === "object" ? value !== null && typeof value === "object" && !Array.isArray(value)
+    : typeof value === type;
+  if (!types.some(matches)) throw new ToolError(`${name} must be ${types.join(" or ")}`);
+  if (schema.enum && !schema.enum.includes(value)) throw new ToolError(`${name} must be one of ${schema.enum.join(", ")}`);
+  if (schema.minimum !== undefined && value < schema.minimum
+      || schema.maximum !== undefined && value > schema.maximum) {
+    throw new ToolError(`${name} must be ${schema.minimum}..${schema.maximum}`);
+  }
+  if (schema.type === "array") value.forEach((item, i) => validateInput(item, schema.items, `${name}[${i}]`));
+  if (schema.type === "object") {
+    for (const key of schema.required ?? []) {
+      if (!Object.hasOwn(value, key)) throw new ToolError(`${name}.${key} is required`);
+    }
+    for (const [key, item] of Object.entries(value)) {
+      if (!Object.hasOwn(schema.properties, key)) throw new ToolError(`${name}.${key} is not supported`);
+      validateInput(item, schema.properties[key], `${name}.${key}`);
+    }
+  }
+}
+for (const tool of TOOLS) tool.inputSchema.additionalProperties = false;
 const TOOL_MAP = new Map(TOOLS.map((t) => [t.name, t]));
 
 // --- JSON-RPC over stdio --------------------------------------------------------------
@@ -651,7 +691,9 @@ function callTool(name, args) {
   const tool = TOOL_MAP.get(name);
   if (!tool) return { content: [{ type: "text", text: `unknown tool "${name}"` }], isError: true };
   try {
-    return { content: tool.run(args ?? {}) };
+    const input = args === undefined ? {} : args;
+    validateInput(input, tool.inputSchema);
+    return { content: tool.run(input) };
   } catch (e) {
     // ToolErrors are expected input problems; anything else is logged for debugging.
     if (!(e instanceof ToolError)) console.error("[matcha]", e);

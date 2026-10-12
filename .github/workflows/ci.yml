@@ -83,3 +83,9 @@ jobs:
       - run: node mcp/debug-homebrew.mjs
       - run: node scripts/build-web.mjs
       - run: scripts/build-plugin.sh
+      - run: node scripts/prepare-release.mjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: matcha-release-${{ github.sha }}
+          path: release/
+          if-no-files-found: error

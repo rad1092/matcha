@@ -1,4 +1,4 @@
-# 0.1.1 candidate validation
+# 0.1.1 validation and release scope
 
 The MCP server validates its advertised input contract before executing a tool.
 ROM loading prepares the new machine and reply before replacing the old session.
@@ -34,3 +34,14 @@ from these synthetic checks. Known hardware timing limitations remain.
 Independent review and clean public-release download verification are separate
 release gates. A source test pass or locally assembled archive alone does not
 establish that a published asset contains this fix.
+
+The independent candidate review also exercised both DMG and CGB with an
+original instruction fixture: rejected inputs preserved CPU/RAM/images and
+per-session debugger data, while save/load replay was exact. ROM identity is
+header-based; same-header, different-body ROMs are not distinguished. The CLI
+and core are unchanged. Interactive Claude Desktop installation and full web
+player interaction are not claimed by the MCP tests.
+
+CI uploads the plugin, offline HTML, retained homebrew notices, a source/WASM
+manifest and checksums. Publish only artifacts from a successful final main run.
+The release remains dependent on clean-download consumption checks after upload.

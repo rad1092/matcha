@@ -73,3 +73,8 @@ mid-call cancellation or crash persistence.
 The emulator core and save-state format are unchanged in 0.1.1. Known DMG/CGB
 timing failures and missing CGB compatibility mode still apply. This fixture
 does not revalidate the separate conformance scoreboards or real hardware.
+
+State-file ROM identity currently hashes the cartridge header, not the complete
+ROM body (ADR-0006). Homebrew builds with identical headers can accept each
+other's snapshots; keep states with their exact ROM build. This release does
+not change or strengthen that identity check.

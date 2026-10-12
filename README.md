@@ -138,30 +138,6 @@ plugin/              Claude plugin (skills, manifest)
 analysis/            corpus study pipeline (manifest, profiling, SameBoy reference, report)
 ```
 
-## 한국어 요약
-
-**matcha**는 게임보이(DMG)와 네이티브 게임보이 컬러 에뮬레이터다. Rust 코어
-하나(`no_std`, 의존성 0, `unsafe` 없음)를 웹 플레이어·Claude 플러그인·CLI가
-같이 쓴다.
-
-- **웹 플레이어**: HTML 파일 하나로 오프라인 실행. 사운드, 세이브/되감기,
-  CPU·PPU·VRAM·사운드를 실시간으로 보는 디버거 포함. 오픈소스 홈브루 4개 내장.
-- **Claude 플러그인**: MCP 도구 17개 + 스킬 3개. Claude가 ROM을 켜고, 화면을
-  보고, 버튼을 누르고, 브레이크포인트·메모리 검색으로 디버깅한다.
-- **CLI**: 헤드리스 실행/스크린샷, 테스트 스코어보드, 프로파일러, 명령어 트레이서.
-- **정확도**: SingleStepTests 498,000/498,000, Mooneye 94/94, dmg-acid2 통과,
-  Blargg 43/43, Gambatte 1,642/1,783, Mealybug 9/24. 픽셀 FIFO를 구현해
-  한 줄 중간의 팔레트·스크롤·창 변경을 반영한다. 컬러 모드의 메모리 뱅크,
-  팔레트, 배속 전환, VRAM DMA를 지원하며 cgb-acid2와 cgb-acid-hell을 통과한다.
-  CGB의 DMG 호환 모드와 일부 정밀 타이밍은 아직 남아 있다.
-- **코퍼스 분석**: Homebrew Hub에서 원조 게임보이로 돌아가는 868개를 matcha와
-  SameBoy로 1분씩 같은 입력으로 돌려 비교했다. 이 비교로 matcha 버그 3개
-  (부트 로고 VRAM, STOP 동작, OAM DMA 버스 충돌)를 찾아 고쳤다. 새 컬러 포함
-  비교는 1,235개 중 1,229개에서 실행 상태가 일치했다. 이 숫자는 화면·소리·
-  게임 진행의 완전한 호환율이 아니다. [`새 보고서`](docs/cgb-analysis.md)에
-  제외 대상과 불일치 원인을 함께 기록했다.
-
-이어서 작업하려면 [`CONTINUE.md`](CONTINUE.md)부터 읽으면 된다.
 
 ## License
 

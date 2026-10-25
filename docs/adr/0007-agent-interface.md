@@ -8,7 +8,8 @@
 
 An AI agent should be able to play, test and debug Game Boy software: see the
 screen, press buttons, inspect memory, and repeat experiments. It has to
-install as a Claude plugin with nothing but Node on the machine.
+install as a portable package with nothing but Node and a compatible local
+MCP host on the machine.
 
 ## Decision
 
@@ -17,9 +18,11 @@ directly, loads the same `matcha.wasm` as the web player, and exposes 17
 task-level tools: `load_rom`, `press`, `run`, `screenshot`, `state`,
 `read_memory`, `write_memory`, `disassemble`, `breakpoint`, `step`,
 `save_state`, `load_state`, `find_value`, `serial_output`, `profile`,
-`tiles`, `reset`. Screenshots are PNG image content. The plugin bundles
+`tiles`, `reset`. Screenshots are PNG image content. The AI package bundles
 three skills that teach the workflows (play, debug, find values) and four
-open-source sample ROMs.
+open-source sample ROMs. Since 2026-10-17, the primary distribution is a
+host-neutral ZIP with an operator guide, configuration helper and checksums.
+The original host-specific plugin remains an optional compatibility adapter.
 
 Tool design rules:
 - Each tool does one agent-sized job and returns what the agent needs next

@@ -16,12 +16,12 @@ import { createInterface } from "node:readline";
 import { deflateSync } from "node:zlib";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-// Packaged plugin: matcha.js/.wasm sit next to this file. Repo checkout: ../web.
+// Packaged server: matcha.js/.wasm sit next to this file. Repo checkout: ../web.
 const CORE_DIR = existsSync(join(HERE, "matcha.wasm")) ? HERE : join(HERE, "..", "web");
 const SAMPLE_DIR = existsSync(join(HERE, "roms")) ? join(HERE, "roms") : join(HERE, "..", "web", "roms");
 /** The largest cartridge any supported mapper can address (MBC5). */
 const MAX_ROM_BYTES = 8 * 1024 * 1024;
-/** Open-source homebrew bundled with the plugin (see roms/LICENSES.md). */
+/** Open-source homebrew bundled with the AI package (see roms/LICENSES.md). */
 const SAMPLES = {
   "tobu": { file: "tobu.gb", about: "Tobu Tobu Girl — arcade platformer (Tangram Games, MIT / CC BY 4.0)" },
   "libbet": { file: "libbet.gb", about: "Libbet and the Magic Floor — puzzle (Damian Yerrick, zlib)" },
@@ -38,7 +38,11 @@ Start with load_rom. Use press to tap buttons and see the result, run to let
 time pass, and screenshot to look. Emulation is deterministic: save_state
 before risky moves and load_state to retry. For debugging use state,
 disassemble, breakpoint, step, read_memory and serial_output. find_value
-locates where a game stores a number (lives, HP, score).`;
+locates where a game stores a number (lives, HP, score). Use tools/list for
+argument schemas and check isError on every result. load_rom defaults to
+model auto (DMG or native CGB). Save slots live only in this server process;
+loading another ROM or closing the process discards them. For isolated tests,
+use a fresh server, keep a written result, then stop it and remove test files.`;
 
 // --- helpers ---------------------------------------------------------------------
 

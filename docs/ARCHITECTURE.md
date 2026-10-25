@@ -31,7 +31,7 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
 | Portability | One core for browser, Node and native; no OS services | `no_std` + `alloc`, zero dependencies |
 | Safety | Any byte sequence is a valid ROM or state input: no panics, no UB | `#![forbid(unsafe_code)]` in the core; bounds-checked state reader; atomic state load |
 | Footprint | Small enough to embed in one HTML file | Shared WASM: 186,123 bytes (181.8 KiB), no imports |
-| Install | Plugin works with nothing but Node | MCP server has no npm dependencies |
+| Install | AI ZIP works with Node and a compatible local MCP host | No npm dependencies; optional host adapter |
 
 ### Constraints
 
@@ -69,7 +69,7 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
                      └─────┬────────────┬─────┘              analysis/data/*.json
                            │            │
              ┌─────────────┴───┐   ┌────┴──────────────────┐
-             │ Web player      │   │ MCP server (Node)     │◀── stdio JSON-RPC ── Claude
+             │ Web player      │   │ MCP server (Node)     │◀── stdio JSON-RPC ── AI agent
              │ canvas, audio   │   │ 17 tools, PNG encoder │
              │ worklet, rewind │   │ + plugin skills       │
              └─────────────────┘   └───────────────────────┘
@@ -179,7 +179,7 @@ every 2 s: battery RAM dirty? → localStorage "matcha:sav:<rom key>" (best effo
 ### One agent action through MCP
 
 ```
-Claude ──tools/call press {buttons:["a"]}──▶ server.mjs
+AI agent ──tools/call press {buttons:["a"]}──▶ server.mjs
    server: validate args → hold A for 6 frames → release → run 30 frames
            (either stops early at a breakpoint/watchpoint)
            → encode the framebuffer as PNG (zlib deflate, 2× scale)
@@ -196,6 +196,17 @@ Claude ──tools/call press {buttons:["a"]}──▶ server.mjs
 | JS wrapper | `loadMatcha(bytes)` → `MatchaModule.create(rom, {model: "auto"})` → `Emulator` methods; shared by browser and Node | `web/matcha.js` |
 | Agent ↔ server | MCP over stdio, protocol 2024-11-05 … 2025-11-25; 17 tools | `mcp/server.mjs` (ADR-0007) |
 | Shell ↔ CLI | `matcha info/run/test/profile/trace/disasm`; ROM execution accepts `--model auto/dmg/cgb`; conformance defaults to explicit DMG and has a separate CGB baseline | `crates/matcha-cli/src/main.rs` |
+
+### AI distribution
+
+`node scripts/build-ai-package.mjs` creates `dist/matcha-ai.zip` with the
+MCP server, shared WASM/JS, sample ROMs, licences, operator guide and optional
+workflow skills. `configure.mjs` prints absolute Node/server paths for the
+current installation; a host maps those values into its local stdio settings.
+The ZIP includes SHA-256 checksums and an explicit ES-module package scope.
+No model provider is selected by the server. Image-based operation depends
+on the host passing image results to the model. The older `.plugin` format
+is retained as a host-specific adapter. Both builders remove temporary staging.
 
 ## 5. State and storage
 

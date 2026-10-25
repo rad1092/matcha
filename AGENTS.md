@@ -18,7 +18,8 @@ scripts/build-wasm.sh                      # core -> web/matcha.wasm (MATCHA_BUI
                                            # wasm32 target can't be installed)
 node mcp/test.mjs                          # MCP server end-to-end test (uses web/matcha.wasm)
 node scripts/build-web.mjs                 # dist/matcha.html + dist/matcha.fragment.html
-scripts/build-plugin.sh                    # dist/matcha.plugin
+node scripts/build-ai-package.mjs          # dist/matcha-ai.zip (host-neutral AI package)
+scripts/build-plugin.sh                    # dist/matcha.plugin (optional host adapter)
 ```
 
 `matcha trace <rom> --input monkey --last 200` prints the instructions before
@@ -65,7 +66,7 @@ a crash; `--watch ADDR` shows which instructions changed a byte.
 | `crates/matcha-cli/` | `matcha` CLI: run, test (scoreboard), profile, trace, disasm, info |
 | `crates/matcha-wasm/` | C-ABI WebAssembly exports |
 | `web/` | `matcha.js` wrapper, `matcha.wasm`, player source (`src/`), bundled ROMs |
-| `mcp/` | MCP server (`server.mjs`) and its end-to-end test |
-| `plugin/` | Claude plugin: manifest, skills, README (server copied in at build) |
+| `mcp/` | MCP server, AI operator guide, connection-settings helper and end-to-end test |
+| `plugin/` | Optional host adapter: manifest, skills, README (assembled in temporary storage) |
 | `analysis/` | Corpus study: manifest, profiling, SameBoy reference runner, report |
 | `docs/` | Architecture, ADRs, conformance scoreboard, analysis report |

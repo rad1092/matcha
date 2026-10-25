@@ -4,7 +4,15 @@ Where the project stands and how to pick it up — written for the next
 person or coding agent. Rules and commands are in [`AGENTS.md`](AGENTS.md);
 how it fits together is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## State (2026-09-30)
+## State (2026-10-17)
+
+The host-neutral AI distribution is `dist/matcha-ai.zip`, built by
+`node scripts/build-ai-package.mjs`. Its setup guide is `mcp/README.md`;
+`mcp/AI_GUIDE.md` covers all tools, operation and temporary-test cleanup.
+`configure.mjs` prints per-installation absolute connection settings. The
+optional `.plugin` adapter shares the runtime and guide. Both package builds
+clean their staging directories, and explicitly declare JavaScript modules.
+Package verification is recorded in `docs/verification/2026-10-17-ai-package.md`.
 
 Done and verified:
 
@@ -14,7 +22,8 @@ Done and verified:
   validated loading, optional DMG-like power-on RAM noise, debugger hooks,
   profiler. Scoreboard: [`docs/CONFORMANCE.md`](docs/CONFORMANCE.md).
 - **Hosts**: web player (`web/`, bundled into `dist/matcha.html`), MCP server
-  and Claude plugin (`mcp/`, `plugin/`, packaged as `dist/matcha.plugin`),
+  and AI package (`mcp/`, packaged as `dist/matcha-ai.zip`; optional
+  `plugin/` adapter packaged as `dist/matcha.plugin`),
   CLI (`crates/matcha-cli`: run, test, profile, trace, disasm, info).
 - **Docs**: architecture, ten ADRs, roadmap, this file.
 - **Corpus study** (`analysis/`, report in [`docs/analysis.md`](docs/analysis.md)):
@@ -22,7 +31,7 @@ Done and verified:
   1,235-ROM automatic DMG/CGB run in `docs/cgb-analysis.md`.
 - **CI** (`.github/workflows/ci.yml`, on [GitHub](https://github.com/rad1092/matcha/actions)):
   fmt, clippy, unit tests + 498k CPU cases, conformance against the
-  committed scoreboard, wasm build, MCP e2e, plugin build.
+  committed scoreboard, wasm build, MCP e2e, AI package and plugin builds.
 
 Not done (in order — details, verification and first steps in
 [`ROADMAP.md`](ROADMAP.md)):
@@ -32,7 +41,7 @@ Not done (in order — details, verification and first steps in
 2. Remaining DMG pixel-fetch/window and OAM DMA quirks — the FIFO is implemented; use the
    failing Mealybug and Gambatte cases in the scoreboard to guide refinement.
 
-The interrupted Claude work was recovered from upstream `fe2d0ed`: OAM
+The interrupted implementation work was recovered from upstream `fe2d0ed`: OAM
 corruption and seeded RAM noise were already committed there. The FIFO
 change also corrects running-versus-halted interrupt sampling, interrupt
 entry bus phases, and IF register-write collisions exposed by raster tests.
@@ -78,7 +87,7 @@ assuming that an acid test or coarse corpus outcome proves compatibility.
 |---|---|---|
 | Rust ≥ 1.85 | everything | `rustup target add wasm32-unknown-unknown` for the web build. Without network access to the prebuilt target, `MATCHA_BUILD_STD=1 scripts/build-wasm.sh` builds std from `rust-src` instead. |
 | Node ≥ 18 | MCP server, web bundle, `mcp/test.mjs` | no npm packages |
-| `zip` | `scripts/build-plugin.sh` | the Claude CLI is optional (`claude plugin validate`) |
+| `zip` | AI package and optional plugin builds | the Claude CLI is optional (`claude plugin validate`) |
 | Python 3 + pandas, numpy, matplotlib | `analysis/` | |
 | C compiler + [RGBDS](https://github.com/gbdev/rgbds) + a [SameBoy](https://github.com/LIJI32/SameBoy) checkout | `analysis/reference/` only | built here with RGBDS v1.0.4 and SameBoy `213a12c` |
 
@@ -95,7 +104,8 @@ cargo test --workspace
 cargo run --release -p matcha-cli -- test testdata/roms --baseline docs/conformance.json
 cargo run --release -p matcha-cli -- test testdata/roms --model cgb --baseline docs/conformance-cgb.json
 scripts/build-wasm.sh && node mcp/test.mjs
-node scripts/build-web.mjs && scripts/build-plugin.sh
+node scripts/build-web.mjs
+node scripts/build-ai-package.mjs && scripts/build-plugin.sh
 ```
 
 CI runs both model baselines; known failures are recorded rather than hidden.

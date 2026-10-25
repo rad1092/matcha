@@ -1,7 +1,7 @@
 {
   "name": "matcha",
   "version": "0.1.0",
-  "description": "A Game Boy and native Game Boy Color emulator Claude can see, play and debug: load .gb/.gbc ROMs, press buttons, take screenshots, set breakpoints and watchpoints, step, inspect memory and find game values.",
+  "description": "A Game Boy and native Game Boy Color emulator AI agents can see, play and debug: load .gb/.gbc ROMs, press buttons, take screenshots, set breakpoints and watchpoints, step, inspect memory and find game values.",
   "author": {
     "name": "HONGDAE KIM"
   },

@@ -67,4 +67,5 @@ jobs:
       - run: scripts/build-wasm.sh
       - run: node mcp/test.mjs
       - run: node scripts/build-web.mjs
+      - run: node scripts/build-ai-package.mjs
       - run: scripts/build-plugin.sh

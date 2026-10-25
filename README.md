@@ -1,7 +1,7 @@
 # matcha
 
 A Game Boy and Game Boy Color emulator you can see inside — and that
-Claude can play.
+AI agents can play, inspect and debug.
 
 One portable Rust core (`no_std`, zero dependencies, no `unsafe`) with three
 hosts:
@@ -10,9 +10,10 @@ hosts:
   battery saves, save states, 20 seconds of rewind, and a live debugger
   (CPU, disassembly, per-line PPU timing, VRAM, audio channels, RAM search).
   Four open-source homebrew games are on the shelf.
-- **Claude plugin** — an MCP server with 17 tools (`load_rom`, `press`,
-  `screenshot`, `breakpoint`, `find_value`, …) and three skills, so Claude
-  can play, test and debug Game Boy software. Node only; no npm packages.
+- **AI package** — an MCP server with 17 tools (`load_rom`, `press`,
+  `screenshot`, `breakpoint`, `find_value`, …) and three workflow skills, so an AI
+  can play, test and debug Game Boy software. A host-neutral ZIP with an
+  operator guide and connection-settings helper; Node only, no npm packages.
 - **`matcha` CLI** — headless runs and screenshots, the conformance
   scoreboard, a profiler, an instruction tracer and a disassembler.
 
@@ -49,7 +50,9 @@ DMG-on-CGB colourization and precise hardware quirks remain; see
 # Play: open the bundled page (after building it once, see below)
 open dist/matcha.html
 
-# Claude plugin: install dist/matcha.plugin in the Claude desktop app
+# AI package: build, extract to a permanent folder, then print MCP settings
+node scripts/build-ai-package.mjs          # dist/matcha-ai.zip
+# After extracting: node /path/to/matcha-ai/configure.mjs
 
 # CLI
 cargo build --release
@@ -68,8 +71,14 @@ target/release/matcha test testdata/roms --model cgb --baseline docs/conformance
 # Builds
 scripts/build-wasm.sh                     # core -> web/matcha.wasm
 node scripts/build-web.mjs                # dist/matcha.html
-scripts/build-plugin.sh                   # dist/matcha.plugin
+node scripts/build-ai-package.mjs         # dist/matcha-ai.zip (any compatible local MCP host)
+scripts/build-plugin.sh                   # dist/matcha.plugin (optional host-specific adapter)
 ```
+
+For AI setup and operations, read the [package quick start](mcp/README.md) and
+[AI operator guide / AI 공통 조작서](mcp/AI_GUIDE.md). The host must support
+local stdio MCP tools; visual play also needs image results passed to the model.
+The generic package contains the runtime, samples, guides and file checksums.
 
 The web player, JavaScript wrapper, CLI and MCP choose CGB for colour-capable
 cartridges by default; `--model dmg` / `--model cgb` or the corresponding
@@ -98,21 +107,23 @@ crates/matcha-core   the emulator (CPU, PPU, APU, timer, cartridges, save states
 crates/matcha-cli    matcha: run, test, profile, trace, disasm, info
 crates/matcha-wasm   C-ABI WebAssembly exports
 web/                 JS wrapper, player source, bundled homebrew
-mcp/                 MCP server + end-to-end test
-plugin/              Claude plugin (skills, manifest)
+mcp/                 MCP server, AI operator guide, settings helper + end-to-end test
+plugin/              optional host adapter (skills, manifest)
 analysis/            corpus study pipeline (manifest, profiling, SameBoy reference, report)
 ```
 
 ## 한국어 요약
 
 **matcha**는 게임보이(DMG)와 네이티브 게임보이 컬러 에뮬레이터다. Rust 코어
-하나(`no_std`, 의존성 0, `unsafe` 없음)를 웹 플레이어·Claude 플러그인·CLI가
+하나(`no_std`, 의존성 0, `unsafe` 없음)를 웹 플레이어·AI 도구·CLI가
 같이 쓴다.
 
 - **웹 플레이어**: HTML 파일 하나로 오프라인 실행. 사운드, 세이브/되감기,
   CPU·PPU·VRAM·사운드를 실시간으로 보는 디버거 포함. 오픈소스 홈브루 4개 내장.
-- **Claude 플러그인**: MCP 도구 17개 + 스킬 3개. Claude가 ROM을 켜고, 화면을
-  보고, 버튼을 누르고, 브레이크포인트·메모리 검색으로 디버깅한다.
+- **AI 공통 패키지**: MCP 도구 17개 + 조작서 + 스킬 3개. AI가 ROM을 켜고,
+  화면을 보고, 버튼을 누르고, 브레이크포인트·메모리 검색으로 디버깅한다.
+  `dist/matcha-ai.zip`을 풀고 `node configure.mjs`로 연결 설정을 만든다.
+  [AI 공통 조작서](mcp/AI_GUIDE.md)에 연결·조작·시험 후 정리 절차가 있다.
 - **CLI**: 헤드리스 실행/스크린샷, 테스트 스코어보드, 프로파일러, 명령어 트레이서.
 - **정확도**: SingleStepTests 498,000/498,000, Mooneye 94/94, dmg-acid2 통과,
   Blargg 43/43, Gambatte 1,642/1,783, Mealybug 9/24. 픽셀 FIFO를 구현해

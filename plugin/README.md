@@ -1,9 +1,9 @@
-# matcha — Game Boy for Claude
+# matcha — Game Boy for AI agents
 
-Gives Claude a Game Boy / native Game Boy Color it can look at, play
+Gives an AI agent a Game Boy / native Game Boy Color it can look at, play
 and debug. Everything runs locally in Node; no network, no dependencies.
 
-## What Claude can do with it
+## What an AI can do with it
 
 - **Play and test ROMs** — boot a `.gb` or `.gbc`, read the screen, tap or hold
   buttons, let time pass, save and restore states (emulation is
@@ -34,9 +34,28 @@ Libbet and the Magic Floor, Shock Lobster, 2048); see
 
 ## Requirements
 
-Node.js 18 or newer on the machine that runs Claude (the server is a single
-ES module plus `matcha.wasm`). Claude Desktop's Cowork workspace already has
-Node.
+Node.js 18 or newer and an AI application that supports local stdio MCP tools.
+For visual play, the application must pass image results to an image-capable
+model. The server is an ES module plus `matcha.wasm`; no npm install is needed.
+
+## Installation and operator guide
+
+The default host-neutral distribution is `dist/matcha-ai.zip`, built with
+`node scripts/build-ai-package.mjs`. Extract it and run `node configure.mjs`
+to print the absolute command and arguments for your AI application's MCP
+settings. The JSON container used by a particular host may differ; use its
+local stdio MCP settings and merge with existing entries.
+
+This optional `.plugin` adapter retains the manifest and variable names its
+original host requires. Its AI tools and operator instructions are shared
+with the generic ZIP. Import it only into an application that supports this
+plugin format; the file extension is not a universal installation format.
+
+Built packages include `AI_GUIDE.md` (Korean operator manual), `configure.mjs`
+and three English workflow skills. In a source checkout the full guide is
+`mcp/AI_GUIDE.md`. Skills may be read as ordinary instructions when the host
+does not automatically discover them. Test in a fresh temporary session,
+retain a written result, and remove test processes and temporary files afterward.
 
 ## Accuracy
 

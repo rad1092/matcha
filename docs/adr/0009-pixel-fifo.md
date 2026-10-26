@@ -86,7 +86,7 @@ inside mode 3, including a scene with overlapping objects and a window;
 replay register writes and compare the complete state and output.
 
 Rebuild the single shared WASM file and run MCP tests before publishing
-web or plugin bundles. The generated scoreboard and `CONTINUE.md` record
+web or plugin bundles. The generated scoreboard and `docs/STATUS.md` record
 the measured result and remaining hardware quirks; the presence of a FIFO
 alone does not imply that every Mealybug case passes.
 

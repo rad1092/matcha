@@ -1,7 +1,13 @@
-# matcha
+# Matcha
 
 A Game Boy and Game Boy Color emulator you can see inside — and that
 Claude can play.
+
+**[Play in your browser](https://play.whago.net/)** · [Download](#download) · [Use it from Claude](#use-it-from-claude)
+
+![Claude playing 2048 through Matcha's MCP tools, one press call at a time](docs/img/claude-plays-2048.gif)
+
+![The web player running Tobu Tobu Girl next to the CPU, disassembly and frame timing panels](docs/img/web-player.png)
 
 One portable Rust core (`no_std`, zero dependencies, no `unsafe`) with three
 hosts:
@@ -17,8 +23,8 @@ hosts:
   scoreboard, a profiler, an instruction tracer and a disassembler.
 
 And a study: every Homebrew Hub cartridge an original Game Boy can run —
-868 of them — played for a minute by matcha and by SameBoy side by side
-([`docs/analysis.md`](docs/analysis.md)). The comparison found three matcha
+868 of them — played for a minute by Matcha and by SameBoy side by side
+([`docs/analysis.md`](docs/analysis.md)). The comparison found three Matcha
 bugs, since fixed. The [new automatic DMG/CGB study](docs/cgb-analysis.md)
 revalidates all 1,235 supported-mapper cartridges from the same pinned corpus.
 
@@ -53,30 +59,31 @@ requests preserve the machine, save slots, breakpoints, search and palette.
 See [the manual MCP walkthrough](docs/MCP-HOMEBREW.md) for the tool calls and
 known limits. This is debugger workflow evidence, not a hardware accuracy score.
 
-## Download 0.1.1
+## Download
 
-Get `matcha.plugin`, `matcha.html` and `SHA256SUMS` from the
-[0.1.1 release](https://github.com/rad1092/matcha/releases/tag/v0.1.1).
-The plugin is a ZIP archive containing the standalone MCP server; the HTML is
-an offline web player. Neither needs a Rust build. Node 18+ is required for MCP.
-The Rust CLI remains a source build.
+From the [latest release](https://github.com/rad1092/matcha/releases/latest):
 
-For a generic MCP client, extract `matcha.plugin` into a new directory and add
-this stdio server, replacing the path with its actual absolute location:
+- `matcha.html`: the web player as one offline file. Open it in any browser.
+- `matcha.plugin`: the Claude plugin, a ZIP with the MCP server inside. Node 18 or newer.
+- `matcha-<platform>`: the command-line tool for macOS, Windows and Linux
+  (from 0.1.2; earlier releases need a Rust build).
+- `SHA256SUMS`: run `shasum -a 256 -c SHA256SUMS` after downloading.
+
+Bundled homebrew notices are in the plugin and `HOMEBREW-LICENSES.md`. Only use
+ROMs you are allowed to run.
+
+## Use it from Claude
+
+Install `matcha.plugin` in the Claude desktop app. For any other MCP client,
+unzip it and add this server, with the real absolute path:
 
 ```json
 {"mcpServers":{"matcha":{"command":"node","args":["/absolute/path/matcha-plugin/server/server.mjs"]}}}
 ```
 
-Run `shasum -a 256 -c SHA256SUMS` after downloading all listed assets (or use a
-SHA-256 checker for the individual asset you downloaded). The release manifest
-records the source commit and WASM hash; checksums identify files but do not
-establish trust in their publisher. Bundled homebrew notices are retained in the
-plugin and `HOMEBREW-LICENSES.md`. Only use ROMs you are allowed to run.
-
-Follow [the homebrew debugger exercise](docs/MCP-HOMEBREW.md) using the source
-archive from the same tag; its fixture generator and tests are plain Node files.
-Save slots live in the MCP process and are lost when it exits.
+Then ask Claude to load one of the bundled games and play, or to find where a
+game keeps your lives. Save slots live in the MCP process and are lost when it
+exits.
 
 ## Quick start
 
@@ -125,8 +132,8 @@ loaded; cartridge battery saves keep their existing format.
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design: timing model, components, data flow, interfaces, performance |
 | [`docs/adr/`](docs/adr/) | Ten decision records (timing, PPU, portability, WASM ABI, audio, save states, MCP, verification, pixel FIFO, native CGB) |
 | [`docs/analysis.md`](docs/analysis.md) | The homebrew corpus study and the SameBoy comparison |
-| [`AGENTS.md`](AGENTS.md) | Rules and commands for anyone changing the code |
-| [`CONTINUE.md`](CONTINUE.md) | Current state and how to pick the work up |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Rules and commands for anyone changing the code |
+| [`docs/STATUS.md`](docs/STATUS.md) | Current state and how to pick the work up |
 
 ```
 crates/matcha-core   the emulator (CPU, PPU, APU, timer, cartridges, save states, debugger, profiler)

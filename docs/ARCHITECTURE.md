@@ -36,7 +36,7 @@ major choice is recorded in the ADRs under [`docs/adr/`](adr/).
 ### Constraints
 
 - One maintainer; the design must stay readable by one person (and by an AI
-  assistant resuming the work — see [`CONTINUE.md`](../CONTINUE.md)).
+  assistant resuming the work — see [`STATUS.md`](STATUS.md)).
 - Test ROMs and the homebrew corpus are fetched, never committed.
 - The published page must be a single self-contained HTML file (the artifact
   host only allows scripts from a few CDNs; matcha needs none).

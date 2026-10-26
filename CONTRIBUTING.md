@@ -1,7 +1,7 @@
-# Working on matcha
+# Contributing to Matcha
 
 Instructions for anyone — human or coding agent — changing this repository.
-Read [`CONTINUE.md`](CONTINUE.md) first for the current state and next steps,
+Read [`docs/STATUS.md`](docs/STATUS.md) first for the current state and next steps,
 and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the pieces fit.
 
 ## Commands

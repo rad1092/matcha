@@ -31,7 +31,7 @@ const SAMPLES = {
 const { loadMatcha, buttonMask, PALETTES, WIDTH, HEIGHT } = await import(pathToFileURL(join(CORE_DIR, "matcha.js")).href);
 const matcha = await loadMatcha(readFileSync(join(CORE_DIR, "matcha.wasm")));
 
-const SERVER_INFO = { name: "matcha", title: "matcha Game Boy", version: "0.1.1" };
+const SERVER_INFO = { name: "matcha", title: "Matcha Game Boy", version: "0.1.2" };
 const PROTOCOLS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 const INSTRUCTIONS = `matcha is a Game Boy / Game Boy Color emulator.
 Start with load_rom. Use press to tap buttons and see the result, run to let

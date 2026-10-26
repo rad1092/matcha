@@ -1,8 +1,8 @@
-# Continuing matcha
+# Matcha: status and next steps
 
 Where the project stands and how to pick it up — written for the next
-person or coding agent. Rules and commands are in [`AGENTS.md`](AGENTS.md);
-how it fits together is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+person or coding agent. Rules and commands are in [`CONTRIBUTING.md`](../CONTRIBUTING.md);
+how it fits together is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## State (2026-09-30)
 
@@ -12,12 +12,12 @@ Done and verified:
   APU, timer, serial, joypad, OAM DMA with bus conflicts, the DMG OAM
   corruption bug, MBC1/1M/2/3+RTC/5, versioned save states with atomic,
   validated loading, optional DMG-like power-on RAM noise, debugger hooks,
-  profiler. Scoreboard: [`docs/CONFORMANCE.md`](docs/CONFORMANCE.md).
+  profiler. Scoreboard: [`docs/CONFORMANCE.md`](CONFORMANCE.md).
 - **Hosts**: web player (`web/`, bundled into `dist/matcha.html`), MCP server
   and Claude plugin (`mcp/`, `plugin/`, packaged as `dist/matcha.plugin`),
   CLI (`crates/matcha-cli`: run, test, profile, trace, disasm, info).
 - **Docs**: architecture, ten ADRs, roadmap, this file.
-- **Corpus study** (`analysis/`, report in [`docs/analysis.md`](docs/analysis.md)):
+- **Corpus study** (`analysis/`, report in [`docs/analysis.md`](analysis.md)):
   historical 868-ROM DMG comparison (866 same outcome), plus the new
   1,235-ROM automatic DMG/CGB run in `docs/cgb-analysis.md`.
 - **CI** (`.github/workflows/ci.yml`, on [GitHub](https://github.com/rad1092/matcha/actions)):
@@ -25,7 +25,7 @@ Done and verified:
   committed scoreboard, wasm build, MCP e2e, plugin build.
 
 Not done (in order — details, verification and first steps in
-[`ROADMAP.md`](ROADMAP.md)):
+[`ROADMAP.md`](../ROADMAP.md)):
 
 1. Remaining native CGB timing and DMG-on-CGB compatibility mode; native
    colour graphics, memory banking, speed switching and VRAM DMA are implemented.

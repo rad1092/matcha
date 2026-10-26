@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-28
-**Deciders:** HONGDAE KIM (owner), Claude (implementation)
+**Deciders:** rad1092 (owner), Claude (implementation)
 
 ## Context
 

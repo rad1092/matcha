@@ -13,6 +13,7 @@ const USAGE: &str = "\
 matcha — a Game Boy / Game Boy Color emulator you can see inside
 
 USAGE:
+  matcha version
   matcha info <rom>
   matcha run <rom> [--seconds N | --frames N] [--hold BUTTONS | --input none|monkey] [--audio]
                    [--screenshot out.png] [--scale N] [--palette grey|matcha|dmg] [--serial]
@@ -478,6 +479,10 @@ fn main() -> ExitCode {
         "trace" => cmd_trace(&args).map(|()| true),
         "help" | "--help" | "-h" => {
             print!("{USAGE}");
+            Ok(true)
+        }
+        "version" | "--version" | "-V" => {
+            println!("matcha {}", env!("CARGO_PKG_VERSION"));
             Ok(true)
         }
         other => Err(format!("unknown command '{other}'\n\n{USAGE}")),

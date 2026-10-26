@@ -2,7 +2,7 @@
 
 **Status:** Superseded by [ADR-0009](0009-pixel-fifo.md) for rendering; the LCD timing event model is retained.
 **Date:** 2026-09-28
-**Deciders:** HONGDAE KIM (owner), Claude (implementation)
+**Deciders:** rad1092 (owner), Claude (implementation)
 
 ## Context
 
